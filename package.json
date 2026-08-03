@@ -1,33 +1,16 @@
 {
   "name": "dasgar-io",
   "version": "1.0.0",
-  "description": "Dasgar.io – Modern Agar.io-style Multiplayer Game",
   "private": true,
-  "workspaces": [
-    "client",
-    "server",
-    "shared"
-  ],
+  "description": "Dasgar.io – Modern Agar.io-style single-player game with AI bots",
+  "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w shared && npm run build -w client && npm run build -w server",
-    "start": "npm run start -w server",
-    "lint": "echo \"No linter configured yet\""
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0",
-    "typescript": "^5.7.2"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "keywords": [
-    "agar.io",
-    "multiplayer",
-    "canvas",
-    "websocket",
-    "game"
-  ],
-  "author": "Dasgar7",
-  "license": "MIT"
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
+  }
 }

@@ -1,15 +1,34 @@
 # Dasgar.io
 
-**Modern Agar.io-style multiplayer browser game** — dark neon theme, smooth 60 FPS, TypeScript client + Node.js WebSocket server.
+**Modern Agar.io-style single-player browser game** with dark neon visuals and smart AI bots.
+
+Runs entirely in the browser — no backend, no WebSockets, no accounts.
 
 ## Quick Start
 
 ```bash
 npm install
-npm run dev          # server :3001 + client :5173
+npm run dev
 ```
 
-Open http://localhost:5173
+Open **http://localhost:5173**
+
+### Production / Vercel
+
+```bash
+npm run build
+# deploy the `dist/` folder as a static site
+```
+
+## Features
+
+- **70 AI bots** that wander, hunt food, chase prey, flee threats, split, and respawn
+- Thousands of food pellets + viruses
+- Smooth camera, mass-based zoom, glossy cells
+- Desktop (mouse + keyboard) and mobile (joystick + buttons)
+- Spatial grid for efficient collisions
+- Object pooling for food
+- Modular architecture ready for future multiplayer
 
 ## Controls
 
@@ -18,28 +37,23 @@ Open http://localhost:5173
 | Move | Mouse | Joystick |
 | Split | Space | ⬡ |
 | Feed | W | ◉ |
-| Double/Triple/Quad | Q / E / R | ⬢ |
+| Multi-split | Q / E / R | ⬢ |
 | Macro feed | F | — |
 
-## Structure
+## Architecture
 
 ```
-client/   Vite + Canvas + TypeScript
-server/   Node.js + ws + authoritative physics
-shared/   Constants, types, protocol
+src/
+  core/       Game loop, World simulation, SpatialGrid
+  entities/   Cell, Food, Virus, Player (human + bots share this)
+  ai/         BotController — drives bots via the same Player API
+  render/     Canvas renderer
+  input/      Mouse, keyboard, joystick
+  ui/         Menu, HUD, styles
+  utils/      Constants & helpers
 ```
 
-## Features (v1.0)
-
-- Server-authoritative multiplayer
-- Eat pellets, players, virus pop
-- Split / feed / merge
-- Smooth interpolation & camera zoom
-- Desktop + mobile controls
-- Leaderboard, kill feed, death screen
-- Dark neon green UI
-
-Scaffolded for shop, skins, progression, modes, admin panel — see `docs/ARCHITECTURE.md`.
+Bots and the human player both use the `Player` class. To add multiplayer later, replace or supplement bot targets with network input — no need to rewrite physics or rendering.
 
 ## License
 
