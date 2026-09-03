@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#07100d"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Strikepoint">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg"><link rel="stylesheet" href="style.css">
+<title>Strikepoint Mobile</title>
+</head><body>
+<div id="rotate">Rotate your device to landscape</div>
+<main id="app"><canvas id="game"></canvas>
+<div id="hud"><div class="top left"><b>STRIKEPOINT</b><span id="round">ROUND 1</span></div><div class="top center"><span id="timer">01:30</span></div><div class="top right"><span id="score">0</span><span class="money">$800</span></div>
+<div id="feed"></div><div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+<div id="weapon"><div><strong id="ammo">30</strong><small>/ 90</small></div><span id="weaponName">VANGUARD</span></div>
+<div id="health"><div class="bar"><span></span></div><b>100</b></div>
+<div id="joystick"><div class="stick"></div></div><div id="aim"><div class="stick"></div></div>
+<button id="fire" aria-label="Fire"></button><button id="reload">↻</button><button id="knife">◈</button><button id="jump">↑</button><button id="switch">1</button>
+<div id="install"><b>Strikepoint</b><span>Install this game to your Home Screen</span><button id="installBtn">INSTALL</button><button id="closeInstall">×</button></div>
+<div id="roundEnd"><h1 id="result">ROUND WON</h1><p id="resultSub">Enemies eliminated</p><button id="nextRound">NEXT ROUND</button></div>
+</div></main><script src="game.js"></script></body></html>
