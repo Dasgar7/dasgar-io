@@ -1,0 +1,9 @@
+{
+  "name": "Dasgar.io",
+  "short_name": "Dasgar.io",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "any"
+}

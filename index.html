@@ -1,1 +1,79 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#07100d"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Strikepoint"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon.svg"><link rel="stylesheet" href="style.css"><title>Strikepoint Mobile</title></head><body><div id="rotate">Rotate your device to landscape</div><main id="app"><canvas id="game"></canvas><div id="hud"><div class="top left"><b>STRIKEPOINT</b><span id="round">ROUND 1</span></div><div class="top center"><span id="timer">01:30</span></div><div class="top right"><span id="score">0</span><span class="money">$800</span></div><div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div><div id="weapon"><div><strong id="ammo">30</strong><small>/ 90</small></div><span id="weaponName">VANGUARD</span></div><div id="health"><div class="bar"><span></span></div><b>100</b></div><div id="joystick"><div class="stick"></div></div><div id="aim"><div class="stick"></div></div><button id="fire" aria-label="Fire"></button><button id="reload">↻</button><button id="knife">◈</button><button id="jump">↑</button><button id="switch">1</button><div id="install"><b>Strikepoint</b><span>Install this game to your Home Screen</span><button id="installBtn">INSTALL</button><button id="closeInstall">×</button></div><div id="roundEnd"><h1 id="result">ROUND WON</h1><p id="resultSub">Enemies eliminated</p><button id="nextRound">NEXT ROUND</button></div></div></main><script src="game.js"></script><script>if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');</script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Dasgar.io</title>
+    <style>
+      /* Force disable ALL selection and long-press callouts on iOS/Android */
+      html, body {
+        overflow: hidden !important;
+        overflow-x: hidden !important;
+        overflow-y: hidden !important;
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0;
+        padding: 0;
+        position: fixed !important;
+        touch-action: manipulation !important;
+        overscroll-behavior: none !important;
+      }
+      
+      html, body, *, *:before, *:after {
+        -webkit-user-drag: none !important;
+        user-drag: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-user-select: none !important;
+        -khtml-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+
+      /* Protect all icons and inner contents of buttons from receiving pointer events */
+      img, svg, svg * {
+        pointer-events: none !important;
+        -webkit-user-drag: none !important;
+        user-drag: none !important;
+        -webkit-touch-callout: none !important;
+        user-select: none !important;
+      }
+
+      [role="button"] > *, button > * {
+        pointer-events: none !important;
+        -webkit-user-drag: none !important;
+        user-drag: none !important;
+        -webkit-touch-callout: none !important;
+        user-select: none !important;
+      }
+      
+      /* Allow selection and pointer interaction ONLY on inputs */
+      input, textarea {
+        -webkit-touch-callout: default !important;
+        -webkit-user-select: auto !important;
+        -khtml-user-select: auto !important;
+        -moz-user-select: auto !important;
+        -ms-user-select: auto !important;
+        user-select: auto !important;
+        pointer-events: auto !important;
+      }
+    </style>
+    <script>
+      // CRITICAL NATIVE FIX: physically intercept and kill all drag events at the root browser level
+      document.addEventListener('dragstart', function(e){ e.preventDefault(); }, { passive: false, capture: true });
+      document.addEventListener('drop', function(e){ e.preventDefault(); }, { passive: false, capture: true });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

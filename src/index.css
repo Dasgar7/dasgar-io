@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+* {
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Strictly disable selection, callouts, and drag globally */
+html, body, #root {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  -khtml-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Re-enable selection and callouts specifically for inputs */
+input, textarea {
+  -webkit-touch-callout: default !important;
+  -webkit-user-select: auto !important;
+  -khtml-user-select: auto !important;
+  -moz-user-select: auto !important;
+  -ms-user-select: auto !important;
+  user-select: auto !important;
+  pointer-events: auto !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100%;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  position: fixed !important;
+  touch-action: manipulation !important;
+  overscroll-behavior: none !important;
+}
+
+#root {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100%;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+
+button, a, img, svg, div[role="button"] {
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  touch-action: manipulation !important;
+}
+
+/* Ensure images, SVGs, and children of clickable wrappers never receive direct pointer events */
+img, svg, svg * {
+  pointer-events: none !important;
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  -webkit-touch-callout: none !important;
+  user-select: none !important;
+}
+
+[role="button"] > *, button > * {
+  pointer-events: none !important;
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  -webkit-touch-callout: none !important;
+  user-select: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ==========================================================================
+   Smooth Tap & Click Interaction (Sarok.io style)
+   Zero jumping, zero scaling, zero positional movement.
+   Crisp brightness tap feedback + smooth touch ripple show.
+   ========================================================================== */
+.hud-tap {
+  transform: none !important;
+  transition: filter 0.12s ease, opacity 0.12s ease;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.hud-tap:active,
+.hud-tap[data-pressed="true"] {
+  transform: none !important;
+  filter: brightness(0.85) contrast(1.05) !important;
+  transition: filter 0.04s ease !important;
+}
+
+/* ==========================================================================
+   Smooth Panel Entrance Animations (Emoji, Chat, Leaderboard, Mod Menu)
+   ========================================================================== */
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.panel-animate-in {
+  animation: panelFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}

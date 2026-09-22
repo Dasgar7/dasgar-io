@@ -1,0 +1,6 @@
+{
+  "name": "Dasgar.io",
+  "description": "A mobile-first Agar.io clone with an anime-inspired UI and Season 1 Green Candy Pass.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
