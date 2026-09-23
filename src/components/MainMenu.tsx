@@ -470,7 +470,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
       {/* 1. CENTER CONSOLE: LOGO, AVATAR, NICKNAME BAR, ACTIONS & DRAWER           */}
       {/* ========================================================================= */}
       <div 
-        className={`absolute left-1/2 -translate-x-1/2 flex flex-col items-center z-20 w-full max-w-[340px] sm:max-w-[370px] md:max-w-[390px] px-2 pointer-events-none transition-all duration-300 ease-out ${
+        className={`absolute left-1/2 -translate-x-1/2 flex flex-col items-center z-20 w-full max-w-[460px] sm:max-w-[500px] md:max-w-[540px] px-2 pointer-events-none transition-all duration-300 ease-out ${
           isMoreOpen && !isEditingHud 
             ? 'top-1 sm:top-2 -translate-y-1 sm:-translate-y-2' 
             : 'top-1 sm:top-2 translate-y-0'
@@ -553,7 +553,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         {/* NICKNAME BAR */}
         {renderEditableItem(
           'nickname',
-          <div className="w-full max-w-[200px] sm:max-w-[230px] mx-auto bg-white/75 backdrop-blur-sm border-2 border-slate-300/80 rounded-xl shadow-sm text-center transition-all duration-300 ease-out focus-within:bg-white focus-within:border-slate-400 mt-1 px-3 py-1 pointer-events-auto">
+          <div className="w-full max-w-[250px] sm:max-w-[280px] mx-auto bg-white/75 backdrop-blur-sm border-2 border-slate-300/80 rounded-xl shadow-sm text-center transition-all duration-300 ease-out focus-within:bg-white focus-within:border-slate-400 mt-1 px-3.5 py-1.5 pointer-events-auto">
             <input 
               type="text" 
               placeholder="Nickname" 
@@ -567,15 +567,15 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         )}
 
         {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER - Centered directly under nickname bar */}
-        <div className="w-full mt-2 sm:mt-2.5 flex flex-col items-center pointer-events-auto">
+        <div className="w-full mt-2.5 sm:mt-3 flex flex-col items-center pointer-events-auto">
           {/* Action Buttons Row - Equal sized 3-column landscape grid matching Agar.io */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-full max-w-[330px] sm:max-w-[360px] md:max-w-[380px] mx-auto pointer-events-auto">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 w-full max-w-[430px] sm:max-w-[470px] md:max-w-[490px] mx-auto pointer-events-auto">
             {/* SPECTATE BUTTON */}
             {renderEditableItem(
               'spectate',
-              <TouchSafeButton className="w-full h-[50px] sm:h-[56px] md:h-[58px] bg-gradient-to-b from-red-500 to-red-700 border-2 border-red-300 rounded-xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-md shadow-red-500/25 select-none hud-tap pointer-events-auto">
-                <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-white mb-0.5 pointer-events-none drop-shadow" />
-                <span className="font-black text-xs sm:text-[13px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+              <TouchSafeButton className="w-full h-[62px] sm:h-[70px] md:h-[74px] bg-gradient-to-b from-red-500 to-red-700 border-2 border-red-300 rounded-2xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-md shadow-red-500/25 select-none hud-tap pointer-events-auto">
+                <Eye className="w-6 h-6 sm:w-7 sm:h-7 text-white mb-0.5 pointer-events-none drop-shadow" />
+                <span className="font-black text-xs sm:text-sm tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                   SPECTATE
                 </span>
               </TouchSafeButton>,
@@ -587,10 +587,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'play',
               <TouchSafeButton 
                 onClick={() => onPlay('classic')}
-                className="w-full h-[50px] sm:h-[56px] md:h-[58px] bg-gradient-to-b from-emerald-400 via-green-500 to-green-600 border-2 border-green-200 rounded-xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-md shadow-green-500/30 select-none hud-tap pointer-events-auto"
+                className="w-full h-[62px] sm:h-[70px] md:h-[74px] bg-gradient-to-b from-emerald-400 via-green-500 to-green-600 border-2 border-green-200 rounded-2xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-md shadow-green-500/30 select-none hud-tap pointer-events-auto"
               >
-                <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-white mb-0.5 pointer-events-none drop-shadow" />
-                <span className="font-black text-xs sm:text-[13px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+                <Gamepad2 className="w-6 h-6 sm:w-7 sm:h-7 text-white mb-0.5 pointer-events-none drop-shadow" />
+                <span className="font-black text-xs sm:text-sm tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                   PLAY
                 </span>
               </TouchSafeButton>,
@@ -602,14 +602,14 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'more',
               <TouchSafeButton 
                 onClick={() => setIsMoreOpen(prev => !prev)}
-                className={`w-full h-[50px] sm:h-[56px] md:h-[58px] bg-gradient-to-b ${
+                className={`w-full h-[62px] sm:h-[70px] md:h-[74px] bg-gradient-to-b ${
                   isMoreOpen 
                     ? 'from-blue-600 to-blue-800 border-cyan-300 ring-2 ring-blue-400 shadow-blue-500/40' 
                     : 'from-blue-500 to-blue-700 border-blue-200 shadow-blue-500/25'
-                } border-2 rounded-xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-md select-none hud-tap pointer-events-auto`}
+                } border-2 rounded-2xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-md select-none hud-tap pointer-events-auto`}
               >
-                <MoreHorizontal className="w-5 h-5 sm:w-6 sm:h-6 text-white mb-0.5 pointer-events-none drop-shadow" />
-                <span className="font-black text-xs sm:text-[13px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+                <MoreHorizontal className="w-6 h-6 sm:w-7 sm:h-7 text-white mb-0.5 pointer-events-none drop-shadow" />
+                <span className="font-black text-xs sm:text-sm tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                   MORE
                 </span>
               </TouchSafeButton>,
@@ -645,14 +645,14 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 }}
                 className="pointer-events-auto w-full overflow-hidden select-none"
               >
-                <div className="grid grid-cols-3 gap-2 sm:gap-2.5 w-full max-w-[330px] sm:max-w-[360px] md:max-w-[380px] mx-auto pt-2 pb-0.5">
+                <div className="grid grid-cols-3 gap-2.5 sm:gap-3 w-full max-w-[430px] sm:max-w-[470px] md:max-w-[490px] mx-auto pt-2 pb-0.5">
                   {/* 1. BOTS: Private server, bots only, no friends */}
                   <TouchSafeButton
                     onClick={() => onPlay('bots')}
-                    className="h-[42px] sm:h-[46px] bg-gradient-to-b from-teal-400 to-emerald-600 border-2 border-teal-200 rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-emerald-500/25 select-none hud-tap"
+                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-teal-400 to-emerald-600 border-2 border-teal-200 rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-emerald-500/25 select-none hud-tap"
                   >
-                    <Bot className="w-4 h-4 text-white mb-0.5 pointer-events-none drop-shadow" />
-                    <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase pointer-events-none leading-none">
+                    <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none drop-shadow" />
+                    <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none">
                       BOTS
                     </span>
                   </TouchSafeButton>
@@ -660,10 +660,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   {/* 2. INSTANT MERGE: Fast recombine, exclusive mode */}
                   <TouchSafeButton
                     onClick={() => onPlay('instantMerge')}
-                    className="h-[42px] sm:h-[46px] bg-gradient-to-b from-amber-400 via-orange-500 to-red-600 border-2 border-amber-200 rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-orange-500/25 select-none hud-tap"
+                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-amber-400 via-orange-500 to-red-600 border-2 border-amber-200 rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-orange-500/25 select-none hud-tap"
                   >
-                    <Zap className="w-4 h-4 text-white fill-white mb-0.5 pointer-events-none drop-shadow" />
-                    <span className="font-black text-[8px] sm:text-[9.5px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white mb-0.5 pointer-events-none drop-shadow" />
+                    <span className="font-black text-[8.5px] sm:text-[10px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                       INSTANT MERGE
                     </span>
                   </TouchSafeButton>
@@ -674,10 +674,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                       setIsMoreOpen(false);
                       setIsEditingHud(true);
                     }}
-                    className="h-[42px] sm:h-[46px] bg-gradient-to-b from-indigo-500 to-purple-600 border-2 border-indigo-200 rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-purple-500/25 select-none hud-tap"
+                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-indigo-500 to-purple-600 border-2 border-indigo-200 rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-purple-500/25 select-none hud-tap"
                   >
-                    <Sliders className="w-4 h-4 text-white mb-0.5 pointer-events-none drop-shadow" />
-                    <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+                    <Sliders className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none drop-shadow" />
+                    <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                       EDIT HUD
                     </span>
                   </TouchSafeButton>
