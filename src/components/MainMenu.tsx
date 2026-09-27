@@ -8,6 +8,9 @@ import { AnimatePresence, motion } from 'motion/react';
 import { TouchSafeButton } from './TouchSafeButton';
 import { PRESET_SKINS, SkinItem, getPlayerRank } from '../data/skinsData';
 import { getStarStyleForLevel } from '../utils/levelUtils';
+import spectateBtnImg from '../assets/images/spectate-button.png';
+import playBtnImg from '../assets/images/play-button.png';
+import moreBtnImg from '../assets/images/more-button.png';
 
 interface MainMenuProps {
   onPlay: (mode?: 'classic' | 'bots' | 'instantMerge') => void;
@@ -527,11 +530,11 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         {/* LOGO */}
         {renderEditableItem(
           'logo',
-          <h1 className={`font-black tracking-wide drop-shadow-sm mb-0.5 pointer-events-auto transition-all duration-300 ease-out ${
+          <h1 className={`font-black tracking-wide mb-0.5 pointer-events-auto transition-all duration-300 ease-out ${
             isMoreOpen && !isEditingHud ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'
           }`}>
-            <span className="text-slate-700 drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]">Dasgar</span>
-            <span className="text-[#00e676] drop-shadow-[0_1px_2px_rgba(0,230,118,0.35)]">.io</span>
+            <span className="text-slate-800">Dasgar</span>
+            <span className="text-[#22c55e]">.io</span>
           </h1>,
           'pointer-events-auto'
         )}
@@ -543,7 +546,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
             className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-0.5"
             onClick={isEditingHud ? undefined : onSkins}
           >
-            <div className={`rounded-full shadow-lg bg-gradient-to-b from-white/95 via-slate-100/90 to-slate-200/90 border-[3.5px] border-[#00e676] shadow-[#00e676]/25 backdrop-blur-sm flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out ${
+            <div className={`rounded-full bg-slate-200 border-4 border-[#22c55e] shadow-sm flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out ${
               isMoreOpen && !isEditingHud ? 'w-16 h-16 sm:w-18 sm:h-18' : 'w-20 h-20 sm:w-22 sm:h-22'
             }`}>
               {equippedSkinSvg ? (
@@ -574,26 +577,26 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
             </div>
             
             {/* Plus button (top right) */}
-            <div className={`absolute top-[2px] right-[2px] w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-b from-[#00f279] via-[#00c853] to-[#009624] border-[1.5px] border-emerald-100 rounded-full flex items-center justify-center text-white shadow-md shadow-green-700/40 z-10 select-none overflow-hidden before:absolute before:inset-0 before:rounded-full before:shadow-[inset_0_2px_3px_rgba(255,255,255,0.6)] before:pointer-events-none transition-all duration-300 ${
+            <div className={`absolute top-[2px] right-[2px] w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
               isMoreOpen && !isEditingHud ? 'scale-75' : 'scale-100'
             }`}>
-              <Plus size={12} strokeWidth={4} className="pointer-events-none drop-shadow-xs relative z-10" />
+              <Plus size={12} strokeWidth={3.5} className="pointer-events-none" />
             </div>
 
             {/* XP Star button (top left) */}
-            <div className={`absolute -top-[2px] -left-[2px] w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-b from-[#ffe066] via-[#f59e0b] to-[#d97706] border-[2px] border-yellow-100 rounded-full flex items-center justify-center text-white shadow-md shadow-amber-600/40 z-10 select-none overflow-hidden before:absolute before:inset-0 before:rounded-full before:shadow-[inset_0_2px_4px_rgba(255,255,255,0.7)] before:pointer-events-none transition-all duration-300 ${
+            <div className={`absolute -top-[2px] -left-[2px] w-7 h-7 sm:w-8 sm:h-8 bg-[#f59e0b] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
               isMoreOpen && !isEditingHud ? 'scale-75 -top-[4px] -left-[4px]' : 'scale-100'
             }`}>
-              <Star size={18} className="fill-white text-white pointer-events-none drop-shadow-xs relative z-10" />
-              <span className="absolute text-amber-800 font-black text-[7.5px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
+              <Star size={16} className="fill-white text-white pointer-events-none" />
+              <span className="absolute text-amber-900 font-black text-[7.5px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
             </div>
 
             {/* Boost Zap button (bottom left) */}
-            <div className={`absolute -bottom-[2px] -left-[2px] w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-b from-[#38bdf8] via-[#0284c7] to-[#0369a1] border-[2px] border-cyan-100 rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-md shadow-sky-600/40 z-10 select-none overflow-hidden before:absolute before:inset-0 before:rounded-full before:shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] before:pointer-events-none transition-all duration-300 ${
+            <div className={`absolute -bottom-[2px] -left-[2px] w-7 h-7 sm:w-8 sm:h-8 bg-[#0ea5e9] border-2 border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
               isMoreOpen && !isEditingHud ? 'scale-75 -bottom-[4px] -left-[4px]' : 'scale-100'
             }`}>
-              <Zap size={11} className="fill-white pointer-events-none drop-shadow-xs relative z-10" />
-              <span className="text-white font-black text-[7px] leading-none mt-0.5 pointer-events-none tracking-wide drop-shadow-xs relative z-10">BST</span>
+              <Zap size={11} className="fill-white pointer-events-none" />
+              <span className="text-white font-black text-[7px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
             </div>
           </TouchSafeButton>,
           'pointer-events-auto'
@@ -602,7 +605,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         {/* NICKNAME BAR */}
         {renderEditableItem(
           'nickname',
-          <div className="w-full max-w-[250px] sm:max-w-[280px] mx-auto bg-white/90 backdrop-blur-md border-[1.5px] border-slate-300/90 rounded-2xl shadow-[inset_0_2px_4px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.03)] text-center transition-all duration-300 ease-out focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-400/25 mt-1 px-3.5 py-1.5 pointer-events-auto">
+          <div className="w-full max-w-[250px] sm:max-w-[280px] mx-auto bg-white border-2 border-slate-300 rounded-xl shadow-xs text-center transition-all duration-300 ease-out focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 mt-1 px-3.5 py-1.5 pointer-events-auto">
             <input 
               type="text" 
               placeholder="Nickname" 
@@ -617,16 +620,18 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
 
         {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER - Centered directly under nickname bar */}
         <div className="w-full mt-2.5 sm:mt-3 flex flex-col items-center pointer-events-auto">
-          {/* Action Buttons Row - Equal sized 3-column landscape grid matching Agar.io */}
+          {/* Action Buttons Row - Equal sized 3-column landscape grid matching Agar.io / Sarok.io */}
           <div className="grid grid-cols-3 gap-2.5 sm:gap-3 w-full max-w-[430px] sm:max-w-[470px] md:max-w-[490px] mx-auto pointer-events-auto">
             {/* SPECTATE BUTTON */}
             {renderEditableItem(
               'spectate',
-              <TouchSafeButton className="w-full h-[62px] sm:h-[70px] md:h-[74px] bg-gradient-to-b from-[#ff3b5c] via-[#e6194b] to-[#c70d3a] border-t border-white/40 border-b-[4px] border-[#8a0624] rounded-2xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-lg shadow-rose-950/20 select-none hud-tap pointer-events-auto active:translate-y-0.5 active:border-b-2 hover:brightness-105 transition-all">
-                <Eye className="w-6 h-6 sm:w-7 sm:h-7 text-white mb-0.5 pointer-events-none drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.45)]" />
-                <span className="font-black text-xs sm:text-sm tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
-                  SPECTATE
-                </span>
+              <TouchSafeButton className="w-full h-[62px] sm:h-[70px] md:h-[74px] flex items-center justify-center select-none hud-tap pointer-events-auto">
+                <img
+                  src={spectateBtnImg}
+                  alt="Spectate"
+                  className="w-full h-full object-contain pointer-events-none select-none"
+                  draggable={false}
+                />
               </TouchSafeButton>,
               'w-full flex pointer-events-auto'
             )}
@@ -636,12 +641,14 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'play',
               <TouchSafeButton 
                 onClick={() => onPlay('classic')}
-                className="w-full h-[62px] sm:h-[70px] md:h-[74px] bg-gradient-to-b from-[#00f279] via-[#00c853] to-[#009624] border-t border-white/50 border-b-[4px] border-[#00600f] rounded-2xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-lg shadow-emerald-950/25 select-none hud-tap pointer-events-auto active:translate-y-0.5 active:border-b-2 hover:brightness-105 transition-all"
+                className="w-full h-[62px] sm:h-[70px] md:h-[74px] flex items-center justify-center select-none hud-tap pointer-events-auto"
               >
-                <Gamepad2 className="w-6 h-6 sm:w-7 sm:h-7 text-white mb-0.5 pointer-events-none drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.45)]" />
-                <span className="font-black text-xs sm:text-sm tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
-                  PLAY
-                </span>
+                <img
+                  src={playBtnImg}
+                  alt="Play"
+                  className="w-full h-full object-contain pointer-events-none select-none"
+                  draggable={false}
+                />
               </TouchSafeButton>,
               'w-full flex pointer-events-auto'
             )}
@@ -651,16 +658,14 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'more',
               <TouchSafeButton 
                 onClick={() => setIsMoreOpen(prev => !prev)}
-                className={`w-full h-[62px] sm:h-[70px] md:h-[74px] bg-gradient-to-b ${
-                  isMoreOpen 
-                    ? 'from-[#1e69ff] via-[#1554d6] to-[#0f3ea8] border-b-[4px] border-[#092975] ring-2 ring-cyan-300 shadow-blue-900/40' 
-                    : 'from-[#3b82f6] via-[#1d4ed8] to-[#1e40af] border-b-[4px] border-[#172554] shadow-blue-900/25'
-                } border-t border-white/40 rounded-2xl px-1 sm:px-2 flex flex-col items-center justify-center text-white shadow-lg select-none hud-tap pointer-events-auto active:translate-y-0.5 active:border-b-2 hover:brightness-105 transition-all`}
+                className="w-full h-[62px] sm:h-[70px] md:h-[74px] flex items-center justify-center select-none hud-tap pointer-events-auto"
               >
-                <MoreHorizontal className="w-6 h-6 sm:w-7 sm:h-7 text-white mb-0.5 pointer-events-none drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.45)]" />
-                <span className="font-black text-xs sm:text-sm tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
-                  MORE
-                </span>
+                <img
+                  src={moreBtnImg}
+                  alt="More"
+                  className="w-full h-full object-contain pointer-events-none select-none"
+                  draggable={false}
+                />
               </TouchSafeButton>,
               'w-full flex pointer-events-auto'
             )}
@@ -698,10 +703,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   {/* 1. BOTS: Private server, bots only, no friends */}
                   <TouchSafeButton
                     onClick={() => onPlay('bots')}
-                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#00f2fe] via-[#02b8d4] to-[#0093a8] border-t border-white/40 border-b-[3px] border-[#00606e] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-cyan-950/20 select-none hud-tap active:translate-y-0.5 active:border-b-1 hover:brightness-105"
+                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#06b6d4] to-[#0891b2] border border-[#0e7490] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
                   >
-                    <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
-                    <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]">
+                    <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none" />
+                    <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none">
                       BOTS
                     </span>
                   </TouchSafeButton>
@@ -709,10 +714,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   {/* 2. INSTANT MERGE: Fast recombine, exclusive mode */}
                   <TouchSafeButton
                     onClick={() => onPlay('instantMerge')}
-                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#ff9f43] via-[#ff5e57] to-[#ee5253] border-t border-white/40 border-b-[3px] border-[#b32b26] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-red-950/20 select-none hud-tap active:translate-y-0.5 active:border-b-1 hover:brightness-105"
+                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#f97316] to-[#ea580c] border border-[#c2410c] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
                   >
-                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white mb-0.5 pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
-                    <span className="font-black text-[8.5px] sm:text-[10px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]">
+                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white mb-0.5 pointer-events-none" />
+                    <span className="font-black text-[8.5px] sm:text-[10px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                       INSTANT MERGE
                     </span>
                   </TouchSafeButton>
@@ -723,10 +728,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                       setIsMoreOpen(false);
                       setIsEditingHud(true);
                     }}
-                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#a55eea] via-[#8854d0] to-[#575fcf] border-t border-white/40 border-b-[3px] border-[#3b3b98] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-md shadow-purple-950/20 select-none hud-tap active:translate-y-0.5 active:border-b-1 hover:brightness-105"
+                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
                   >
-                    <Sliders className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
-                    <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]">
+                    <Sliders className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none" />
+                    <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                       EDIT HUD
                     </span>
                   </TouchSafeButton>
@@ -744,9 +749,9 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         'shop',
         <TouchSafeButton 
           id="shop-cart-button" 
-          className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-b from-[#ff3b5c] via-[#e6194b] to-[#c70d3a] border-t border-white/40 border-b-[4px] border-[#8a0624] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-rose-950/25 select-none hud-tap pointer-events-auto active:translate-y-0.5 active:border-b-2 hover:brightness-105 transition-all"
+          className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-b from-[#ef4444] to-[#dc2626] border border-[#b91c1c] rounded-2xl flex items-center justify-center text-white shadow-sm shadow-red-500/20 select-none hud-tap pointer-events-auto"
         >
-          <ShoppingCart size={28} className="pointer-events-none text-white drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.45)]" />
+          <ShoppingCart size={28} className="pointer-events-none text-white" />
         </TouchSafeButton>,
         'absolute pointer-events-auto z-10 select-none',
         { 
@@ -768,13 +773,13 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         {/* COINS */}
         {renderEditableItem(
           'coins',
-          <div draggable={false} onDragStart={(e) => e.preventDefault()} className="bg-gradient-to-b from-white via-slate-50 to-slate-100 border border-slate-200/90 rounded-full flex items-center p-1 pr-3 sm:pr-4 shadow-sm shadow-slate-300/40 min-w-[130px] sm:min-w-[145px] pointer-events-auto">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 rounded-full flex items-center justify-center border border-yellow-200 shadow-sm shadow-amber-500/30 mr-2 pointer-events-none">
-              <Coins size={15} className="text-yellow-950 pointer-events-none drop-shadow-xs" />
+          <div draggable={false} onDragStart={(e) => e.preventDefault()} className="bg-white border-2 border-slate-200 rounded-full flex items-center p-1 pr-3 sm:pr-4 shadow-xs min-w-[130px] sm:min-w-[145px] pointer-events-auto">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#f59e0b] rounded-full flex items-center justify-center mr-2 pointer-events-none">
+              <Coins size={15} className="text-white pointer-events-none" />
             </div>
             <span className="text-slate-800 font-black flex-1 text-center pointer-events-none text-sm sm:text-base tabular-nums">613</span>
-            <TouchSafeButton className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-b from-[#00f279] to-[#00a844] border-t border-white/40 border-b-2 border-[#00600f] rounded-full flex items-center justify-center text-white shadow-sm shadow-green-600/30 ml-1.5 select-none hud-tap active:scale-95">
-              <Plus size={13} strokeWidth={3.5} className="pointer-events-none drop-shadow-xs" />
+            <TouchSafeButton className="w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] rounded-full flex items-center justify-center text-white shadow-xs ml-1.5 select-none hud-tap">
+              <Plus size={13} strokeWidth={3.5} className="pointer-events-none" />
             </TouchSafeButton>
           </div>,
           'pointer-events-auto'
@@ -783,13 +788,13 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         {/* CASH */}
         {renderEditableItem(
           'cash',
-          <div draggable={false} onDragStart={(e) => e.preventDefault()} className="bg-gradient-to-b from-white via-slate-50 to-slate-100 border border-slate-200/90 rounded-full flex items-center p-1 pr-3 sm:pr-4 shadow-sm shadow-slate-300/40 min-w-[130px] sm:min-w-[145px] pointer-events-auto">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-emerald-300 via-emerald-500 to-teal-600 rounded-full flex items-center justify-center border border-emerald-200 shadow-sm shadow-emerald-500/30 mr-2 pointer-events-none">
-              <Banknote size={15} className="text-white pointer-events-none drop-shadow-xs" />
+          <div draggable={false} onDragStart={(e) => e.preventDefault()} className="bg-white border-2 border-slate-200 rounded-full flex items-center p-1 pr-3 sm:pr-4 shadow-xs min-w-[130px] sm:min-w-[145px] pointer-events-auto">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#10b981] rounded-full flex items-center justify-center mr-2 pointer-events-none">
+              <Banknote size={15} className="text-white pointer-events-none" />
             </div>
             <span className="text-slate-800 font-black flex-1 text-center pointer-events-none text-sm sm:text-base tabular-nums">15</span>
-            <TouchSafeButton className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-b from-[#00f279] to-[#00a844] border-t border-white/40 border-b-2 border-[#00600f] rounded-full flex items-center justify-center text-white shadow-sm shadow-green-600/30 ml-1.5 select-none hud-tap active:scale-95">
-              <Plus size={13} strokeWidth={3.5} className="pointer-events-none drop-shadow-xs" />
+            <TouchSafeButton className="w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] rounded-full flex items-center justify-center text-white shadow-xs ml-1.5 select-none hud-tap">
+              <Plus size={13} strokeWidth={3.5} className="pointer-events-none" />
             </TouchSafeButton>
           </div>,
           'pointer-events-auto'
@@ -800,10 +805,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           'season',
           <TouchSafeButton 
             onClick={isEditingHud ? undefined : onSeason}
-            className="bg-gradient-to-b from-[#fcd34d] via-[#f59e0b] to-[#d97706] border-t border-white/50 border-b-[3.5px] border-[#92400e] rounded-full py-1.5 sm:py-2 px-6 sm:px-8 flex items-center gap-2 shadow-lg shadow-amber-900/20 mt-0.5 select-none pointer-events-auto hud-tap active:translate-y-0.5 active:border-b-2 hover:brightness-105 transition-all"
+            className="bg-gradient-to-b from-[#f59e0b] to-[#d97706] border border-[#b45309] rounded-full py-1.5 sm:py-2 px-6 sm:px-8 flex items-center gap-2 shadow-xs mt-0.5 select-none pointer-events-auto hud-tap text-white"
           >
-            <Crown size={18} className="text-white fill-white pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]" />
-            <span className="text-white font-black tracking-wider uppercase text-xs sm:text-sm pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">Season</span>
+            <Crown size={18} className="text-white fill-white pointer-events-none" />
+            <span className="text-white font-black tracking-wider uppercase text-xs sm:text-sm pointer-events-none">Season</span>
           </TouchSafeButton>,
           'pointer-events-auto'
         )}
@@ -825,10 +830,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           <TouchSafeButton 
             id="settings-button" 
             onClick={isEditingHud ? undefined : onSettings}
-            className="w-[74px] sm:w-[82px] h-[50px] sm:h-14 bg-gradient-to-b from-[#64748b] via-[#475569] to-[#334155] border-t border-white/30 border-b-[3.5px] border-[#1e293b] rounded-xl flex flex-col items-center justify-center text-white shadow-md shadow-slate-900/20 select-none hud-tap pointer-events-auto active:translate-y-0.5 active:border-b-2 hover:brightness-105 transition-all"
+            className="w-[74px] sm:w-[82px] h-[50px] sm:h-14 bg-gradient-to-b from-[#64748b] to-[#475569] border border-[#334155] rounded-xl flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap pointer-events-auto"
           >
-            <Settings size={20} className="pointer-events-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] mb-0.5" />
-            <span className="text-[9.5px] sm:text-[10.5px] font-black tracking-wider text-white uppercase pointer-events-none leading-none drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)] whitespace-nowrap">
+            <Settings size={20} className="pointer-events-none text-white mb-0.5" />
+            <span className="text-[9.5px] sm:text-[10.5px] font-black tracking-wider text-white uppercase pointer-events-none leading-none whitespace-nowrap">
               SETTINGS
             </span>
           </TouchSafeButton>,
@@ -841,10 +846,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           <TouchSafeButton 
             id="party-button"
             onClick={() => {}}
-            className="w-[50px] sm:w-14 h-[50px] sm:h-14 bg-gradient-to-b from-[#8b5cf6] via-[#7c3aed] to-[#6d28d9] border-t border-white/30 border-b-[3.5px] border-[#4c1d95] rounded-xl flex flex-col items-center justify-center text-white shadow-md shadow-purple-950/20 select-none hud-tap pointer-events-auto active:translate-y-0.5 active:border-b-2 hover:brightness-105 transition-all"
+            className="w-[50px] sm:w-14 h-[50px] sm:h-14 bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap pointer-events-auto"
           >
-            <User size={20} className="pointer-events-none text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] mb-0.5" />
-            <span className="text-[9.5px] sm:text-[10.5px] font-black tracking-wider text-white uppercase pointer-events-none leading-none drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)] whitespace-nowrap">
+            <User size={20} className="pointer-events-none text-white mb-0.5" />
+            <span className="text-[9.5px] sm:text-[10.5px] font-black tracking-wider text-white uppercase pointer-events-none leading-none whitespace-nowrap">
               PARTY
             </span>
           </TouchSafeButton>,
@@ -858,7 +863,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
       {renderEditableItem(
         'levelStar',
         <TouchSafeButton className="relative flex items-center justify-center hud-tap pointer-events-auto">
-          <div className="relative flex items-center justify-center filter drop-shadow-xl pointer-events-none">
+          <div className="relative flex items-center justify-center pointer-events-none">
             <Star 
               size={76} 
               strokeWidth={starStyle.isOutlineOnly ? 2 : 1.5} 
@@ -870,7 +875,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               className="pointer-events-none" 
             />
             <span 
-              className="absolute inset-0 flex items-center justify-center font-black text-2xl pt-1 pointer-events-none drop-shadow-md"
+              className="absolute inset-0 flex items-center justify-center font-black text-2xl pt-1 pointer-events-none"
               style={{ 
                 color: starStyle.text,
                 transition: 'color 1.5s ease-in-out'
@@ -883,7 +888,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         'absolute pointer-events-auto z-10 select-none flex items-center justify-center',
         { 
           bottom: 'max(1rem, env(safe-area-inset-bottom))', 
-          right: 'max(1.5rem, env(safe-area-inset-right))' 
+          right: 'max(1rem, env(safe-area-inset-right))' 
         }
       )}
 

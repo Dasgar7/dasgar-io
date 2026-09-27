@@ -89,19 +89,20 @@ img, svg, svg * {
 /* ==========================================================================
    Smooth Tap & Click Interaction (Sarok.io style)
    Zero jumping, zero scaling, zero positional movement.
-   Crisp brightness tap feedback + smooth touch ripple show.
+   Smooth opacity/brightness feedback only.
    ========================================================================== */
 .hud-tap {
   transform: none !important;
-  transition: filter 0.12s ease, opacity 0.12s ease;
+  transition: opacity 0.12s ease, filter 0.12s ease;
   -webkit-tap-highlight-color: transparent !important;
 }
 
 .hud-tap:active,
 .hud-tap[data-pressed="true"] {
   transform: none !important;
-  filter: brightness(0.85) contrast(1.05) !important;
-  transition: filter 0.04s ease !important;
+  opacity: 0.9 !important;
+  filter: brightness(0.93) !important;
+  transition: opacity 0.05s ease, filter 0.05s ease !important;
 }
 
 /* ==========================================================================
