@@ -302,17 +302,20 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
       return null;
     }
 
-    const itemTransform = `translate3d(${config.x}px, ${config.y}px, 0) scale(${config.scale})`;
+    const hasCustomTransform = config.x !== 0 || config.y !== 0 || config.scale !== 1;
+    const itemTransform = hasCustomTransform
+      ? `translate3d(${config.x}px, ${config.y}px, 0) scale(${config.scale})`
+      : '';
     const combinedTransform = baseWrapperStyle.transform 
-      ? `${baseWrapperStyle.transform} ${itemTransform}`
-      : itemTransform;
+      ? (itemTransform ? `${baseWrapperStyle.transform} ${itemTransform}` : baseWrapperStyle.transform)
+      : (itemTransform || undefined);
 
     if (!isEditingHud) {
       return (
         <div
           style={{
             ...baseWrapperStyle,
-            transform: combinedTransform,
+            ...(combinedTransform ? { transform: combinedTransform } : {}),
           }}
           className={baseWrapperClass}
         >
@@ -519,117 +522,123 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
 
       {/* ========================================================================= */}
       {/* 1. CENTER CONSOLE: LOGO, AVATAR, NICKNAME BAR, ACTIONS & DRAWER           */}
+      {/*    Anchored at screen center so Spectate/Play/More always stay centered   */}
+      {/*    even when the Skin (Avatar) button is larger or scaled up.             */}
       {/* ========================================================================= */}
       <div 
-        className={`absolute left-1/2 -translate-x-1/2 flex flex-col items-center z-20 w-full max-w-[460px] sm:max-w-[500px] md:max-w-[540px] px-2 pointer-events-none transition-all duration-300 ease-out ${
+        className={`absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[460px] sm:max-w-[520px] md:max-w-[560px] px-2 pointer-events-none transition-all duration-300 ease-out ${
           isMoreOpen && !isEditingHud 
-            ? 'top-1 sm:top-2 -translate-y-1 sm:-translate-y-2' 
-            : 'top-1 sm:top-2 translate-y-0'
+            ? 'top-[50%] sm:top-[52%]' 
+            : 'top-[53%] sm:top-[55%]'
         }`}
       >
-        {/* LOGO */}
-        {renderEditableItem(
-          'logo',
-          <h1 className={`font-black tracking-wide mb-0.5 pointer-events-auto transition-all duration-300 ease-out ${
-            isMoreOpen && !isEditingHud ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'
-          }`}>
-            <span className="text-slate-800">Dasgar</span>
-            <span className="text-[#22c55e]">.io</span>
-          </h1>,
-          'pointer-events-auto'
-        )}
-
-        {/* AVATAR + BADGES */}
-        {renderEditableItem(
-          'avatar',
-          <TouchSafeButton 
-            className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-0.5"
-            onClick={isEditingHud ? undefined : onSkins}
-          >
-            <div className={`rounded-full bg-slate-200 border-4 border-[#22c55e] shadow-sm flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out ${
-              isMoreOpen && !isEditingHud ? 'w-16 h-16 sm:w-18 sm:h-18' : 'w-20 h-20 sm:w-22 sm:h-22'
+        {/* UPPER STACK (LOGO + BIGGER SKIN BUTTON + NICKNAME) - Grows upward above center */}
+        <div className="absolute bottom-full left-0 right-0 pb-1.5 sm:pb-2 flex flex-col items-center pointer-events-none">
+          {/* LOGO */}
+          {renderEditableItem(
+            'logo',
+            <h1 className={`font-black tracking-wide mb-0.5 pointer-events-auto transition-all duration-300 ease-out ${
+              isMoreOpen && !isEditingHud ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'
             }`}>
-              {equippedSkinSvg ? (
-                <img 
-                  src={equippedSkinSvg} 
-                  alt="Equipped Skin" 
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    const skinId = localStorage.getItem('dasgario_equipped_skin');
-                    const target = e.currentTarget;
-                    if (skinId === 'rank-1' && target.src !== '/skins/rank1-pig.png') {
-                      target.src = '/skins/rank1-pig.png';
-                    } else if (skinId === 'rank-7' && target.src !== '/skins/rank7-spider.png') {
-                      target.src = '/skins/rank7-spider.png';
-                    } else if (skinId === 'rank-15' && target.src !== '/skins/rank15-cat.png') {
-                      target.src = '/skins/rank15-cat.png';
-                    } else if (skinId === 'rank-23' && target.src !== '/skins/rank23-dragon.png') {
-                      target.src = '/skins/rank23-dragon.png';
-                    } else if (skinId === 'rank-27' && target.src !== '/skins/rank27-shark.png') {
-                      target.src = '/skins/rank27-shark.png';
-                    } else if (skinId === 'rank-35' && target.src !== '/skins/rank35-fox.png') {
-                      target.src = '/skins/rank35-fox.png';
-                    }
-                  }}
-                  className="w-full h-full object-cover pointer-events-none" 
-                />
-              ) : null}
-            </div>
-            
-            {/* Plus button (top right) */}
-            <div className={`absolute top-[2px] right-[2px] w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
-              isMoreOpen && !isEditingHud ? 'scale-75' : 'scale-100'
-            }`}>
-              <Plus size={12} strokeWidth={3.5} className="pointer-events-none" />
-            </div>
+              <span className="text-slate-800">Dasgar</span>
+              <span className="text-[#22c55e]">.io</span>
+            </h1>,
+            'pointer-events-auto'
+          )}
 
-            {/* XP Star button (top left) */}
-            <div className={`absolute -top-[2px] -left-[2px] w-7 h-7 sm:w-8 sm:h-8 bg-[#f59e0b] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
-              isMoreOpen && !isEditingHud ? 'scale-75 -top-[4px] -left-[4px]' : 'scale-100'
-            }`}>
-              <Star size={16} className="fill-white text-white pointer-events-none" />
-              <span className="absolute text-amber-900 font-black text-[7.5px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
-            </div>
+          {/* AVATAR (SKIN BUTTON) + BADGES - Larger size without pushing action buttons down */}
+          {renderEditableItem(
+            'avatar',
+            <TouchSafeButton 
+              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-1"
+              onClick={isEditingHud ? undefined : onSkins}
+            >
+              <div className={`rounded-full bg-slate-200 border-4 border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out ${
+                isMoreOpen && !isEditingHud ? 'w-20 h-20 sm:w-24 sm:h-24' : 'w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32'
+              }`}>
+                {equippedSkinSvg ? (
+                  <img 
+                    src={equippedSkinSvg} 
+                    alt="Equipped Skin" 
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const skinId = localStorage.getItem('dasgario_equipped_skin');
+                      const target = e.currentTarget;
+                      if (skinId === 'rank-1' && target.src !== '/skins/rank1-pig.png') {
+                        target.src = '/skins/rank1-pig.png';
+                      } else if (skinId === 'rank-7' && target.src !== '/skins/rank7-spider.png') {
+                        target.src = '/skins/rank7-spider.png';
+                      } else if (skinId === 'rank-15' && target.src !== '/skins/rank15-cat.png') {
+                        target.src = '/skins/rank15-cat.png';
+                      } else if (skinId === 'rank-23' && target.src !== '/skins/rank23-dragon.png') {
+                        target.src = '/skins/rank23-dragon.png';
+                      } else if (skinId === 'rank-27' && target.src !== '/skins/rank27-shark.png') {
+                        target.src = '/skins/rank27-shark.png';
+                      } else if (skinId === 'rank-35' && target.src !== '/skins/rank35-fox.png') {
+                        target.src = '/skins/rank35-fox.png';
+                      }
+                    }}
+                    className="w-full h-full object-cover pointer-events-none" 
+                  />
+                ) : null}
+              </div>
+              
+              {/* Plus button (top right) */}
+              <div className={`absolute top-[2px] right-[2px] w-6 h-6 sm:w-7 sm:h-7 bg-[#22c55e] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
+                isMoreOpen && !isEditingHud ? 'scale-85' : 'scale-100'
+              }`}>
+                <Plus size={14} strokeWidth={3.5} className="pointer-events-none" />
+              </div>
 
-            {/* Boost Zap button (bottom left) */}
-            <div className={`absolute -bottom-[2px] -left-[2px] w-7 h-7 sm:w-8 sm:h-8 bg-[#0ea5e9] border-2 border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
-              isMoreOpen && !isEditingHud ? 'scale-75 -bottom-[4px] -left-[4px]' : 'scale-100'
-            }`}>
-              <Zap size={11} className="fill-white pointer-events-none" />
-              <span className="text-white font-black text-[7px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
-            </div>
-          </TouchSafeButton>,
-          'pointer-events-auto'
-        )}
+              {/* XP Star button (top left) */}
+              <div className={`absolute -top-[2px] -left-[2px] w-8 h-8 sm:w-9 sm:h-9 bg-[#f59e0b] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
+                isMoreOpen && !isEditingHud ? 'scale-85 -top-[4px] -left-[4px]' : 'scale-100'
+              }`}>
+                <Star size={18} className="fill-white text-white pointer-events-none" />
+                <span className="absolute text-amber-900 font-black text-[8px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
+              </div>
 
-        {/* NICKNAME BAR */}
-        {renderEditableItem(
-          'nickname',
-          <div className="w-full max-w-[250px] sm:max-w-[280px] mx-auto bg-white border-2 border-slate-300 rounded-xl shadow-xs text-center transition-all duration-300 ease-out focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 mt-1 px-3.5 py-1.5 pointer-events-auto">
-            <input 
-              type="text" 
-              placeholder="Nickname" 
-              value={nickname}
-              onChange={(e) => handleNicknameChange(e.target.value)}
-              className="w-full bg-transparent outline-none text-center text-slate-800 font-bold placeholder-slate-400 text-sm sm:text-base"
-              maxLength={15}
-            />
-          </div>,
-          'w-full flex justify-center pointer-events-auto'
-        )}
+              {/* Boost Zap button (bottom left) */}
+              <div className={`absolute -bottom-[2px] -left-[2px] w-8 h-8 sm:w-9 sm:h-9 bg-[#0ea5e9] border-2 border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
+                isMoreOpen && !isEditingHud ? 'scale-85 -bottom-[4px] -left-[4px]' : 'scale-100'
+              }`}>
+                <Zap size={12} className="fill-white pointer-events-none" />
+                <span className="text-white font-black text-[7.5px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
+              </div>
+            </TouchSafeButton>,
+            'pointer-events-auto'
+          )}
 
-        {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER - Centered directly under nickname bar */}
-        <div className="w-full mt-2.5 sm:mt-3 flex flex-col items-center pointer-events-auto">
-          {/* Action Buttons Row - Equal sized 3-column landscape grid matching Agar.io / Sarok.io */}
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 w-full max-w-[430px] sm:max-w-[470px] md:max-w-[490px] mx-auto pointer-events-auto">
+          {/* NICKNAME BAR */}
+          {renderEditableItem(
+            'nickname',
+            <div className="w-full max-w-[260px] sm:max-w-[290px] mx-auto bg-white border-2 border-slate-300 rounded-xl shadow-xs text-center transition-all duration-300 ease-out focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 mt-1 px-3.5 py-1.5 pointer-events-auto">
+              <input 
+                type="text" 
+                placeholder="Nickname" 
+                value={nickname}
+                onChange={(e) => handleNicknameChange(e.target.value)}
+                className="w-full bg-transparent outline-none text-center text-slate-800 font-bold placeholder-slate-400 text-sm sm:text-base"
+                maxLength={15}
+              />
+            </div>,
+            'w-full flex justify-center pointer-events-auto'
+          )}
+        </div>
+
+        {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER - Locked at center of screen */}
+        <div className="w-full flex flex-col items-center pointer-events-auto">
+          {/* Action Buttons Row - Larger & closer together like Agar.io / Sarok.io */}
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full max-w-[440px] sm:max-w-[500px] md:max-w-[540px] mx-auto pointer-events-auto">
             {/* SPECTATE BUTTON */}
             {renderEditableItem(
               'spectate',
-              <TouchSafeButton className="w-full h-[62px] sm:h-[70px] md:h-[74px] flex items-center justify-center select-none hud-tap pointer-events-auto">
+              <TouchSafeButton className="w-full h-[84px] sm:h-[96px] md:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto">
                 <img
                   src={spectateBtnImg}
                   alt="Spectate"
-                  className="w-full h-full object-contain pointer-events-none select-none"
+                  style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
                   draggable={false}
                 />
               </TouchSafeButton>,
@@ -641,12 +650,13 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'play',
               <TouchSafeButton 
                 onClick={() => onPlay('classic')}
-                className="w-full h-[62px] sm:h-[70px] md:h-[74px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                className="w-full h-[84px] sm:h-[96px] md:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
               >
                 <img
                   src={playBtnImg}
                   alt="Play"
-                  className="w-full h-full object-contain pointer-events-none select-none"
+                  style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
                   draggable={false}
                 />
               </TouchSafeButton>,
@@ -658,12 +668,13 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'more',
               <TouchSafeButton 
                 onClick={() => setIsMoreOpen(prev => !prev)}
-                className="w-full h-[62px] sm:h-[70px] md:h-[74px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                className="w-full h-[84px] sm:h-[96px] md:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
               >
                 <img
                   src={moreBtnImg}
                   alt="More"
-                  className="w-full h-full object-contain pointer-events-none select-none"
+                  style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
                   draggable={false}
                 />
               </TouchSafeButton>,
@@ -699,7 +710,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 }}
                 className="pointer-events-auto w-full overflow-hidden select-none"
               >
-                <div className="grid grid-cols-3 gap-2.5 sm:gap-3 w-full max-w-[430px] sm:max-w-[470px] md:max-w-[490px] mx-auto pt-2 pb-0.5">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full max-w-[440px] sm:max-w-[500px] md:max-w-[540px] mx-auto pt-2 pb-0.5">
                   {/* 1. BOTS: Private server, bots only, no friends */}
                   <TouchSafeButton
                     onClick={() => onPlay('bots')}
