@@ -528,33 +528,33 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
       <div 
         className={`absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[460px] sm:max-w-[520px] md:max-w-[560px] px-2 pointer-events-none transition-all duration-300 ease-out ${
           isMoreOpen && !isEditingHud 
-            ? 'top-[50%] sm:top-[52%]' 
-            : 'top-[53%] sm:top-[55%]'
+            ? 'top-[52%] sm:top-[54%]' 
+            : 'top-[56%] sm:top-[58%]'
         }`}
       >
         {/* UPPER STACK (LOGO + BIGGER SKIN BUTTON + NICKNAME) - Grows upward above center */}
-        <div className="absolute bottom-full left-0 right-0 pb-1.5 sm:pb-2 flex flex-col items-center pointer-events-none">
+        <div className="absolute bottom-full left-0 right-0 pb-1 sm:pb-1.5 flex flex-col items-center pointer-events-none">
           {/* LOGO */}
           {renderEditableItem(
             'logo',
-            <h1 className={`font-black tracking-wide mb-0.5 pointer-events-auto transition-all duration-300 ease-out ${
+            <h1 className={`font-black tracking-wide leading-none translate-y-1 sm:translate-y-1.5 mb-0.5 pointer-events-auto transition-all duration-300 ease-out ${
               isMoreOpen && !isEditingHud ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'
             }`}>
               <span className="text-slate-800">Dasgar</span>
               <span className="text-[#22c55e]">.io</span>
             </h1>,
-            'pointer-events-auto'
+            'pointer-events-auto z-10'
           )}
 
           {/* AVATAR (SKIN BUTTON) + BADGES - Larger size without pushing action buttons down */}
           {renderEditableItem(
             'avatar',
             <TouchSafeButton 
-              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-1"
+              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-0.5"
               onClick={isEditingHud ? undefined : onSkins}
             >
               <div className={`rounded-full bg-slate-200 border-4 border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out ${
-                isMoreOpen && !isEditingHud ? 'w-20 h-20 sm:w-24 sm:h-24' : 'w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32'
+                isMoreOpen && !isEditingHud ? 'w-20 h-20 sm:w-22 sm:h-22' : 'w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32'
               }`}>
                 {equippedSkinSvg ? (
                   <img 

@@ -11,8 +11,8 @@ interface GameScreenProps {
 // Game Constants
 const MAP_SIZE = 3000;
 const INITIAL_RADIUS = 20;
-const BASE_PLAYER_SPEED = 3.3;
-const SPEED_SCALE = 0.44;
+const BASE_PLAYER_SPEED = 2.4;
+const SPEED_SCALE = 0.439;
 const DEBUG_FORCE_PHONE_ZOOM = false;
 const DEBUG_PLAYER_SPAWN_SCORE: number | null = null;
 const PLAYER_START_RADIUS = DEBUG_PLAYER_SPAWN_SCORE != null
@@ -50,6 +50,8 @@ type PlayerCell = {
   renderY?: number;
   renderRadius?: number;
   phaseOffset?: number;
+  ignoreParentId?: string;
+  ignoreParentUntil?: number;
 };
 type BotPlayer = Circle & {
   targetX: number;
@@ -110,6 +112,14 @@ const PBTN_EDGE_B = `max(14px, env(safe-area-inset-bottom))`;
 
 const MACRO_FEED_INTERVAL = 85; // ms between feeds when macro is held (default ~12/s)
 
+// Fixed bottom-left joystick metrics (Sarok.io style)
+const getJoystickBase = (width: number, height: number) => {
+  const isLandscape = width > height;
+  const baseX = isLandscape ? Math.max(90, Math.min(130, width * 0.12)) : Math.max(75, Math.min(110, width * 0.2));
+  const baseY = isLandscape ? height - Math.max(85, Math.min(125, height * 0.24)) : height - Math.max(90, Math.min(140, height * 0.16));
+  return { x: baseX, y: baseY };
+};
+
 export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -168,6 +178,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const isPhoneRef = useRef<boolean>(checkIsTouchDevice());
   const [isTouchDevice, setIsTouchDevice] = useState<boolean>(() => checkIsTouchDevice());
   const zoomRef = useRef<number>(1.0);
+  const physicsAccumulatorRef = useRef<number>(0);
 
   const autoGatherRef = useRef(false);
 
@@ -575,10 +586,16 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         cell.radius = newRadius;
         cell.splitTime = now;
 
-        // Authentic Agar.io split launch burst
+        // Authentic Agar.io / Sarok.io Mobile split launch burst & parent recoil
         const burstSpeed = 24;
-        const spawnX = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.x + dirX * (newRadius * 0.75)));
-        const spawnY = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.y + dirY * (newRadius * 0.75)));
+        const spawnX = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.x + dirX * (cell.radius * 0.85)));
+        const spawnY = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.y + dirY * (cell.radius * 0.85)));
+
+        // Parent recoil: smooth physical kickback
+        cell.vx = -dirX * 2.2;
+        cell.vy = -dirY * 2.2;
+        cell.moveVx = 0;
+        cell.moveVy = 0;
 
         newCells.push({
           id: generateId(),
@@ -589,11 +606,13 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           renderRadius: newRadius,
           vx: dirX * burstSpeed,
           vy: dirY * burstSpeed,
-          moveVx: dirX * 1.5,
-          moveVy: dirY * 1.5,
+          moveVx: dirX * 2.0,
+          moveVy: dirY * 2.0,
           radius: newRadius,
           splitTime: now,
-          phaseOffset: Math.random() * Math.PI * 2
+          phaseOffset: Math.random() * Math.PI * 2,
+          ignoreParentId: cell.id,
+          ignoreParentUntil: now + 140
         });
       }
     });
@@ -1057,7 +1076,23 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const inputMag = Math.hypot(inputRef.current.dirX, inputRef.current.dirY);
       if (inputMag <= 0.02) return;
 
-      const { centerX: clusterCenterX, centerY: clusterCenterY, maxRadius } = playerGroupRef.current;
+      let clusterCenterX = 0, clusterCenterY = 0, totalArea = 0, maxRadius = 0;
+      for (let i = 0; i < cells.length; i++) {
+        const c = cells[i];
+        const r = c.renderRadius ?? c.radius;
+        const area = r * r;
+        totalArea += area;
+        clusterCenterX += (c.renderX ?? c.x) * area;
+        clusterCenterY += (c.renderY ?? c.y) * area;
+        if (r > maxRadius) maxRadius = r;
+      }
+      if (totalArea > 0) {
+        clusterCenterX /= totalArea;
+        clusterCenterY /= totalArea;
+      } else {
+        clusterCenterX = cells[0].renderX ?? cells[0].x;
+        clusterCenterY = cells[0].renderY ?? cells[0].y;
+      }
 
       const angle = Math.atan2(inputRef.current.dirY, inputRef.current.dirX);
       const gap = 16;
@@ -1196,25 +1231,31 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         vEffects.length = writeIdx;
       }
 
-      // 1. Movement input vector — two completely separate paths:
-      //    - PHONE: unchanged drag-joystick (touch origin -> current touch position)
-      //    - PC: continuous mouse-follow (screen center -> raw mouse position), no click/drag needed
+      // 1. Movement input vector:
+      //    - PHONE: Agar.io Mobile dynamic floating joystick with smooth analog Hermite response
+      //    - PC: continuous mouse-follow (screen center -> mouse cursor)
       let targetDirX = 0;
       let targetDirY = 0;
       let rawDist = 0;
 
       if (isPhoneRef.current) {
-        // --- MOBILE: untouched drag-joystick logic ---
+        // --- MOBILE: Fixed Sarok.io joystick in bottom-left corner ---
         const maxDragRadius = 60;
-        const deadzone = 5;
+        const deadzone = 4;
+        const base = getJoystickBase(canvas.clientWidth, canvas.clientHeight);
+        inputRef.current.startX = base.x;
+        inputRef.current.startY = base.y;
+
         if (inputRef.current.active) {
-          const rawDx = inputRef.current.curX - inputRef.current.startX;
-          const rawDy = inputRef.current.curY - inputRef.current.startY;
+          const rawDx = inputRef.current.curX - base.x;
+          const rawDy = inputRef.current.curY - base.y;
           rawDist = Math.hypot(rawDx, rawDy);
           if (rawDist > deadzone) {
             const normX = rawDx / rawDist;
             const normY = rawDy / rawDist;
-            const magnitude = Math.min(rawDist - deadzone, maxDragRadius - deadzone) / (maxDragRadius - deadzone);
+            // Smooth progressive analog response
+            const normDist = Math.min(1.0, (rawDist - deadzone) / (maxDragRadius - deadzone));
+            const magnitude = normDist * normDist * (3 - 2 * normDist);
             targetDirX = normX * magnitude;
             targetDirY = normY * magnitude;
           }
@@ -1222,11 +1263,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         inputRef.current.dragDist = rawDist;
       } else {
         // --- PC: cell always moves toward the current mouse position, no button held ---
-        // The camera always keeps the player's average position at screen center, so the
-        // vector from screen center to the raw mouse position is exactly the aim direction.
         const deadzone = 8;
-        // Scale the "full speed" radius with the viewport so it feels consistent across
-        // different monitor/window sizes, similar to how real Agar.io scales this.
         const maxDragRadius = Math.max(220, Math.min(canvas.clientWidth, canvas.clientHeight) * 0.45);
         const centerX = canvas.clientWidth / 2;
         const centerY = canvas.clientHeight / 2;
@@ -1236,13 +1273,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         if (rawDist > deadzone) {
           const normX = rawDx / rawDist;
           const normY = rawDy / rawDist;
-          const magnitude = Math.min(rawDist - deadzone, maxDragRadius - deadzone) / (maxDragRadius - deadzone);
+          const normDist = Math.min(1.0, (rawDist - deadzone) / (maxDragRadius - deadzone));
+          const magnitude = normDist * normDist * (3 - 2 * normDist);
           targetDirX = normX * magnitude;
           targetDirY = normY * magnitude;
         }
-        // Mouse-follow is always "engaged" on PC (no drag origin concept), and never
-        // counts as centered/gather-mode from mere cursor position — keep this false so
-        // PC never accidentally triggers mobile's "cursor parked at center = gather" trick.
         inputRef.current.active = false;
         inputRef.current.dragDist = rawDist;
       }
@@ -1283,7 +1318,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       }
       const effectiveRadius = Math.sqrt(groupTotalArea);
 
-      // Cache group metrics for O(1) reuse in drawAimArrow (Section 26)
       playerGroupRef.current = {
         centerX: groupCenterX,
         centerY: groupCenterY,
@@ -1292,14 +1326,14 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         totalArea: groupTotalArea
       };
 
-      // 3. Multi-cell physics with size-dependent speed: small cells faster, large cells slower (Sections 2, 20)
+      // 3. Multi-cell physics with authentic Agar.io size-dependent speed and turning curves
       for (let i = 0; i < cells.length; i++) {
         const cell = cells[i];
         let targetVx = 0;
         let targetVy = 0;
 
-        // Agar.io-style movement speed: speed = BASE_SPEED / pow(cellRadius, SPEED_SCALE)
-        const cellSpeed = BASE_PLAYER_SPEED / Math.pow(Math.max(10, cell.radius) / INITIAL_RADIUS, SPEED_SCALE);
+        // Real Agar.io Mobile speed formula: speed = BASE_SPEED * (radius / 20)^(-0.439)
+        const cellSpeed = BASE_PLAYER_SPEED * Math.pow(Math.max(12, cell.radius) / INITIAL_RADIUS, -SPEED_SCALE);
 
         if (gatherMode) {
           const toX = groupCenterX - cell.x;
@@ -1317,10 +1351,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           targetVy = inDirY * maxSpeed;
         }
 
-        // Weighted acceleration lerp: heavier cells feel slightly more weighted and organic
-        const massFactor = Math.max(0.65, Math.min(1.0, 55 / (cell.radius + 25)));
-        const accelRate = (inputMag > 0.02 || gatherMode) ? 8.5 : 6.0;
-        const accel = 1 - Math.exp(-accelRate * massFactor * (dt / 1000));
+        // Mass-dependent turning agility & smooth coasting on release
+        const massTurnAgility = Math.max(0.65, Math.min(1.0, 48 / (cell.radius + 20)));
+        const accelRate = (inputMag > 0.02 || gatherMode) ? 10.0 * massTurnAgility : 4.0;
+        const accel = 1 - Math.exp(-accelRate * (dt / 1000));
         cell.moveVx = (cell.moveVx || 0) + (targetVx - (cell.moveVx || 0)) * accel;
         cell.moveVy = (cell.moveVy || 0) + (targetVy - (cell.moveVy || 0)) * accel;
 
@@ -1328,14 +1362,16 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         cell.x += (cell.moveVx + cell.vx) * dtRatio;
         cell.y += (cell.moveVy + cell.vy) * dtRatio;
 
-        // Smooth continuous exponential burst decay (ease-out into normal glide)
-        const burstDecay = Math.pow(0.91, dtRatio);
+        // Smooth Agar.io split launch decay curve
+        const burstDecay = Math.pow(0.88, dtRatio);
         cell.vx *= burstDecay;
         cell.vy *= burstDecay;
-        if (Math.abs(cell.vx) < 0.02) cell.vx = 0;
-        if (Math.abs(cell.vy) < 0.02) cell.vy = 0;
+        if (Math.hypot(cell.vx, cell.vy) < 0.08) {
+          cell.vx = 0;
+          cell.vy = 0;
+        }
 
-        // Wall boundary collision & frictionless sliding
+        // Frictionless border sliding
         if (cell.x <= cell.radius) {
           cell.x = cell.radius;
           if (cell.moveVx < 0) cell.moveVx = 0;
@@ -1357,81 +1393,81 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
       }
 
+      // Multi-cell separation & merging: 2 relaxation passes with mass-weighted repulsion
       if (cells.length > 1) {
         const mergedIndices = new Set<number>();
 
-        for (let i = 0; i < cells.length; i++) {
-          if (mergedIndices.has(i)) continue;
-          for (let j = i + 1; j < cells.length; j++) {
-            if (mergedIndices.has(j)) continue;
+        for (let pass = 0; pass < 2; pass++) {
+          for (let i = 0; i < cells.length; i++) {
+            if (mergedIndices.has(i)) continue;
+            for (let j = i + 1; j < cells.length; j++) {
+              if (mergedIndices.has(j)) continue;
 
-            const c1 = cells[i];
-            const c2 = cells[j];
-            const dx = c2.x - c1.x;
-            const dy = c2.y - c1.y;
-            const dist = Math.hypot(dx, dy) || 0.0001;
-            const totalR = c1.radius + c2.radius;
+              const c1 = cells[i];
+              const c2 = cells[j];
 
-            const mergeCooldownMs = (isInstantMergeMode || instantMergeRef.current) ? 250 : 16000;
-            const canMerge = (now - c1.splitTime >= mergeCooldownMs) && (now - c2.splitTime >= mergeCooldownMs);
+              // Skip collision if newly split grace period is active between parent and child
+              if (c2.ignoreParentId === c1.id && now < (c2.ignoreParentUntil || 0)) continue;
+              if (c1.ignoreParentId === c2.id && now < (c1.ignoreParentUntil || 0)) continue;
 
-            if (canMerge && dist < totalR * 0.85) {
-              const combinedArea = (c1.radius * c1.radius) + (c2.radius * c2.radius);
-              c1.radius = Math.sqrt(combinedArea);
-              c1.x = (c1.x + c2.x) / 2;
-              c1.y = (c1.y + c2.y) / 2;
-              c1.vx = (c1.vx + c2.vx) / 2;
-              c1.vy = (c1.vy + c2.vy) / 2;
-              c1.moveVx = ((c1.moveVx || 0) + (c2.moveVx || 0)) / 2;
-              c1.moveVy = ((c1.moveVy || 0) + (c2.moveVy || 0)) / 2;
-              c1.splitTime = Math.min(c1.splitTime, c2.splitTime);
-              mergedIndices.add(j);
-            } else if (!gatherMode && dist < totalR) {
-              const overlap = totalR - dist;
-              const force = (overlap * 0.16) * dtRatio;
-              const nx = dx / dist;
-              const ny = dy / dist;
+              const dx = c2.x - c1.x;
+              const dy = c2.y - c1.y;
+              const distSq = dx * dx + dy * dy;
+              const totalR = c1.radius + c2.radius;
 
-              // Boundary check for wall sliding and force redirection
-              const c1OnLeft = c1.x <= c1.radius + 1.5;
-              const c1OnRight = c1.x >= MAP_SIZE - c1.radius - 1.5;
-              const c1OnTop = c1.y <= c1.radius + 1.5;
-              const c1OnBottom = c1.y >= MAP_SIZE - c1.radius - 1.5;
+              if (distSq < totalR * totalR) {
+                const dist = Math.sqrt(distSq) || 0.001;
+                const nx = dx / dist;
+                const ny = dy / dist;
 
-              const c2OnLeft = c2.x <= c2.radius + 1.5;
-              const c2OnRight = c2.x >= MAP_SIZE - c2.radius - 1.5;
-              const c2OnTop = c2.y <= c2.radius + 1.5;
-              const c2OnBottom = c2.y >= MAP_SIZE - c2.radius - 1.5;
+                const m1 = c1.radius * c1.radius;
+                const m2 = c2.radius * c2.radius;
+                const totalM = m1 + m2;
+                const w1 = m2 / totalM; // fraction of push applied to c1
+                const w2 = m1 / totalM; // fraction of push applied to c2
 
-              if ((c1OnLeft && c2OnLeft) || (c1OnRight && c2OnRight)) {
-                // Both against the same vertical wall: separate tangentially along Y
-                const s = Math.sign(c2.y - c1.y) || 1;
-                c1.y -= s * force * 0.5;
-                c2.y += s * force * 0.5;
-              } else if ((c1OnTop && c2OnTop) || (c1OnBottom && c2OnBottom)) {
-                // Both against the same horizontal wall: separate tangentially along X
-                const s = Math.sign(c2.x - c1.x) || 1;
-                c1.x -= s * force * 0.5;
-                c2.x += s * force * 0.5;
-              } else if (c1OnLeft || c1OnRight || c1OnTop || c1OnBottom) {
-                // c1 pinned to wall: push c2 inward
-                c2.x += nx * force;
-                c2.y += ny * force;
-              } else if (c2OnLeft || c2OnRight || c2OnTop || c2OnBottom) {
-                // c2 pinned to wall: push c1 inward
-                c1.x -= nx * force;
-                c1.y -= ny * force;
-              } else {
-                c1.x -= nx * force * 0.5;
-                c1.y -= ny * force * 0.5;
-                c2.x += nx * force * 0.5;
-                c2.y += ny * force * 0.5;
+                const mergeCooldownMs = (isInstantMergeMode || instantMergeRef.current)
+                  ? 250
+                  : Math.max(20000, 20000 + Math.max(c1.radius, c2.radius) * 12);
+                const canMerge = (now - c1.splitTime >= mergeCooldownMs) && (now - c2.splitTime >= mergeCooldownMs);
+
+                if (canMerge) {
+                  // Mutual capillary attraction when ready to merge
+                  const pull = 0.18 * (totalR - dist) * dtRatio;
+                  c1.x += nx * pull * w1;
+                  c1.y += ny * pull * w1;
+                  c2.x -= nx * pull * w2;
+                  c2.y -= ny * pull * w2;
+
+                  if (dist < Math.max(c1.radius, c2.radius) * 0.72 || dist < totalR * 0.48) {
+                    c1.radius = Math.sqrt(totalM);
+                    c1.renderRadius = c1.radius;
+                    c1.x = (c1.x * m1 + c2.x * m2) / totalM;
+                    c1.y = (c1.y * m1 + c2.y * m2) / totalM;
+                    c1.vx = (c1.vx * m1 + c2.vx * m2) / totalM;
+                    c1.vy = (c1.vy * m1 + c2.vy * m2) / totalM;
+                    c1.moveVx = ((c1.moveVx || 0) * m1 + (c2.moveVx || 0) * m2) / totalM;
+                    c1.moveVy = ((c1.moveVy || 0) * m1 + (c2.moveVy || 0) * m2) / totalM;
+                    c1.splitTime = Math.min(c1.splitTime, c2.splitTime);
+                    mergedIndices.add(j);
+                  }
+                } else if (!gatherMode) {
+                  // Mass-weighted elastic separation: heavier cells stay firm, smaller cells slide smoothly
+                  const overlap = totalR - dist;
+                  const stiffness = 0.42 * dtRatio;
+                  const push = overlap * stiffness;
+
+                  c1.x -= nx * push * w1;
+                  c1.y -= ny * push * w1;
+                  c2.x += nx * push * w2;
+                  c2.y += ny * push * w2;
+
+                  c1.x = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.x));
+                  c1.y = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.y));
+                  c2.x = Math.max(c2.radius, Math.min(MAP_SIZE - c2.radius, c2.x));
+                  c2.y = Math.max(c2.radius, Math.min(MAP_SIZE - c2.radius, c2.y));
+                }
               }
-
-              c1.x = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.x));
-              c1.y = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.y));
-              c2.x = Math.max(c2.radius, Math.min(MAP_SIZE - c2.radius, c2.x));
-              c2.y = Math.max(c2.radius, Math.min(MAP_SIZE - c2.radius, c2.y));
             }
           }
         }
@@ -1441,7 +1477,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
       }
 
-      // 4. Camera follow & dynamic zoom smoothing (Always keep player center in field of view)
+      // 4. Smooth cinematic camera follow & dynamic zoom (Agar.io mobile feel)
       const currentCells = playerCellsRef.current;
       if (currentCells.length > 0) {
         let sumX = 0, sumY = 0, totalMass = 0;
@@ -1460,30 +1496,27 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const canvasWidth = canvas.clientWidth;
         const canvasHeight = canvas.clientHeight;
 
-        // Dedicated size-based & viewport-aware dynamic zoom
         const targetZoom = getTargetZoom(visualEffectiveRadius, canvasWidth, canvasHeight);
 
-        // Smooth gradual zoom transition
-        const zoomLerp = 1 - Math.exp(-3.5 * (dt / 1000));
+        // Critically damped zoom transition
+        const zoomLerp = 1 - Math.exp(-3.2 * (dt / 1000));
         zoomRef.current += (targetZoom - zoomRef.current) * zoomLerp;
 
-        // Smooth centered camera follow
-        const camLerp = 1 - Math.exp(-14.0 * (dt / 1000));
-        cameraRef.current.x += (visualCenterX - cameraRef.current.x) * camLerp;
-        cameraRef.current.y += (visualCenterY - cameraRef.current.y) * camLerp;
+        // Sarok.io locked-center camera: cell is 100% fixed at center with zero drift
+        cameraRef.current.x = visualCenterX;
+        cameraRef.current.y = visualCenterY;
       }
-
-      // Ejected mass physics: soft continuous exponential velocity decay for smooth gliding arc
+      // Ejected mass physics: smooth viscous fluid decay
       const allFoods = foodsRef.current;
       for (let i = 0; i < allFoods.length; i++) {
         const food = allFoods[i];
         if (food.vx !== undefined && food.vy !== undefined && (food.vx !== 0 || food.vy !== 0)) {
           food.x += food.vx * dtRatio;
           food.y += food.vy * dtRatio;
-          const decayFactor = Math.pow(0.94, dtRatio);
+          const decayFactor = Math.pow(0.88, dtRatio);
           food.vx *= decayFactor;
           food.vy *= decayFactor;
-          if (Math.hypot(food.vx, food.vy) < 0.03) {
+          if (Math.hypot(food.vx, food.vy) < 0.05) {
             food.vx = 0;
             food.vy = 0;
           }
@@ -1952,9 +1985,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
     // Smooth render interpolation between physics steps (Agar.io/Sarok.io buttery jelly feel)
     const interpolate = (dt: number) => {
-      const posLerp = 1 - Math.exp(-22 * (dt / 1000));
-      const radLerp = 1 - Math.exp(-7.5 * (dt / 1000)); // Soft, fluid jelly radius interpolation over frames
-      const foodLerp = 1 - Math.exp(-24 * (dt / 1000));
+      const posLerp = 1 - Math.exp(-38 * (dt / 1000));
+      const radLerp = 1 - Math.exp(-12 * (dt / 1000));
+      const foodLerp = 1 - Math.exp(-28 * (dt / 1000));
 
       const cells = playerCellsRef.current;
       for (let i = 0; i < cells.length; i++) {
@@ -2005,21 +2038,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const cr = cell.renderRadius ?? cell.radius;
       const cellScore = Math.floor((cell.radius * cell.radius) / 10);
 
-      const vx = (cell.moveVx || 0) + (cell.vx || 0);
-      const vy = (cell.moveVy || 0) + (cell.vy || 0);
-      const speed = Math.hypot(vx, vy);
-      const moveAngle = speed > 0.05 ? Math.atan2(vy, vx) : 0;
-
-      // Organic, smooth jelly stretch/squash based on motion and gentle breath oscillation
-      const stretch = Math.min(0.04, speed * 0.007) + 0.012 * Math.sin(time * 0.0022 + (cell.phaseOffset || 0));
-
       ctx.save();
       ctx.translate(cx, cy);
-      if (speed > 0.05) {
-        ctx.rotate(moveAngle);
-      }
-      ctx.scale(1 + stretch, 1 / (1 + stretch));
 
+      // In Sarok.io / Agar.io, cells are ALWAYS 100% round circles (never oval/stretched)
       ctx.beginPath();
       ctx.arc(0, 0, cr, 0, Math.PI * 2);
 
@@ -2034,6 +2056,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const sx = (iw - minDim) / 2;
         const sy = (ih - minDim) / 2;
 
+        // Upright, static, centered skin image - never rotates or moves on the cell
         ctx.drawImage(
           img,
           sx,
@@ -2117,19 +2140,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const br = bot.renderRadius ?? bot.radius;
       const botScore = Math.floor((bot.radius * bot.radius) / 10);
 
-      const vx = bot.vx || 0;
-      const vy = bot.vy || 0;
-      const speed = Math.hypot(vx, vy);
-      const moveAngle = speed > 0.05 ? Math.atan2(vy, vx) : 0;
-      const stretch = Math.min(0.035, speed * 0.007) + 0.01 * Math.sin(time * 0.002 + (bot.phaseOffset || 0));
-
       ctx.save();
       ctx.translate(bx, by);
-      if (speed > 0.05) {
-        ctx.rotate(moveAngle);
-      }
-      ctx.scale(1 + stretch, 1 / (1 + stretch));
 
+      // In Sarok.io / Agar.io, cells are ALWAYS 100% round circles (never oval)
       ctx.beginPath();
       ctx.arc(0, 0, br, 0, Math.PI * 2);
       ctx.fillStyle = bot.color;
@@ -2168,6 +2182,27 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const logicalWidth = canvas.clientWidth;
       const logicalHeight = canvas.clientHeight;
+
+      // Sarok.io / Agar.io: Lock camera 100% dead-center on the player's visual center
+      const currentCells = playerCellsRef.current;
+      if (currentCells.length > 0) {
+        let sumX = 0, sumY = 0, totalMass = 0;
+        for (let i = 0; i < currentCells.length; i++) {
+          const c = currentCells[i];
+          const cr = c.renderRadius ?? c.radius;
+          const m = cr * cr;
+          totalMass += m;
+          sumX += (c.renderX ?? c.x) * m;
+          sumY += (c.renderY ?? c.y) * m;
+        }
+        if (totalMass > 0) {
+          cameraRef.current.x = sumX / totalMass;
+          cameraRef.current.y = sumY / totalMass;
+        } else {
+          cameraRef.current.x = currentCells[0].renderX ?? currentCells[0].x;
+          cameraRef.current.y = currentCells[0].renderY ?? currentCells[0].y;
+        }
+      }
 
       ctx.fillStyle = '#f8fafc';
       ctx.fillRect(0, 0, logicalWidth, logicalHeight);
@@ -2309,30 +2344,42 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
       ctx.restore();
 
-      if (inputRef.current.active) {
+      // Fixed bottom-left joystick (Sarok.io style: outer ring never moves)
+      if (isPhoneRef.current || inputRef.current.active) {
+        const base = getJoystickBase(logicalWidth, logicalHeight);
         const ringRadius = 60;
-        const stickRadius = 32;
-        const dx = inputRef.current.curX - inputRef.current.startX;
-        const dy = inputRef.current.curY - inputRef.current.startY;
-        const dist = Math.hypot(dx, dy);
-        const clampedDist = Math.min(dist, ringRadius);
-        const stickX = dist > 0 ? inputRef.current.startX + (dx / dist) * clampedDist : inputRef.current.startX;
-        const stickY = dist > 0 ? inputRef.current.startY + (dy / dist) * clampedDist : inputRef.current.startY;
+        const stickRadius = 30;
 
+        let stickX = base.x;
+        let stickY = base.y;
+
+        if (inputRef.current.active) {
+          const dx = inputRef.current.curX - base.x;
+          const dy = inputRef.current.curY - base.y;
+          const dist = Math.hypot(dx, dy);
+          const clampedDist = Math.min(dist, ringRadius);
+          if (dist > 0) {
+            stickX = base.x + (dx / dist) * clampedDist;
+            stickY = base.y + (dy / dist) * clampedDist;
+          }
+        }
+
+        // Fixed outer base ring (permanently anchored in bottom-left corner, never shifts)
         ctx.beginPath();
-        ctx.arc(inputRef.current.startX, inputRef.current.startY, ringRadius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(140,140,140,0.15)';
+        ctx.arc(base.x, base.y, ringRadius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
         ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(140,140,140,0.4)';
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
         ctx.stroke();
 
+        // Inner thumb stick knob
         ctx.beginPath();
         ctx.arc(stickX, stickY, stickRadius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(120,120,120,0.5)';
+        ctx.fillStyle = inputRef.current.active ? 'rgba(255, 255, 255, 0.65)' : 'rgba(255, 255, 255, 0.45)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(90,90,90,0.6)';
         ctx.lineWidth = 2;
+        ctx.strokeStyle = inputRef.current.active ? 'rgba(100, 116, 139, 0.6)' : 'rgba(148, 163, 184, 0.4)';
         ctx.stroke();
       }
     };
@@ -2341,11 +2388,24 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const rawDt = time - lastTime;
       lastTime = time;
       const dt = Math.min(64, Math.max(1, rawDt));
-      
-      update(dt);
+
+      // Fixed 60Hz physics sub-stepping with accumulator for buttery smooth, consistent physics
+      physicsAccumulatorRef.current += dt;
+      const fixedStep = 1000 / 60; // 16.667ms
+      const maxSubSteps = 3;
+      let steps = 0;
+      while (physicsAccumulatorRef.current >= fixedStep && steps < maxSubSteps) {
+        update(fixedStep);
+        physicsAccumulatorRef.current -= fixedStep;
+        steps++;
+      }
+      if (steps >= maxSubSteps) {
+        physicsAccumulatorRef.current = 0;
+      }
+
       interpolate(dt);
       draw();
-      
+
       animationFrameId = requestAnimationFrame(loop);
     };
 
@@ -2383,27 +2443,41 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     if (isPausedRef.current) return;
     autoGatherRef.current = false;
 
+    const canvas = canvasRef.current;
+    const cw = canvas ? canvas.clientWidth : window.innerWidth;
+    const ch = canvas ? canvas.clientHeight : window.innerHeight;
+    const base = getJoystickBase(cw, ch);
+
     if ('touches' in e) {
       if (!inputRef.current.active && e.changedTouches.length > 0) {
-        const touch = e.changedTouches[0];
-        const p = getCanvasCoords(touch.clientX, touch.clientY);
-        inputRef.current.active = true;
-        inputRef.current.touchId = touch.identifier;
-        inputRef.current.startX = p.x;
-        inputRef.current.startY = p.y;
-        inputRef.current.curX = p.x;
-        inputRef.current.curY = p.y;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          const p = getCanvasCoords(touch.clientX, touch.clientY);
+          // Left portion of screen steers the fixed bottom-left joystick
+          if (p.x < cw * 0.58) {
+            inputRef.current.active = true;
+            inputRef.current.touchId = touch.identifier;
+            // Base NEVER changes position!
+            inputRef.current.startX = base.x;
+            inputRef.current.startY = base.y;
+            inputRef.current.curX = p.x;
+            inputRef.current.curY = p.y;
+            break;
+          }
+        }
       }
     } else {
       if (inputRef.current.active) return;
       const p = extractPoint(e);
       if (!p) return;
-      inputRef.current.active = true;
-      inputRef.current.touchId = null;
-      inputRef.current.startX = p.x;
-      inputRef.current.startY = p.y;
-      inputRef.current.curX = p.x;
-      inputRef.current.curY = p.y;
+      if (p.x < cw * 0.58) {
+        inputRef.current.active = true;
+        inputRef.current.touchId = null;
+        inputRef.current.startX = base.x;
+        inputRef.current.startY = base.y;
+        inputRef.current.curX = p.x;
+        inputRef.current.curY = p.y;
+      }
     }
   };
 
@@ -2421,6 +2495,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
         if (!touch) return;
         const p = getCanvasCoords(touch.clientX, touch.clientY);
+        
+        // Fixed joystick: base position NEVER shifts when dragged!
         inputRef.current.curX = p.x;
         inputRef.current.curY = p.y;
       }
@@ -2440,11 +2516,17 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         if (touch.identifier === inputRef.current.touchId) {
           inputRef.current.active = false;
           inputRef.current.touchId = null;
+          inputRef.current.dirX = 0;
+          inputRef.current.dirY = 0;
+          inputRef.current.dragDist = 0;
         }
       }
     } else {
       inputRef.current.active = false;
       inputRef.current.touchId = null;
+      inputRef.current.dirX = 0;
+      inputRef.current.dirY = 0;
+      inputRef.current.dragDist = 0;
     }
   };
 
@@ -2454,6 +2536,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       if (touch.identifier === inputRef.current.touchId) {
         inputRef.current.active = false;
         inputRef.current.touchId = null;
+        inputRef.current.dirX = 0;
+        inputRef.current.dirY = 0;
+        inputRef.current.dragDist = 0;
       }
     }
   };
