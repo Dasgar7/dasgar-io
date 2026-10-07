@@ -12,6 +12,7 @@ import spectateBtnImg from '../assets/images/spectate-button.png';
 import playBtnImg from '../assets/images/play-button.png';
 import moreBtnImg from '../assets/images/more-button.png';
 import seasonBtnImg from '../assets/images/season-button.png';
+import { SeasonVideoBtn } from './SeasonVideoBtn';
 
 interface MainMenuProps {
   onPlay: (mode?: 'classic' | 'bots' | 'instantMerge') => void;
@@ -823,13 +824,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
             onClick={isEditingHud ? undefined : onSeason}
             className="w-[165px] sm:w-[195px] md:w-[220px] h-[80px] sm:h-[94px] md:h-[106px] flex items-center justify-end select-none hud-tap pointer-events-auto"
           >
-            <img
-              src={seasonBtnImg}
-              alt="Season"
-              style={{ imageRendering: '-webkit-optimize-contrast' as any }}
-              className="w-full h-full object-contain pointer-events-none select-none drop-shadow-md hover:scale-105 active:scale-95 transition-transform"
-              draggable={false}
-            />
+            <SeasonVideoBtn className="w-full h-full pointer-events-none" />
           </TouchSafeButton>,
           'pointer-events-auto -mt-3 sm:-mt-4 md:-mt-5'
         )}
