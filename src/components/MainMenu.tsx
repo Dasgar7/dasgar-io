@@ -628,14 +628,14 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
 
         {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER - Locked at center of screen */}
         <div className="w-full flex flex-col items-center pointer-events-auto">
-          {/* Action Buttons Row - Larger & closer together like Agar.io / Sarok.io */}
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full max-w-[440px] sm:max-w-[500px] md:max-w-[540px] mx-auto pointer-events-auto">
+          {/* Action Buttons Row - Nestled closely together */}
+          <div className="flex items-center justify-center gap-0.5 sm:gap-1 w-full max-w-[340px] sm:max-w-[390px] md:max-w-[430px] mx-auto pointer-events-auto">
             {/* SPECTATE BUTTON */}
             {renderEditableItem(
               'spectate',
               <TouchSafeButton 
                 onClick={() => onPlay('classic')}
-                className="w-full h-[84px] sm:h-[96px] md:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                className="w-full h-[80px] sm:h-[92px] md:h-[100px] flex items-center justify-end select-none hud-tap pointer-events-auto"
                 title="Spectate"
               >
                 <img
@@ -646,7 +646,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   draggable={false}
                 />
               </TouchSafeButton>,
-              'w-full flex pointer-events-auto'
+              'flex-1 flex justify-end pointer-events-auto'
             )}
             
             {/* PLAY BUTTON */}
@@ -654,7 +654,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'play',
               <TouchSafeButton 
                 onClick={() => onPlay('classic')}
-                className="w-full h-[84px] sm:h-[96px] md:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                className="w-full h-[80px] sm:h-[92px] md:h-[100px] flex items-center justify-center select-none hud-tap pointer-events-auto"
               >
                 <img
                   src={playBtnImg}
@@ -664,7 +664,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   draggable={false}
                 />
               </TouchSafeButton>,
-              'w-full flex pointer-events-auto'
+              'flex-1 flex justify-center pointer-events-auto'
             )}
 
             {/* MORE BUTTON */}
@@ -672,7 +672,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'more',
               <TouchSafeButton 
                 onClick={() => setIsMoreOpen(prev => !prev)}
-                className="w-full h-[84px] sm:h-[96px] md:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                className="w-full h-[80px] sm:h-[92px] md:h-[100px] flex items-center justify-start select-none hud-tap pointer-events-auto"
               >
                 <img
                   src={moreBtnImg}
@@ -682,7 +682,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   draggable={false}
                 />
               </TouchSafeButton>,
-              'w-full flex pointer-events-auto'
+              'flex-1 flex justify-start pointer-events-auto'
             )}
           </div>
 
@@ -714,7 +714,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 }}
                 className="pointer-events-auto w-full overflow-hidden select-none"
               >
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full max-w-[440px] sm:max-w-[500px] md:max-w-[540px] mx-auto pt-2 pb-0.5">
+                <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[340px] sm:max-w-[390px] md:max-w-[430px] mx-auto pt-2 pb-0.5">
                   {/* 1. BOTS: Private server, bots only, no friends */}
                   <TouchSafeButton
                     onClick={() => onPlay('bots')}
