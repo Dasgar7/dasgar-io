@@ -89,36 +89,37 @@ type Virus = Circle & {
   vx?: number;
   vy?: number;
 };
-type VirusPopEffect = { id: string; x: number; y: number; age: number; maxAge: number; radius: number };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const randomColor = () => `hsl(${Math.random() * 360}, 80%, 60%)`;
 
-// Quick-react emoji options shown in the emoji picker (Agar.io-style emote wheel)
-const QUICK_EMOJIS = ['🥺', '🤢', '🤡', '🙄', '👻', '😂', '😡', '💀', '😎', '😭', '🔥', '👍', '💩', '😈'];
-const EMOJI_DISPLAY_DURATION = 2000; // ms: ~2 seconds
+export interface QuickEmojiItem {
+  id: string;
+  name: string;
+  src: string;
+}
 
-// Action-button metrics for TABLETS and PC (viewport >= 640px) - enlarged for PC HUD.
-const TBTN_SIZE = 'clamp(96px, 14vmin, 150px)';
-const TBTN_GAP = `calc(${TBTN_SIZE} * 0.18)`;
-const TBTN_EDGE_R = `max(28px, calc(env(safe-area-inset-right) + 20px))`;
-const TBTN_EDGE_B = `max(28px, calc(env(safe-area-inset-bottom) + 20px))`;
+// Exactly the 3 uploaded custom cell emojis (all others removed)
+const QUICK_EMOJIS: QuickEmojiItem[] = [
+  { id: 'blue_cool', name: 'Cool Cell', src: '/emojis/blue_cool_cell.png' },
+  { id: 'green_happy', name: 'Happy Cell', src: '/emojis/green_happy_cell.png' },
+  { id: 'red_angry', name: 'Angry Cell', src: '/emojis/red_angry_cell.png' },
+];
+const EMOJI_DISPLAY_DURATION = 3500; // ms: ~3.5 seconds
 
-// Action-button metrics for PHONES (viewport < 640px).
-const PBTN_SIZE = 'clamp(58px, 14vmin, 86px)';
-const PBTN_GAP = `calc(${PBTN_SIZE} * 0.16)`;
-const PBTN_EDGE_R = `max(14px, env(safe-area-inset-right))`;
-const PBTN_EDGE_B = `max(14px, env(safe-area-inset-bottom))`;
+// Action-button metrics for TABLETS and PC (viewport >= 640px)
+const TBTN_SIZE = 'clamp(80px, 12vmin, 120px)';
+const TBTN_GAP = `calc(${TBTN_SIZE} * 0.16)`;
+const TBTN_EDGE_R = `max(22px, calc(env(safe-area-inset-right) + 14px))`;
+const TBTN_EDGE_B = `max(22px, calc(env(safe-area-inset-bottom) + 14px))`;
+
+// Action-button metrics for PHONES (viewport < 640px) - compact and non-intrusive for mobile HUD
+const PBTN_SIZE = 'clamp(42px, 10vmin, 58px)';
+const PBTN_GAP = `calc(${PBTN_SIZE} * 0.14)`;
+const PBTN_EDGE_R = `max(10px, env(safe-area-inset-right))`;
+const PBTN_EDGE_B = `max(10px, env(safe-area-inset-bottom))`;
 
 const MACRO_FEED_INTERVAL = 85; // ms between feeds when macro is held (default ~12/s)
-
-// Fixed bottom-left joystick metrics (Sarok.io style)
-const getJoystickBase = (width: number, height: number) => {
-  const isLandscape = width > height;
-  const baseX = isLandscape ? Math.max(90, Math.min(130, width * 0.12)) : Math.max(75, Math.min(110, width * 0.2));
-  const baseY = isLandscape ? height - Math.max(85, Math.min(125, height * 0.24)) : height - Math.max(90, Math.min(140, height * 0.16));
-  return { x: baseX, y: baseY };
-};
 
 export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -188,6 +189,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const handleEjectRef = useRef<() => void>(() => {});
 
   const activeEmojiRef = useRef<{ emoji: string; timeLeft: number } | null>(null);
+  const emojiImagesRef = useRef<{ [key: string]: HTMLImageElement }>({});
   const leaderboardTimerRef = useRef(0);
   const drawablePoolRef = useRef<{ type: 'player' | 'bot' | 'virus'; entity: any; radius: number }[]>([]);
   
@@ -196,7 +198,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const greenCandyImgRef = useRef<HTMLImageElement | null>(null);
   const botsRef = useRef<BotPlayer[]>([]);
   const virusesRef = useRef<Virus[]>([]);
-  const virusPopEffectsRef = useRef<VirusPopEffect[]>([]);
   const scoreRef = useRef(PLAYER_START_SCORE);
   const isGameOverRef = useRef(false);
   const isPausedRef = useRef(false);
@@ -507,7 +508,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     zoomRef.current = 1.0;
     scoreRef.current = PLAYER_START_SCORE;
     setScore(scoreRef.current);
-    virusPopEffectsRef.current = [];
     isGameOverRef.current = false;
     isPausedRef.current = false;
     setIsPaused(false);
@@ -871,6 +871,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       greenCandyImgRef.current = candyImg;
     };
     greenCandyImgRef.current = candyImg;
+
+    // Preload custom cell emojis (only these 3 in the game)
+    const emojiMap: { [key: string]: HTMLImageElement } = {};
+    QUICK_EMOJIS.forEach(item => {
+      const img = new Image();
+      img.src = item.src;
+      emojiMap[item.id] = img;
+    });
+    emojiImagesRef.current = emojiMap;
     
     initEntities();
   }, []);
@@ -1047,28 +1056,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       ctx.restore();
     };
 
-    const drawVirusPopEffect = (effect: VirusPopEffect) => {
-      const progress = effect.age / effect.maxAge;
-      const alpha = Math.max(0, 1 - progress);
-      const ringRadius = effect.radius * (0.9 + progress * 1.5);
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(effect.x, effect.y, ringRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(34, 197, 94, ${alpha * 0.85})`;
-      ctx.lineWidth = Math.max(1.5, 4 * (1 - progress));
-      ctx.stroke();
-
-      if (progress < 0.6) {
-        const coreAlpha = (1 - progress / 0.6) * 0.45;
-        ctx.beginPath();
-        ctx.arc(effect.x, effect.y, effect.radius * (0.7 + progress * 0.6), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${coreAlpha})`;
-        ctx.fill();
-      }
-      ctx.restore();
-    };
-
     const drawAimArrow = () => {
       const cells = playerCellsRef.current;
       if (cells.length === 0) return;
@@ -1177,15 +1164,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         });
       }
 
-      virusPopEffectsRef.current.push({
-        id: generateId(),
-        x: virus.x,
-        y: virus.y,
-        age: 0,
-        maxAge: 380,
-        radius: virus.radius
-      });
-
       return fragments;
     };
 
@@ -1218,19 +1196,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         macroAccumulatorRef.current = 0;
       }
 
-      // In-place age update and prune for visual effects (zero allocation)
-      if (virusPopEffectsRef.current.length > 0) {
-        let writeIdx = 0;
-        const vEffects = virusPopEffectsRef.current;
-        for (let i = 0; i < vEffects.length; i++) {
-          vEffects[i].age += dt;
-          if (vEffects[i].age < vEffects[i].maxAge) {
-            vEffects[writeIdx++] = vEffects[i];
-          }
-        }
-        vEffects.length = writeIdx;
-      }
-
       // 1. Movement input vector:
       //    - PHONE: Agar.io Mobile dynamic floating joystick with smooth analog Hermite response
       //    - PC: continuous mouse-follow (screen center -> mouse cursor)
@@ -1239,28 +1204,40 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       let rawDist = 0;
 
       if (isPhoneRef.current) {
-        // --- MOBILE: Fixed Sarok.io joystick in bottom-left corner ---
         const maxDragRadius = 60;
         const deadzone = 4;
-        const base = getJoystickBase(canvas.clientWidth, canvas.clientHeight);
-        inputRef.current.startX = base.x;
-        inputRef.current.startY = base.y;
 
         if (inputRef.current.active) {
-          const rawDx = inputRef.current.curX - base.x;
-          const rawDy = inputRef.current.curY - base.y;
+          const rawDx = inputRef.current.curX - inputRef.current.startX;
+          const rawDy = inputRef.current.curY - inputRef.current.startY;
           rawDist = Math.hypot(rawDx, rawDy);
           if (rawDist > deadzone) {
             const normX = rawDx / rawDist;
             const normY = rawDy / rawDist;
-            // Smooth progressive analog response
-            const normDist = Math.min(1.0, (rawDist - deadzone) / (maxDragRadius - deadzone));
-            const magnitude = normDist * normDist * (3 - 2 * normDist);
-            targetDirX = normX * magnitude;
-            targetDirY = normY * magnitude;
+            targetDirX = normX;
+            targetDirY = normY;
+            lastAimDirRef.current = { x: normX, y: normY };
+          } else {
+            // Tapped without dragging: steer toward tap location relative to screen center
+            const centerX = canvas.clientWidth / 2;
+            const centerY = canvas.clientHeight / 2;
+            const fromCenterX = inputRef.current.startX - centerX;
+            const fromCenterY = inputRef.current.startY - centerY;
+            const centerDist = Math.hypot(fromCenterX, fromCenterY);
+            if (centerDist > 10) {
+              const normX = fromCenterX / centerDist;
+              const normY = fromCenterY / centerDist;
+              targetDirX = normX;
+              targetDirY = normY;
+              lastAimDirRef.current = { x: normX, y: normY };
+            }
           }
+          inputRef.current.dragDist = rawDist;
+        } else {
+          // STOP-ON-RELEASE REMOVED: cell automatically continues cruising in the last aimed direction
+          targetDirX = lastAimDirRef.current.x;
+          targetDirY = lastAimDirRef.current.y;
         }
-        inputRef.current.dragDist = rawDist;
       } else {
         // --- PC: cell always moves toward the current mouse position, no button held ---
         const deadzone = 8;
@@ -1273,10 +1250,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         if (rawDist > deadzone) {
           const normX = rawDx / rawDist;
           const normY = rawDy / rawDist;
-          const normDist = Math.min(1.0, (rawDist - deadzone) / (maxDragRadius - deadzone));
-          const magnitude = normDist * normDist * (3 - 2 * normDist);
-          targetDirX = normX * magnitude;
-          targetDirY = normY * magnitude;
+          targetDirX = normX;
+          targetDirY = normY;
+          lastAimDirRef.current = { x: normX, y: normY };
+        } else {
+          targetDirX = lastAimDirRef.current.x;
+          targetDirY = lastAimDirRef.current.y;
         }
         inputRef.current.active = false;
         inputRef.current.dragDist = rawDist;
@@ -1634,7 +1613,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             food.eaten = true;
             anyFoodEaten = true;
             virus.fedCount = (virus.fedCount || 0) + 1;
-            virus.radius = Math.min(62, VIRUS_RADIUS + virus.fedCount * 1.8);
+            // Virus stays at standard radius (removed swelling/expansion effect when pushing virus)
+            virus.radius = VIRUS_RADIUS;
 
             // Once fed 7 times, virus shoots!
             if (virus.fedCount >= 7) {
@@ -1863,14 +1843,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           if (vdx * vdx + vdy * vdy < bot.radius * bot.radius && bot.radius > virus.radius) {
             bot.radius = Math.max(INITIAL_RADIUS, bot.radius * 0.65);
             poppedVirusIds.add(virus.id);
-            virusPopEffectsRef.current.push({
-              id: generateId(),
-              x: virus.x,
-              y: virus.y,
-              age: 0,
-              maxAge: 380,
-              radius: virus.radius
-            });
           }
         });
       });
@@ -2119,17 +2091,16 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
         if (cell.id === largestCell?.id) {
           const { emoji, timeLeft } = activeEmojiRef.current;
-          const alpha = Math.min(1, timeLeft / 300);
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(cx, cy, cr, 0, Math.PI * 2);
-          ctx.clip();
-          ctx.globalAlpha = alpha;
-          ctx.font = `${cr * 2.2}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(emoji, cx, cy);
-          ctx.restore();
+          const alpha = Math.min(1, timeLeft / 400);
+          const img = emojiImagesRef.current[emoji];
+          if (img && img.complete && img.naturalWidth > 0) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            // Draw uploaded custom emoji sticker centered on the player's cell
+            const emojiSize = Math.max(38, cr * 1.6);
+            ctx.drawImage(img, cx - emojiSize / 2, cy - emojiSize / 2, emojiSize, emojiSize);
+            ctx.restore();
+          }
         }
       }
     };
@@ -2338,48 +2309,42 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         drawAimArrow();
       }
 
-      if (virusPopEffectsRef.current.length > 0) {
-        virusPopEffectsRef.current.forEach(drawVirusPopEffect);
-      }
-
       ctx.restore();
 
-      // Fixed bottom-left joystick (Sarok.io style: outer ring never moves)
-      if (isPhoneRef.current || inputRef.current.active) {
-        const base = getJoystickBase(logicalWidth, logicalHeight);
-        const ringRadius = 60;
-        const stickRadius = 30;
+      // Floating joystick: shows EXACTLY where the player clicked/tapped
+      if (inputRef.current.active) {
+        const isMobile = isPhoneRef.current || logicalWidth < 640;
+        const ringRadius = isMobile ? 44 : 58;
+        const stickRadius = isMobile ? 22 : 29;
 
-        let stickX = base.x;
-        let stickY = base.y;
+        const startX = inputRef.current.startX;
+        const startY = inputRef.current.startY;
+        const curX = inputRef.current.curX;
+        const curY = inputRef.current.curY;
 
-        if (inputRef.current.active) {
-          const dx = inputRef.current.curX - base.x;
-          const dy = inputRef.current.curY - base.y;
-          const dist = Math.hypot(dx, dy);
-          const clampedDist = Math.min(dist, ringRadius);
-          if (dist > 0) {
-            stickX = base.x + (dx / dist) * clampedDist;
-            stickY = base.y + (dy / dist) * clampedDist;
-          }
-        }
+        const dx = curX - startX;
+        const dy = curY - startY;
+        const dist = Math.hypot(dx, dy);
+        const clampedDist = Math.min(dist, ringRadius);
+        const stickX = startX + (dist > 0 ? (dx / dist) * clampedDist : 0);
+        const stickY = startY + (dist > 0 ? (dy / dist) * clampedDist : 0);
 
-        // Fixed outer base ring (permanently anchored in bottom-left corner, never shifts)
+        // Outer base ring (centered exactly where clicked)
         ctx.beginPath();
-        ctx.arc(base.x, base.y, ringRadius, 0, Math.PI * 2);
+        ctx.arc(startX, startY, ringRadius, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
         ctx.fill();
         ctx.lineWidth = 2.5;
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
         ctx.stroke();
 
         // Inner thumb stick knob
         ctx.beginPath();
         ctx.arc(stickX, stickY, stickRadius, 0, Math.PI * 2);
-        ctx.fillStyle = inputRef.current.active ? 'rgba(255, 255, 255, 0.65)' : 'rgba(255, 255, 255, 0.45)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.fill();
         ctx.lineWidth = 2;
-        ctx.strokeStyle = inputRef.current.active ? 'rgba(100, 116, 139, 0.6)' : 'rgba(148, 163, 184, 0.4)';
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.65)';
         ctx.stroke();
       }
     };
@@ -2446,20 +2411,20 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     const canvas = canvasRef.current;
     const cw = canvas ? canvas.clientWidth : window.innerWidth;
     const ch = canvas ? canvas.clientHeight : window.innerHeight;
-    const base = getJoystickBase(cw, ch);
 
     if ('touches' in e) {
       if (!inputRef.current.active && e.changedTouches.length > 0) {
         for (let i = 0; i < e.changedTouches.length; i++) {
           const touch = e.changedTouches[i];
           const p = getCanvasCoords(touch.clientX, touch.clientY);
-          // Left portion of screen steers the fixed bottom-left joystick
-          if (p.x < cw * 0.58) {
+          // Tap anywhere on canvas (outside action buttons cluster) activates joystick
+          const inActionButtonZone = p.x > cw - 170 && p.y > ch - 230;
+          if (!inActionButtonZone) {
             inputRef.current.active = true;
             inputRef.current.touchId = touch.identifier;
-            // Base NEVER changes position!
-            inputRef.current.startX = base.x;
-            inputRef.current.startY = base.y;
+            // Spawn joystick EXACTLY where player clicked/tapped
+            inputRef.current.startX = p.x;
+            inputRef.current.startY = p.y;
             inputRef.current.curX = p.x;
             inputRef.current.curY = p.y;
             break;
@@ -2470,11 +2435,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       if (inputRef.current.active) return;
       const p = extractPoint(e);
       if (!p) return;
-      if (p.x < cw * 0.58) {
+      const inActionButtonZone = p.x > cw - 170 && p.y > ch - 230;
+      if (!inActionButtonZone) {
         inputRef.current.active = true;
         inputRef.current.touchId = null;
-        inputRef.current.startX = base.x;
-        inputRef.current.startY = base.y;
+        inputRef.current.startX = p.x;
+        inputRef.current.startY = p.y;
         inputRef.current.curX = p.x;
         inputRef.current.curY = p.y;
       }
@@ -2495,8 +2461,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
         if (!touch) return;
         const p = getCanvasCoords(touch.clientX, touch.clientY);
-        
-        // Fixed joystick: base position NEVER shifts when dragged!
         inputRef.current.curX = p.x;
         inputRef.current.curY = p.y;
       }
@@ -2516,17 +2480,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         if (touch.identifier === inputRef.current.touchId) {
           inputRef.current.active = false;
           inputRef.current.touchId = null;
-          inputRef.current.dirX = 0;
-          inputRef.current.dirY = 0;
-          inputRef.current.dragDist = 0;
+          // STOP-ON-RELEASE REMOVED: keep cell moving forward in aimed direction!
         }
       }
     } else {
       inputRef.current.active = false;
       inputRef.current.touchId = null;
-      inputRef.current.dirX = 0;
-      inputRef.current.dirY = 0;
-      inputRef.current.dragDist = 0;
     }
   };
 
@@ -2536,9 +2495,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       if (touch.identifier === inputRef.current.touchId) {
         inputRef.current.active = false;
         inputRef.current.touchId = null;
-        inputRef.current.dirX = 0;
-        inputRef.current.dirY = 0;
-        inputRef.current.dragDist = 0;
       }
     }
   };
@@ -2560,11 +2516,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       />
 
       <div 
-        className="absolute pointer-events-none z-10 flex flex-col items-start gap-2.5 sm:gap-3.5 md:gap-4"
-        style={{ top: 'max(0.75rem, env(safe-area-inset-top))', left: 'max(0.75rem, env(safe-area-inset-left))' }}
+        className="absolute pointer-events-none z-10 flex flex-col items-start gap-1.5 sm:gap-3 md:gap-4"
+        style={{ top: 'max(0.5rem, env(safe-area-inset-top))', left: 'max(0.5rem, env(safe-area-inset-left))' }}
       >
         {/* Pause Button & Score next to it (aligned high/up at the top like Agar.io) */}
-        <div className="flex items-start gap-3 md:gap-4 pointer-events-auto">
+        <div className="flex items-start gap-2 sm:gap-3 md:gap-4 pointer-events-auto">
           <TouchSafeButton
             onClick={togglePause}
             onMouseDown={() => setIsPausePressed(true)}
@@ -2573,11 +2529,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             onTouchStart={() => setIsPausePressed(true)}
             onTouchEnd={() => setIsPausePressed(false)}
             onTouchCancel={() => setIsPausePressed(false)}
-            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none group shrink-0"
+            className="w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none group shrink-0"
             title={isPaused ? "Resume Game (P)" : "Pause Game (P)"}
           >
             <Pause 
-              className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11 transition-colors duration-75" 
+              className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11 transition-colors duration-75" 
               style={{ 
                 color: isPausePressed ? '#000000' : '#9E9E9E',
                 fill: isPausePressed ? '#000000' : '#9E9E9E'
@@ -2585,21 +2541,21 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             />
           </TouchSafeButton>
 
-          <div className="flex flex-col select-none pt-0.5 sm:pt-1 md:pt-1.5">
+          <div className="flex flex-col select-none pt-0 sm:pt-0.5 md:pt-1.5">
             <span 
-              className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight whitespace-nowrap"
+              className="text-base sm:text-xl md:text-3xl lg:text-4xl font-extrabold tracking-tight whitespace-nowrap"
               style={{ color: '#9E9E9E' }}
             >
               Score: {score}
             </span>
             <div 
-              className="flex items-center gap-1.5 md:gap-2 mt-0.5 md:mt-1.5 w-fit"
+              className="flex items-center gap-1 sm:gap-1.5 md:gap-2 mt-0.5 md:mt-1.5 w-fit"
               title="Green Candies collected"
             >
               <img
                 src="/green-candy.png"
                 alt="Green Candy"
-                className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-9 lg:h-9 object-contain select-none pointer-events-none drop-shadow-sm"
+                className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 lg:w-9 lg:h-9 object-contain select-none pointer-events-none drop-shadow-sm"
               />
               <span className="text-xs sm:text-base md:text-xl lg:text-2xl font-black text-emerald-500 font-mono tracking-wide">
                 {greenCandyCount}
@@ -2609,7 +2565,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         </div>
 
         {/* Social / Communication Row: Emoji + Chat */}
-        <div className="flex items-start gap-2 md:gap-3 pointer-events-auto">
+        <div className="flex items-start gap-1.5 sm:gap-2.5 md:gap-3 pointer-events-auto">
           {/* Emoji Button & Agar.io-style Vertical Tray */}
           <div className="relative flex flex-col items-center">
             <TouchSafeButton
@@ -2623,29 +2579,34 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onTouchStart={() => setIsEmojiPressed(true)}
               onTouchEnd={() => setIsEmojiPressed(false)}
               onTouchCancel={() => setIsEmojiPressed(false)}
-              className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
-                showEmojiPicker ? 'rounded-t-2xl md:rounded-t-3xl border-b-0 bg-[rgba(140,140,140,0.28)]' : 'rounded-2xl md:rounded-3xl'
+              className={`w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
+                showEmojiPicker ? 'rounded-t-xl sm:rounded-t-2xl md:rounded-t-3xl border-b-0 bg-[rgba(140,140,140,0.28)]' : 'rounded-xl sm:rounded-2xl md:rounded-3xl'
               }`}
               title="Emotes"
             >
               <Smile 
-                className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11 transition-colors duration-75" 
+                className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11 transition-colors duration-75" 
                 style={{ color: showEmojiPicker || isEmojiPressed ? '#000000' : '#9E9E9E' }} 
               />
             </TouchSafeButton>
 
             {showEmojiPicker && (
-              <div className="w-14 sm:w-16 md:w-20 lg:w-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-t-0 border-[rgba(140,140,140,0.45)] rounded-b-2xl md:rounded-b-3xl shadow-lg flex flex-col items-center py-2 md:py-3 gap-2 md:gap-3 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto overflow-x-hidden no-scrollbar panel-animate-in animate-in fade-in slide-in-from-top-1 duration-150">
-                {QUICK_EMOJIS.map(emoji => (
+              <div className="w-10 sm:w-13 md:w-18 lg:w-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-t-0 border-[rgba(140,140,140,0.45)] rounded-b-xl sm:rounded-b-2xl md:rounded-b-3xl shadow-lg flex flex-col items-center py-1.5 sm:py-2.5 md:py-3 gap-1.5 sm:gap-2 md:gap-3 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto overflow-x-hidden no-scrollbar panel-animate-in animate-in fade-in slide-in-from-top-1 duration-150">
+                {QUICK_EMOJIS.map(emojiItem => (
                   <button
-                    key={emoji}
+                    key={emojiItem.id}
                     onClick={() => {
-                      activeEmojiRef.current = { emoji, timeLeft: EMOJI_DISPLAY_DURATION };
+                      activeEmojiRef.current = { emoji: emojiItem.id, timeLeft: EMOJI_DISPLAY_DURATION };
                       setShowEmojiPicker(false);
                     }}
-                    className="w-11 h-11 sm:w-12 sm:h-12 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-full flex items-center justify-center text-2xl sm:text-3xl md:text-4xl lg:text-5xl hover:bg-white/20 active:scale-90 transition-transform cursor-pointer select-none shrink-0"
+                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 lg:w-18 lg:h-18 rounded-full flex items-center justify-center p-0.5 hover:bg-white/20 active:scale-90 transition-transform cursor-pointer select-none shrink-0"
+                    title={emojiItem.name}
                   >
-                    {emoji}
+                    <img
+                      src={emojiItem.src}
+                      alt={emojiItem.name}
+                      className="w-full h-full object-contain pointer-events-none drop-shadow-xs"
+                    />
                   </button>
                 ))}
               </div>
@@ -2665,19 +2626,19 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onTouchStart={() => setIsChatPressed(true)}
               onTouchEnd={() => setIsChatPressed(false)}
               onTouchCancel={() => setIsChatPressed(false)}
-              className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
-                showChat ? 'bg-[rgba(140,140,140,0.28)] rounded-2xl md:rounded-3xl' : 'rounded-2xl md:rounded-3xl'
+              className={`w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
+                showChat ? 'bg-[rgba(140,140,140,0.28)] rounded-xl sm:rounded-2xl md:rounded-3xl' : 'rounded-xl sm:rounded-2xl md:rounded-3xl'
               }`}
               title="Chat"
             >
               <MessageCircle 
-                className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11 transition-colors duration-75" 
+                className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11 transition-colors duration-75" 
                 style={{ color: showChat || isChatPressed ? '#000000' : '#9E9E9E' }} 
               />
             </TouchSafeButton>
 
             {showChat && (
-              <div className="absolute top-16 sm:top-20 md:top-24 lg:top-26 left-0 w-64 sm:w-80 md:w-96 lg:w-[28rem] bg-[rgba(140,140,140,0.22)] backdrop-blur-md border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-2xl md:rounded-3xl shadow-xl p-3 md:p-4.5 space-y-2.5 md:space-y-3.5 z-40 panel-animate-in animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute top-12 sm:top-16 md:top-20 lg:top-26 left-0 w-60 sm:w-76 md:w-96 lg:w-[28rem] bg-[rgba(140,140,140,0.22)] backdrop-blur-md border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-2xl md:rounded-3xl shadow-xl p-2.5 sm:p-3.5 md:p-4.5 space-y-2 sm:space-y-2.5 md:space-y-3.5 z-40 panel-animate-in animate-in fade-in zoom-in-95 duration-150">
                 <div className="flex items-center justify-between border-b border-black/10 pb-1.5 md:pb-2">
                   <span className="text-[11px] sm:text-xs md:text-sm font-black text-slate-600 uppercase tracking-wider">Chat</span>
                   <button
@@ -2766,7 +2727,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           onPointerMove={handleModPointerMove}
           onPointerUp={handleModPointerUp}
           onPointerCancel={handleModPointerCancel}
-          className={`pointer-events-auto fixed z-30 w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 border-2 md:border-[3px] rounded-2xl md:rounded-3xl shadow-md flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
+          className={`pointer-events-auto fixed z-30 w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 border-2 md:border-[3px] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-md flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
             isModDragging ? 'ring-2 ring-emerald-400 scale-105 shadow-xl' : ''
           }`}
           style={{
@@ -2778,15 +2739,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           }}
           title="Mod Menu (Hold to Reposition)"
         >
-          <Sliders className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
+          <Sliders className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
         </button>
       )}
 
       <div
-        className="absolute flex flex-col items-end gap-2 sm:gap-3.5 md:gap-4 z-10"
-        style={{ top: 'max(0.75rem, env(safe-area-inset-top))', right: 'max(0.75rem, env(safe-area-inset-right))' }}
+        className="absolute flex flex-col items-end gap-1.5 sm:gap-3 md:gap-4 z-10"
+        style={{ top: 'max(0.5rem, env(safe-area-inset-top))', right: 'max(0.5rem, env(safe-area-inset-right))' }}
       >
-        <div className="flex items-center gap-2.5 md:gap-3.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-3.5">
           {/* Mod Menu button in default spot (immediately to the LEFT of Leaderboard toggle) */}
           {!modBtnPos && (
             <button
@@ -2794,7 +2755,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onPointerMove={handleModPointerMove}
               onPointerUp={handleModPointerUp}
               onPointerCancel={handleModPointerCancel}
-              className={`pointer-events-auto w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 border-2 md:border-[3px] rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
+              className={`pointer-events-auto w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 border-2 md:border-[3px] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
                 isModDragging ? 'ring-2 ring-emerald-400 scale-105 shadow-xl' : ''
               }`}
               style={{
@@ -2804,26 +2765,26 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               }}
               title="Mod Menu (Hold to Reposition)"
             >
-              <Sliders className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
+              <Sliders className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
             </button>
           )}
 
           <TouchSafeButton
             onClick={() => setShowLeaderboard(prev => !prev)}
-            className="pointer-events-auto w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none"
+            className="pointer-events-auto w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none"
             title="Leaderboard"
           >
-            <ListOrdered className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11" style={{ color: '#9E9E9E' }} />
+            <ListOrdered className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11" style={{ color: '#9E9E9E' }} />
           </TouchSafeButton>
         </div>
 
         {showLeaderboard && leaderboard.length > 0 && (
-          <div className="bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-2xl md:rounded-3xl shadow-sm px-3 sm:px-4.5 md:px-6 py-2 sm:py-3.5 md:py-4.5 pointer-events-none w-44 sm:w-60 md:w-72 lg:w-80 panel-animate-in animate-in fade-in zoom-in-95 duration-150">
-            <div className="text-[10px] sm:text-xs md:text-sm lg:text-base font-black text-slate-600 uppercase tracking-widest mb-1.5 md:mb-2 text-center">
+          <div className="bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-sm px-2.5 sm:px-4 md:px-6 py-1.5 sm:py-3 md:py-4.5 pointer-events-none w-36 sm:w-56 md:w-72 lg:w-80 panel-animate-in animate-in fade-in zoom-in-95 duration-150">
+            <div className="text-[9px] sm:text-xs md:text-sm lg:text-base font-black text-slate-600 uppercase tracking-widest mb-1 sm:mb-2 text-center">
               {mode === 'bots' ? 'Bots Leaderboard' : (mode === 'instantMerge' ? 'Instant Merge' : 'Leaderboard')}
             </div>
             {leaderboard.map((entry, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs sm:text-sm md:text-base lg:text-lg font-bold py-0.5 sm:py-1 md:py-1.5">
+              <div key={idx} className="flex items-center justify-between text-[10px] sm:text-xs md:text-base lg:text-lg font-bold py-0.5 sm:py-1 md:py-1.5">
                 <span className={entry.isPlayer ? 'text-emerald-600' : 'text-slate-600'}>
                   {idx + 1}. {entry.name}
                 </span>
@@ -2832,8 +2793,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             ))}
             {playerRank && playerRank > 5 && (
               <>
-                <div className="my-1.5 border-t border-black/10" />
-                <div className="flex items-center justify-between text-xs sm:text-sm md:text-base lg:text-lg font-bold py-0.5 sm:py-1 md:py-1.5 text-emerald-600">
+                <div className="my-1 border-t border-black/10" />
+                <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-base lg:text-lg font-bold py-0.5 sm:py-1 md:py-1.5 text-emerald-600">
                   <span>{playerRank}. {playerNameRef.current || 'You'}</span>
                   <span className="font-mono">{score}</span>
                 </div>
