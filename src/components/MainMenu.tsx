@@ -831,7 +831,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               draggable={false}
             />
           </TouchSafeButton>,
-          'pointer-events-auto'
+          'pointer-events-auto -mt-3 sm:-mt-4 md:-mt-5'
         )}
       </div>
 
