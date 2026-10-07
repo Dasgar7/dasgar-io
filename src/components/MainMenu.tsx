@@ -633,7 +633,11 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
             {/* SPECTATE BUTTON */}
             {renderEditableItem(
               'spectate',
-              <TouchSafeButton className="w-full h-[84px] sm:h-[96px] md:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto">
+              <TouchSafeButton 
+                onClick={() => onPlay('classic')}
+                className="w-full h-[84px] sm:h-[96px] md:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                title="Spectate"
+              >
                 <img
                   src={spectateBtnImg}
                   alt="Spectate"
