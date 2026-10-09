@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
@@ -8,154 +8,237 @@ import {
   Diamond, 
   Check, 
   ShoppingBag, 
-  AlertCircle, 
   Gift, 
   ArrowLeft,
+  ChevronLeft,
   ChevronRight,
   Flame,
-  Star,
   Zap,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Move
+  Lock,
+  Target
 } from 'lucide-react';
 import { TouchSafeButton } from './TouchSafeButton';
 import { playClaimRewardSound, playNodeClickSound, playChestSound } from '../utils/seasonSounds';
-import seasonBgImage from '../assets/images/season_map_bg_1789659135767.jpg';
+import seasonBgImage from '../assets/images/scary_halloween_season_bg_1791544045123.jpg';
 
 interface SeasonsPageProps {
   onBack: () => void;
   onOpenShop?: () => void;
 }
 
-interface SeasonNode {
-  id: number;
-  tier: number;
-  label?: string;
-  badgeType?: 'check' | 'chest' | 'gem' | 'daily' | 'bonus' | 'boss';
-  rewardType: 'coins' | 'gems' | 'skin' | 'chest' | 'booster';
-  rewardName: string;
-  rewardAmount?: number;
-  rewardIcon: string;
-  xPercent: number; // relative % for responsive map layout
-  yPercent: number;
+export interface TierReward {
+  id: string;
+  type: 'coins' | 'gems' | 'ghosts' | 'chest' | 'skin' | 'booster';
+  name: string;
+  amount: number;
+  iconType: string;
+  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
+  description?: string;
 }
 
-const SEASON_NODES: SeasonNode[] = [
+export interface SeasonTier {
+  tier: number;
+  tokensRequired: number;
+  isMilestone?: boolean;
+  milestoneTitle?: string;
+  freeReward: TierReward;
+  goldReward: TierReward;
+}
+
+const SEASON_TIERS: SeasonTier[] = [
   {
-    id: 1,
     tier: 1,
-    badgeType: 'check',
-    rewardType: 'coins',
-    rewardName: '300 Gold Coins',
-    rewardAmount: 300,
-    rewardIcon: 'coins',
-    xPercent: 28,
-    yPercent: 71,
+    tokensRequired: 50,
+    isMilestone: true,
+    milestoneTitle: 'WELCOME TIER',
+    freeReward: { id: 'f1', type: 'coins', name: 'Cursed Coins', amount: 350, iconType: 'coins', rarity: 'common', description: 'Essential currency to upgrade your cells' },
+    goldReward: { id: 'g1', type: 'gems', name: 'Soul Gems', amount: 80, iconType: 'gems', rarity: 'rare', description: 'Rare ethereal gems for VIP passes and skips' },
   },
   {
-    id: 2,
+    tier: 2,
+    tokensRequired: 100,
+    freeReward: { id: 'f2', type: 'ghosts', name: 'Ghost Tokens', amount: 40, iconType: 'ghosts', rarity: 'common', description: 'Season 1 spectral tokens' },
+    goldReward: { id: 'g2', type: 'coins', name: 'Cursed Coins', amount: 600, iconType: 'coins', rarity: 'common', description: 'Large bag of cursed gold' },
+  },
+  {
+    tier: 3,
+    tokensRequired: 160,
+    freeReward: { id: 'f3', type: 'coins', name: 'Cursed Coins', amount: 450, iconType: 'coins', rarity: 'common', description: 'Cursed coin stash' },
+    goldReward: { id: 'g3', type: 'ghosts', name: 'Ghost Tokens', amount: 60, iconType: 'ghosts', rarity: 'rare', description: 'Spectral token cache' },
+  },
+  {
+    tier: 4,
+    tokensRequired: 230,
+    freeReward: { id: 'f4', type: 'gems', name: 'Soul Gems', amount: 25, iconType: 'gems', rarity: 'rare', description: 'Soul gem crystal' },
+    goldReward: { id: 'g4', type: 'coins', name: 'Cursed Coins', amount: 850, iconType: 'coins', rarity: 'common', description: 'Heavy chest of gold' },
+  },
+  {
     tier: 5,
-    badgeType: 'check',
-    rewardType: 'gems',
-    rewardName: '50 Emerald Gems',
-    rewardAmount: 50,
-    rewardIcon: 'gem',
-    xPercent: 37,
-    yPercent: 67,
+    tokensRequired: 310,
+    isMilestone: true,
+    milestoneTitle: 'GHOST COFFER',
+    freeReward: { id: 'f5', type: 'chest', name: 'Spooky Ghost Coffer', amount: 1, iconType: 'chest', rarity: 'rare', description: 'Contains mystery coins, gems & tokens' },
+    goldReward: { id: 'g5', type: 'gems', name: 'Soul Gems', amount: 120, iconType: 'gems', rarity: 'epic', description: 'Substantial soul gem hoard' },
   },
   {
-    id: 3,
+    tier: 6,
+    tokensRequired: 400,
+    freeReward: { id: 'f6', type: 'coins', name: 'Cursed Coins', amount: 550, iconType: 'coins', rarity: 'common', description: 'Cursed coin treasure' },
+    goldReward: { id: 'g6', type: 'ghosts', name: 'Ghost Tokens', amount: 80, iconType: 'ghosts', rarity: 'rare', description: 'Spectral ghost pouch' },
+  },
+  {
+    tier: 7,
+    tokensRequired: 500,
+    freeReward: { id: 'f7', type: 'ghosts', name: 'Ghost Tokens', amount: 50, iconType: 'ghosts', rarity: 'common', description: 'Eerie ghost tokens' },
+    goldReward: { id: 'g7', type: 'coins', name: 'Cursed Coins', amount: 1000, iconType: 'coins', rarity: 'rare', description: '1,000 cursed gold coins' },
+  },
+  {
+    tier: 8,
+    tokensRequired: 610,
+    freeReward: { id: 'f8', type: 'gems', name: 'Soul Gems', amount: 35, iconType: 'gems', rarity: 'rare', description: 'Radiant soul gems' },
+    goldReward: { id: 'g8', type: 'booster', name: 'Spectral Booster', amount: 1, iconType: 'booster', rarity: 'epic', description: '2x Mass & Speed temporary boost' },
+  },
+  {
+    tier: 9,
+    tokensRequired: 730,
+    freeReward: { id: 'f9', type: 'coins', name: 'Cursed Coins', amount: 650, iconType: 'coins', rarity: 'common', description: 'Cursed coins reward' },
+    goldReward: { id: 'g9', type: 'ghosts', name: 'Ghost Tokens', amount: 100, iconType: 'ghosts', rarity: 'epic', description: 'Centennial ghost token prize' },
+  },
+  {
     tier: 10,
-    label: 'BONUS CHEST',
-    badgeType: 'bonus',
-    rewardType: 'chest',
-    rewardName: 'Sweet Candy Chest',
-    rewardAmount: 1,
-    rewardIcon: 'chest',
-    xPercent: 45,
-    yPercent: 71,
+    tokensRequired: 860,
+    isMilestone: true,
+    milestoneTitle: 'EPIC SPECTER CHEST',
+    freeReward: { id: 'f10', type: 'chest', name: 'Haunted Crypt Chest', amount: 1, iconType: 'chest', rarity: 'epic', description: 'Gravekeeper chest filled with rare rewards' },
+    goldReward: { id: 'g10', type: 'skin', name: 'Neon Specter Skin', amount: 1, iconType: 'skin', rarity: 'legendary', description: 'Exclusive glowing cyan ghost avatar skin' },
   },
   {
-    id: 4,
+    tier: 11,
+    tokensRequired: 1000,
+    freeReward: { id: 'f11', type: 'coins', name: 'Cursed Coins', amount: 750, iconType: 'coins', rarity: 'common', description: 'Cursed coins bag' },
+    goldReward: { id: 'g11', type: 'coins', name: 'Cursed Coins', amount: 1400, iconType: 'coins', rarity: 'rare', description: 'Large coin bounty' },
+  },
+  {
+    tier: 12,
+    tokensRequired: 1150,
+    freeReward: { id: 'f12', type: 'ghosts', name: 'Ghost Tokens', amount: 65, iconType: 'ghosts', rarity: 'rare', description: 'Ghost token stash' },
+    goldReward: { id: 'g12', type: 'gems', name: 'Soul Gems', amount: 150, iconType: 'gems', rarity: 'epic', description: 'Big soul gem pouch' },
+  },
+  {
+    tier: 13,
+    tokensRequired: 1310,
+    freeReward: { id: 'f13', type: 'gems', name: 'Soul Gems', amount: 45, iconType: 'gems', rarity: 'rare', description: 'Shining soul crystals' },
+    goldReward: { id: 'g13', type: 'ghosts', name: 'Ghost Tokens', amount: 120, iconType: 'ghosts', rarity: 'epic', description: 'Large spectral token bag' },
+  },
+  {
+    tier: 14,
+    tokensRequired: 1480,
+    freeReward: { id: 'f14', type: 'coins', name: 'Cursed Coins', amount: 900, iconType: 'coins', rarity: 'common', description: 'Cursed coins bounty' },
+    goldReward: { id: 'g14', type: 'coins', name: 'Cursed Coins', amount: 1800, iconType: 'coins', rarity: 'rare', description: 'Fortified gold treasure' },
+  },
+  {
+    tier: 15,
+    tokensRequired: 1660,
+    isMilestone: true,
+    milestoneTitle: 'PHANTOM VAULT',
+    freeReward: { id: 'f15', type: 'chest', name: 'Ghost Swirl Mystery Box', amount: 1, iconType: 'chest', rarity: 'epic', description: 'Mystery box containing valuable relics' },
+    goldReward: { id: 'g15', type: 'booster', name: 'Phantom Surge Booster', amount: 2, iconType: 'booster', rarity: 'legendary', description: 'Double XP & 1.5x split speed booster' },
+  },
+  {
     tier: 16,
-    badgeType: 'chest',
-    rewardType: 'coins',
-    rewardName: '800 Gold Coins',
-    rewardAmount: 800,
-    rewardIcon: 'coins',
-    xPercent: 54,
-    yPercent: 61,
+    tokensRequired: 1850,
+    freeReward: { id: 'f16', type: 'ghosts', name: 'Ghost Tokens', amount: 80, iconType: 'ghosts', rarity: 'rare', description: 'Spooky ghost tokens' },
+    goldReward: { id: 'g16', type: 'gems', name: 'Soul Gems', amount: 180, iconType: 'gems', rarity: 'epic', description: 'Vast gem deposit' },
   },
   {
-    id: 5,
+    tier: 17,
+    tokensRequired: 2050,
+    freeReward: { id: 'f17', type: 'coins', name: 'Cursed Coins', amount: 1100, iconType: 'coins', rarity: 'rare', description: 'Over a thousand cursed coins' },
+    goldReward: { id: 'g17', type: 'ghosts', name: 'Ghost Tokens', amount: 150, iconType: 'ghosts', rarity: 'epic', description: 'Heavy spectral token hoard' },
+  },
+  {
+    tier: 18,
+    tokensRequired: 2260,
+    freeReward: { id: 'f18', type: 'gems', name: 'Soul Gems', amount: 55, iconType: 'gems', rarity: 'rare', description: 'Glistening soul stones' },
+    goldReward: { id: 'g18', type: 'coins', name: 'Cursed Coins', amount: 2200, iconType: 'coins', rarity: 'rare', description: 'Massive coin bag' },
+  },
+  {
+    tier: 19,
+    tokensRequired: 2480,
+    freeReward: { id: 'f19', type: 'coins', name: 'Cursed Coins', amount: 1300, iconType: 'coins', rarity: 'rare', description: 'Cursed coin riches' },
+    goldReward: { id: 'g19', type: 'gems', name: 'Soul Gems', amount: 200, iconType: 'gems', rarity: 'epic', description: '200 Soul Gem bounty' },
+  },
+  {
+    tier: 20,
+    tokensRequired: 2710,
+    isMilestone: true,
+    milestoneTitle: 'REAPER REWARD',
+    freeReward: { id: 'f20', type: 'chest', name: 'Grand Citadel Chest', amount: 1, iconType: 'chest', rarity: 'epic', description: 'Imperial citadel chest full of riches' },
+    goldReward: { id: 'g20', type: 'skin', name: 'Cursed Reaper Ghost Skin', amount: 1, iconType: 'skin', rarity: 'legendary', description: 'Cloaked haunted reaper cell skin' },
+  },
+  {
+    tier: 21,
+    tokensRequired: 2950,
+    freeReward: { id: 'f21', type: 'ghosts', name: 'Ghost Tokens', amount: 95, iconType: 'ghosts', rarity: 'rare', description: 'Ghost token bounty' },
+    goldReward: { id: 'g21', type: 'coins', name: 'Cursed Coins', amount: 2600, iconType: 'coins', rarity: 'rare', description: 'Citadel treasury bounty' },
+  },
+  {
     tier: 22,
-    label: 'BONUS CHEST',
-    badgeType: 'gem',
-    rewardType: 'gems',
-    rewardName: '120 Emerald Gems',
-    rewardAmount: 120,
-    rewardIcon: 'gem',
-    xPercent: 62,
-    yPercent: 64,
+    tokensRequired: 3200,
+    freeReward: { id: 'f22', type: 'coins', name: 'Cursed Coins', amount: 1500, iconType: 'coins', rarity: 'rare', description: 'Generous gold coins' },
+    goldReward: { id: 'g22', type: 'ghosts', name: 'Ghost Tokens', amount: 180, iconType: 'ghosts', rarity: 'epic', description: 'Extravagant ghost tokens' },
   },
   {
-    id: 6,
+    tier: 23,
+    tokensRequired: 3460,
+    freeReward: { id: 'f23', type: 'gems', name: 'Soul Gems', amount: 70, iconType: 'gems', rarity: 'rare', description: 'Soul gem cache' },
+    goldReward: { id: 'g23', type: 'gems', name: 'Soul Gems', amount: 250, iconType: 'gems', rarity: 'epic', description: '250 Soul Gems' },
+  },
+  {
+    tier: 24,
+    tokensRequired: 3730,
+    freeReward: { id: 'f24', type: 'coins', name: 'Cursed Coins', amount: 1800, iconType: 'coins', rarity: 'rare', description: 'Grand coin coffer' },
+    goldReward: { id: 'g24', type: 'coins', name: 'Cursed Coins', amount: 3200, iconType: 'coins', rarity: 'epic', description: 'Immense coin hoard' },
+  },
+  {
     tier: 25,
-    label: 'BONUS CHEST',
-    badgeType: 'chest',
-    rewardType: 'chest',
-    rewardName: 'Candy Swirl Mystery Box',
-    rewardAmount: 1,
-    rewardIcon: 'chest',
-    xPercent: 64,
-    yPercent: 52,
+    tokensRequired: 4010,
+    isMilestone: true,
+    milestoneTitle: 'ROYAL PHANTOM VAULT',
+    freeReward: { id: 'f25', type: 'chest', name: 'Royal Phantom Vault', amount: 1, iconType: 'chest', rarity: 'legendary', description: 'Ornate gold chest with legendary drop rates' },
+    goldReward: { id: 'g25', type: 'booster', name: '3x Phantom Overlord Booster', amount: 3, iconType: 'booster', rarity: 'legendary', description: 'Massive stat & speed boosters' },
   },
   {
-    id: 7,
+    tier: 26,
+    tokensRequired: 4300,
+    freeReward: { id: 'f26', type: 'ghosts', name: 'Ghost Tokens', amount: 120, iconType: 'ghosts', rarity: 'epic', description: 'Prestigious ghost token cache' },
+    goldReward: { id: 'g26', type: 'coins', name: 'Cursed Coins', amount: 3800, iconType: 'coins', rarity: 'epic', description: 'Near four thousand coins' },
+  },
+  {
+    tier: 27,
+    tokensRequired: 4600,
+    freeReward: { id: 'f27', type: 'coins', name: 'Cursed Coins', amount: 2200, iconType: 'coins', rarity: 'rare', description: 'Over two thousand coins' },
+    goldReward: { id: 'g27', type: 'gems', name: 'Soul Gems', amount: 300, iconType: 'gems', rarity: 'legendary', description: '300 radiant soul gems' },
+  },
+  {
     tier: 28,
-    badgeType: 'chest',
-    rewardType: 'coins',
-    rewardName: '1,500 Gold Coins',
-    rewardAmount: 1500,
-    rewardIcon: 'coins',
-    xPercent: 64,
-    yPercent: 40,
+    tokensRequired: 4910,
+    freeReward: { id: 'f28', type: 'gems', name: 'Soul Gems', amount: 90, iconType: 'gems', rarity: 'epic', description: 'Deep purple soul crystals' },
+    goldReward: { id: 'g28', type: 'ghosts', name: 'Ghost Tokens', amount: 250, iconType: 'ghosts', rarity: 'legendary', description: 'Quarter-thousand ghost tokens' },
   },
   {
-    id: 8,
-    tier: 32,
-    label: 'DAILY QUEST',
-    badgeType: 'daily',
-    rewardType: 'gems',
-    rewardName: '200 Emerald Gems',
-    rewardAmount: 200,
-    rewardIcon: 'gem',
-    xPercent: 53,
-    yPercent: 33,
+    tier: 29,
+    tokensRequired: 5230,
+    freeReward: { id: 'f29', type: 'coins', name: 'Cursed Coins', amount: 2800, iconType: 'coins', rarity: 'epic', description: 'Immense coin jackpot' },
+    goldReward: { id: 'g29', type: 'coins', name: 'Cursed Coins', amount: 5000, iconType: 'coins', rarity: 'legendary', description: 'Five thousand cursed coins' },
   },
   {
-    id: 9,
-    tier: 36,
-    badgeType: 'gem',
-    rewardType: 'gems',
-    rewardName: 'Candy Cane Booster',
-    rewardAmount: 1,
-    rewardIcon: 'booster',
-    xPercent: 60,
-    yPercent: 28,
-  },
-  {
-    id: 10,
-    tier: 40,
-    label: 'BOSS: CANDY SWIRL PEAK',
-    badgeType: 'boss',
-    rewardType: 'skin',
-    rewardName: 'Exclusive "Green Candy King" Skin',
-    rewardIcon: 'skin',
-    xPercent: 67,
-    yPercent: 27,
+    tier: 30,
+    tokensRequired: 5560,
+    isMilestone: true,
+    milestoneTitle: 'ULTRA GRAND FINALE',
+    freeReward: { id: 'f30', type: 'chest', name: 'Supreme Phantom Ark', amount: 1, iconType: 'chest', rarity: 'legendary', description: 'The ultimate season 1 mystery coffer' },
+    goldReward: { id: 'g30', type: 'skin', name: 'Phantom Lord Specter Skin', amount: 1, iconType: 'skin', rarity: 'legendary', description: 'Exclusive ultra-mythic Ghost King skin with spectral trail!' },
   },
 ];
 
@@ -174,46 +257,72 @@ interface QuestItem {
 const DEFAULT_QUESTS: QuestItem[] = [
   {
     id: 'q1',
-    title: 'Sweet Tooth Feast',
-    desc: 'Consume 500 green candy pellets in any game mode',
+    title: 'Phantom Harvest',
+    desc: 'Collect 500 Ghost Tokens (👻) in any game mode',
     progress: 500,
     target: 500,
-    rewardXp: 250,
-    rewardCoins: 400,
+    rewardXp: 300,
+    rewardCoins: 500,
     completed: true,
     claimed: false,
   },
   {
     id: 'q2',
-    title: 'Rapid Cell Division',
-    desc: 'Perform 15 tactical splits in Classic FFA',
+    title: 'Shadow Cell Division',
+    desc: 'Perform 15 tactical splits in the shadowy arena',
     progress: 15,
     target: 15,
-    rewardXp: 350,
-    rewardCoins: 600,
+    rewardXp: 400,
+    rewardCoins: 750,
     completed: true,
     claimed: false,
   },
   {
     id: 'q3',
-    title: 'Candy Mountain King',
+    title: 'Citadel Sovereign',
     desc: 'Survive in the top 5 leaderboard for 3 minutes',
     progress: 2,
     target: 3,
-    rewardXp: 600,
-    rewardCoins: 1000,
+    rewardXp: 700,
+    rewardCoins: 1200,
     completed: false,
     claimed: false,
   },
 ];
 
 export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
-  // Player state persisted in localStorage
-  const [collectedRewards, setCollectedRewards] = useState<number>(() => {
-    const saved = localStorage.getItem('dasgar_season1_rewards_collected');
-    return saved !== null ? parseInt(saved, 10) : 25;
+  // Current player unlocked tier
+  const [currentTier, setCurrentTier] = useState<number>(() => {
+    const saved = localStorage.getItem('dasgar_season1_tier');
+    return saved !== null ? parseInt(saved, 10) : 18;
   });
 
+  // Track claimed tiers
+  const [claimedFreeTiers, setClaimedFreeTiers] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem('dasgar_season1_claimed_free');
+      return saved ? JSON.parse(saved) : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    } catch {
+      return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    }
+  });
+
+  const [claimedGoldTiers, setClaimedGoldTiers] = useState<number[]>(() => {
+    try {
+      const saved = localStorage.getItem('dasgar_season1_claimed_gold');
+      return saved ? JSON.parse(saved) : [1, 2, 3, 4, 5];
+    } catch {
+      return [1, 2, 3, 4, 5];
+    }
+  });
+
+  // Gold Pass VIP ownership
+  const [hasGoldPass, setHasGoldPass] = useState<boolean>(() => {
+    const saved = localStorage.getItem('dasgar_has_gold_pass');
+    return saved === 'true';
+  });
+
+  // Player currencies
   const [coins, setCoins] = useState<number>(() => {
     const saved = localStorage.getItem('dasgar_player_coins');
     return saved !== null ? parseInt(saved, 10) : 8930;
@@ -224,13 +333,9 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
     return saved !== null ? parseInt(saved, 10) : 1245;
   });
 
-  const [claimedNodeIds, setClaimedNodeIds] = useState<number[]>(() => {
-    try {
-      const saved = localStorage.getItem('dasgar_season1_claimed_nodes');
-      return saved ? JSON.parse(saved) : [1, 2, 3, 4];
-    } catch {
-      return [1, 2, 3, 4];
-    }
+  const [ghostTokens, setGhostTokens] = useState<number>(() => {
+    const saved = localStorage.getItem('dasgar_ghostTokenCount') ?? localStorage.getItem('dasgar_greenCandyCount');
+    return saved !== null ? parseInt(saved, 10) : 2350;
   });
 
   const [quests, setQuests] = useState<QuestItem[]>(() => {
@@ -242,265 +347,27 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
     }
   });
 
-  // Modal states
-  const [selectedNode, setSelectedNode] = useState<SeasonNode | null>(null);
+  // UI state
+  const [selectedReward, setSelectedReward] = useState<{ reward: TierReward; tier: number; isGold: boolean; isClaimed: boolean; isUnlocked: boolean } | null>(null);
   const [isQuestsOpen, setIsQuestsOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
-  const [celebrationParticles, setCelebrationParticles] = useState<{ id: number; x: number; y: number; color: string }[]>([]);
+  const [isGoldPassModalOpen, setIsGoldPassModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showHint, setShowHint] = useState(true);
+  const [celebrationParticles, setCelebrationParticles] = useState<{ id: number; x: number; y: number; color: string }[]>([]);
 
-  // Viewport tracking for robust multi-device support
-  const [viewportSize, setViewportSize] = useState({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1000,
-    height: typeof window !== 'undefined' ? window.innerHeight : 600,
-  });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to current tier on mount
   useEffect(() => {
-    const handleResize = () => {
-      setViewportSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
-
-  // Hide the gesture hint after 4 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => setShowHint(false), 4200);
+    const timer = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        // Find card for current tier (approx 160px per tier column)
+        const targetX = Math.max(0, (currentTier - 2) * 168);
+        scrollContainerRef.current.scrollTo({ left: targetX, behavior: 'smooth' });
+      }
+    }, 250);
     return () => clearTimeout(timer);
   }, []);
-
-  // Compute world dimensions matching image aspect ratio (1376 / 768)
-  const imageAspect = 1376 / 768; // ~1.79167
-  let baseWorldWidth = viewportSize.width;
-  let baseWorldHeight = viewportSize.width / imageAspect;
-  if (baseWorldHeight < viewportSize.height) {
-    baseWorldHeight = viewportSize.height;
-    baseWorldWidth = viewportSize.height * imageAspect;
-  }
-
-  // Map Zoom & Pan State
-  const [scale, setScale] = useState(1.0);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isTransitioning, setIsTransitioning] = useState(false);
-
-  const scaleRef = useRef(scale);
-  const panRef = useRef(pan);
-  scaleRef.current = scale;
-  panRef.current = pan;
-
-  const viewportRef = useRef<HTMLDivElement>(null);
-
-  // Gesture tracking ref to reliably distinguish tap vs pan/pinch
-  const gestureRef = useRef<{
-    mode: 'none' | 'pan' | 'pinch';
-    startClient: { x: number; y: number };
-    startPan: { x: number; y: number };
-    startScale: number;
-    startDistance: number;
-    startMidpoint: { x: number; y: number };
-    hasMoved: boolean;
-    dragDistance: number;
-  }>({
-    mode: 'none',
-    startClient: { x: 0, y: 0 },
-    startPan: { x: 0, y: 0 },
-    startScale: 1.0,
-    startDistance: 0,
-    startMidpoint: { x: 0, y: 0 },
-    hasMoved: false,
-    dragDistance: 0,
-  });
-
-  // Clamping function to keep the map well-bounded on any device
-  const clampPan = useCallback((newPan: { x: number; y: number }, curScale: number) => {
-    const overflowX = Math.max(0, (baseWorldWidth * curScale - viewportSize.width) / 2);
-    const overflowY = Math.max(0, (baseWorldHeight * curScale - viewportSize.height) / 2);
-    const allowSlackX = 120 * curScale;
-    const allowSlackY = 80 * curScale;
-    const maxX = overflowX + allowSlackX;
-    const maxY = overflowY + allowSlackY;
-    return {
-      x: Math.max(-maxX, Math.min(maxX, newPan.x)),
-      y: Math.max(-maxY, Math.min(maxY, newPan.y)),
-    };
-  }, [baseWorldWidth, baseWorldHeight, viewportSize.width, viewportSize.height]);
-
-  // Touch gesture listeners (Pinch-to-zoom & one-finger pan)
-  useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-
-    const onTouchStart = (e: TouchEvent) => {
-      setShowHint(false);
-      setIsTransitioning(false);
-      if (e.touches.length === 1) {
-        gestureRef.current.mode = 'pan';
-        gestureRef.current.startClient = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        gestureRef.current.startPan = { ...panRef.current };
-        gestureRef.current.hasMoved = false;
-        gestureRef.current.dragDistance = 0;
-      } else if (e.touches.length >= 2) {
-        gestureRef.current.mode = 'pinch';
-        const dist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        gestureRef.current.startDistance = dist;
-        gestureRef.current.startScale = scaleRef.current;
-        gestureRef.current.startPan = { ...panRef.current };
-        gestureRef.current.startMidpoint = {
-          x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
-          y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
-        };
-        gestureRef.current.hasMoved = true;
-        e.preventDefault();
-      }
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (gestureRef.current.mode === 'pan' && e.touches.length === 1) {
-        const dx = e.touches[0].clientX - gestureRef.current.startClient.x;
-        const dy = e.touches[0].clientY - gestureRef.current.startClient.y;
-        gestureRef.current.dragDistance += Math.hypot(dx, dy);
-        if (gestureRef.current.dragDistance > 6) {
-          gestureRef.current.hasMoved = true;
-        }
-        const updatedPan = clampPan(
-          { x: gestureRef.current.startPan.x + dx, y: gestureRef.current.startPan.y + dy },
-          scaleRef.current
-        );
-        panRef.current = updatedPan;
-        setPan(updatedPan);
-        // Prevent unwanted browser pull-to-refresh or page swipe navigation
-        e.preventDefault();
-      } else if (e.touches.length >= 2) {
-        e.preventDefault();
-        const dist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        if (gestureRef.current.startDistance > 0) {
-          const ratio = dist / gestureRef.current.startDistance;
-          const newScale = Math.min(2.8, Math.max(0.75, gestureRef.current.startScale * ratio));
-
-          const curMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-          const curMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-          const midDx = curMidX - gestureRef.current.startMidpoint.x;
-          const midDy = curMidY - gestureRef.current.startMidpoint.y;
-
-          const updatedPan = clampPan(
-            { x: gestureRef.current.startPan.x + midDx, y: gestureRef.current.startPan.y + midDy },
-            newScale
-          );
-          scaleRef.current = newScale;
-          panRef.current = updatedPan;
-          setScale(newScale);
-          setPan(updatedPan);
-          gestureRef.current.hasMoved = true;
-        }
-      }
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length === 1) {
-        // Transition back to pan if one finger still touches
-        gestureRef.current.mode = 'pan';
-        gestureRef.current.startClient = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        gestureRef.current.startPan = { ...panRef.current };
-      } else if (e.touches.length === 0) {
-        gestureRef.current.mode = 'none';
-        gestureRef.current.startDistance = 0;
-      }
-    };
-
-    el.addEventListener('touchstart', onTouchStart, { passive: false });
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    el.addEventListener('touchend', onTouchEnd);
-    el.addEventListener('touchcancel', onTouchEnd);
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-      el.removeEventListener('touchcancel', onTouchEnd);
-    };
-  }, [clampPan]);
-
-  // Desktop Mouse Drag & Wheel handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    setShowHint(false);
-    setIsTransitioning(false);
-    gestureRef.current.mode = 'pan';
-    gestureRef.current.startClient = { x: e.clientX, y: e.clientY };
-    gestureRef.current.startPan = { ...panRef.current };
-    gestureRef.current.hasMoved = false;
-    gestureRef.current.dragDistance = 0;
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (gestureRef.current.mode === 'pan') {
-      const dx = e.clientX - gestureRef.current.startClient.x;
-      const dy = e.clientY - gestureRef.current.startClient.y;
-      gestureRef.current.dragDistance += Math.hypot(dx, dy);
-      if (gestureRef.current.dragDistance > 6) {
-        gestureRef.current.hasMoved = true;
-      }
-      const updatedPan = clampPan(
-        { x: gestureRef.current.startPan.x + dx, y: gestureRef.current.startPan.y + dy },
-        scale
-      );
-      panRef.current = updatedPan;
-      setPan(updatedPan);
-    }
-  };
-
-  const handleMouseUp = () => {
-    gestureRef.current.mode = 'none';
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    setShowHint(false);
-    setIsTransitioning(false);
-    const zoomDelta = -e.deltaY * 0.0015;
-    const newScale = Math.min(2.8, Math.max(0.75, scale * (1 + zoomDelta)));
-    const updatedPan = clampPan(pan, newScale);
-    scaleRef.current = newScale;
-    panRef.current = updatedPan;
-    setScale(newScale);
-    setPan(updatedPan);
-  };
-
-  // Quick Zoom buttons
-  const handleZoomIn = () => {
-    setIsTransitioning(true);
-    const newScale = Math.min(2.8, scale * 1.3);
-    const updatedPan = clampPan(pan, newScale);
-    setScale(newScale);
-    setPan(updatedPan);
-  };
-
-  const handleZoomOut = () => {
-    setIsTransitioning(true);
-    const newScale = Math.max(0.75, scale / 1.3);
-    const updatedPan = clampPan(pan, newScale);
-    setScale(newScale);
-    setPan(updatedPan);
-  };
-
-  const handleResetZoom = () => {
-    setIsTransitioning(true);
-    setScale(1.0);
-    setPan({ x: 0, y: 0 });
-  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -509,21 +376,9 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
     }, 2800);
   };
 
-  const saveState = (newCollected: number, newCoins: number, newGems: number, newClaimed: number[]) => {
-    setCollectedRewards(newCollected);
-    setCoins(newCoins);
-    setGems(newGems);
-    setClaimedNodeIds(newClaimed);
-
-    localStorage.setItem('dasgar_season1_rewards_collected', newCollected.toString());
-    localStorage.setItem('dasgar_player_coins', newCoins.toString());
-    localStorage.setItem('dasgar_player_gems', newGems.toString());
-    localStorage.setItem('dasgar_season1_claimed_nodes', JSON.stringify(newClaimed));
-  };
-
   const triggerCelebration = () => {
-    const colors = ['#4ade80', '#22c55e', '#a3e635', '#38bdf8', '#facc15', '#f472b6'];
-    const newParticles = Array.from({ length: 24 }).map((_, i) => ({
+    const colors = ['#38bdf8', '#c084fc', '#a855f7', '#fb923c', '#22d3ee', '#facc15'];
+    const newParticles = Array.from({ length: 30 }).map((_, i) => ({
       id: Date.now() + i,
       x: 50 + (Math.random() - 0.5) * 40,
       y: 70 + (Math.random() - 0.5) * 20,
@@ -535,63 +390,172 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
     }, 1200);
   };
 
-  // Claim All Rewards button
+  // Scroll navigation helpers
+  const handleScrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -340, behavior: 'smooth' });
+    }
+  };
+
+  const handleScrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 340, behavior: 'smooth' });
+    }
+  };
+
+  const handleJumpToCurrent = () => {
+    if (scrollContainerRef.current) {
+      const targetX = Math.max(0, (currentTier - 2) * 168);
+      scrollContainerRef.current.scrollTo({ left: targetX, behavior: 'smooth' });
+    }
+  };
+
+  // Claim single free reward
+  const handleClaimFree = (tierNum: number) => {
+    const tierObj = SEASON_TIERS.find(t => t.tier === tierNum);
+    if (!tierObj || claimedFreeTiers.includes(tierNum) || tierNum > currentTier) return;
+
+    playChestSound();
+    triggerCelebration();
+
+    const newClaimed = [...claimedFreeTiers, tierNum];
+    setClaimedFreeTiers(newClaimed);
+    localStorage.setItem('dasgar_season1_claimed_free', JSON.stringify(newClaimed));
+
+    applyReward(tierObj.freeReward);
+    showToast(`Claimed Tier ${tierNum}: ${tierObj.freeReward.name}!`);
+    if (selectedReward) setSelectedReward(null);
+  };
+
+  // Claim single gold reward
+  const handleClaimGold = (tierNum: number) => {
+    if (!hasGoldPass) {
+      setIsGoldPassModalOpen(true);
+      return;
+    }
+
+    const tierObj = SEASON_TIERS.find(t => t.tier === tierNum);
+    if (!tierObj || claimedGoldTiers.includes(tierNum) || tierNum > currentTier) return;
+
+    playClaimRewardSound();
+    triggerCelebration();
+
+    const newClaimed = [...claimedGoldTiers, tierNum];
+    setClaimedGoldTiers(newClaimed);
+    localStorage.setItem('dasgar_season1_claimed_gold', JSON.stringify(newClaimed));
+
+    applyReward(tierObj.goldReward);
+    showToast(`Claimed VIP Tier ${tierNum}: ${tierObj.goldReward.name}!`);
+    if (selectedReward) setSelectedReward(null);
+  };
+
+  // Apply reward contents
+  const applyReward = (r: TierReward) => {
+    if (r.type === 'coins') {
+      const nextCoins = coins + r.amount;
+      setCoins(nextCoins);
+      localStorage.setItem('dasgar_player_coins', nextCoins.toString());
+    } else if (r.type === 'gems') {
+      const nextGems = gems + r.amount;
+      setGems(nextGems);
+      localStorage.setItem('dasgar_player_gems', nextGems.toString());
+    } else if (r.type === 'ghosts') {
+      const nextGhosts = ghostTokens + r.amount;
+      setGhostTokens(nextGhosts);
+      localStorage.setItem('dasgar_ghostTokenCount', nextGhosts.toString());
+    } else if (r.type === 'chest') {
+      const nextCoins = coins + 750;
+      const nextGhosts = ghostTokens + 60;
+      setCoins(nextCoins);
+      setGhostTokens(nextGhosts);
+      localStorage.setItem('dasgar_player_coins', nextCoins.toString());
+      localStorage.setItem('dasgar_ghostTokenCount', nextGhosts.toString());
+    } else if (r.type === 'skin') {
+      const nextGems = gems + 100;
+      setGems(nextGems);
+      localStorage.setItem('dasgar_player_gems', nextGems.toString());
+    }
+  };
+
+  // Claim ALL available unlocked rewards across both tracks
   const handleClaimAll = () => {
     playClaimRewardSound();
     triggerCelebration();
 
-    const unclaimedUnlocked = SEASON_NODES.filter(
-      n => n.tier <= collectedRewards && !claimedNodeIds.includes(n.id)
-    );
-
     let addedCoins = 0;
     let addedGems = 0;
-    const newClaimed = [...claimedNodeIds];
+    let addedGhosts = 0;
+    let count = 0;
 
-    if (unclaimedUnlocked.length > 0) {
-      unclaimedUnlocked.forEach(node => {
-        newClaimed.push(node.id);
-        if (node.rewardType === 'coins' && node.rewardAmount) addedCoins += node.rewardAmount;
-        if (node.rewardType === 'gems' && node.rewardAmount) addedGems += node.rewardAmount;
-      });
-      const nextCount = Math.min(40, collectedRewards + unclaimedUnlocked.length);
-      saveState(nextCount, coins + addedCoins, gems + addedGems, newClaimed);
-      showToast(`Collected +${addedCoins} Coins & +${addedGems} Gems!`);
+    const newClaimedFree = [...claimedFreeTiers];
+    const newClaimedGold = [...claimedGoldTiers];
+
+    SEASON_TIERS.forEach(t => {
+      if (t.tier <= currentTier) {
+        // Check free track
+        if (!newClaimedFree.includes(t.tier)) {
+          newClaimedFree.push(t.tier);
+          count++;
+          if (t.freeReward.type === 'coins') addedCoins += t.freeReward.amount;
+          if (t.freeReward.type === 'gems') addedGems += t.freeReward.amount;
+          if (t.freeReward.type === 'ghosts') addedGhosts += t.freeReward.amount;
+          if (t.freeReward.type === 'chest') { addedCoins += 600; addedGhosts += 50; }
+        }
+
+        // Check gold track if user owns Gold Pass
+        if (hasGoldPass && !newClaimedGold.includes(t.tier)) {
+          newClaimedGold.push(t.tier);
+          count++;
+          if (t.goldReward.type === 'coins') addedCoins += t.goldReward.amount;
+          if (t.goldReward.type === 'gems') addedGems += t.goldReward.amount;
+          if (t.goldReward.type === 'ghosts') addedGhosts += t.goldReward.amount;
+          if (t.goldReward.type === 'chest') { addedCoins += 1000; addedGems += 50; }
+        }
+      }
+    });
+
+    if (count > 0) {
+      setClaimedFreeTiers(newClaimedFree);
+      setClaimedGoldTiers(newClaimedGold);
+      localStorage.setItem('dasgar_season1_claimed_free', JSON.stringify(newClaimedFree));
+      localStorage.setItem('dasgar_season1_claimed_gold', JSON.stringify(newClaimedGold));
+
+      const nextCoins = coins + addedCoins;
+      const nextGems = gems + addedGems;
+      const nextGhosts = ghostTokens + addedGhosts;
+
+      setCoins(nextCoins);
+      setGems(nextGems);
+      setGhostTokens(nextGhosts);
+
+      localStorage.setItem('dasgar_player_coins', nextCoins.toString());
+      localStorage.setItem('dasgar_player_gems', nextGems.toString());
+      localStorage.setItem('dasgar_ghostTokenCount', nextGhosts.toString());
+
+      showToast(`Collected ${count} Rewards! (+${addedCoins} Coins, +${addedGems} Gems, +${addedGhosts} Ghosts)`);
     } else {
-      const nextCount = Math.min(40, collectedRewards + 1);
-      const bonusCoins = 500;
-      const bonusGems = 50;
-      saveState(nextCount, coins + bonusCoins, gems + bonusGems, newClaimed);
-      showToast(`Tier Claimed! +${bonusCoins} Coins & +${bonusGems} Gems!`);
+      showToast('All unlocked rewards already claimed!');
     }
   };
 
-  // Claim single node
-  const handleClaimSingleNode = (node: SeasonNode) => {
-    playChestSound();
-    triggerCelebration();
-
-    const newClaimed = [...claimedNodeIds, node.id];
-    let newCoins = coins;
-    let newGems = gems;
-
-    if (node.rewardType === 'coins' && node.rewardAmount) newCoins += node.rewardAmount;
-    if (node.rewardType === 'gems' && node.rewardAmount) newGems += node.rewardAmount;
-    if (node.rewardType === 'chest') {
-      newCoins += 650;
-      newGems += 45;
+  // Buy / Activate Gold Pass
+  const handleActivateGoldPass = () => {
+    if (gems >= 250) {
+      const nextGems = gems - 250;
+      setGems(nextGems);
+      setHasGoldPass(true);
+      localStorage.setItem('dasgar_player_gems', nextGems.toString());
+      localStorage.setItem('dasgar_has_gold_pass', 'true');
+      playClaimRewardSound();
+      triggerCelebration();
+      setIsGoldPassModalOpen(false);
+      showToast('GHOST PASS VIP ACTIVATED! Exclusive Gold track unlocked!');
+    } else {
+      showToast('Not enough Soul Gems! Need 250 Gems.');
     }
-    if (node.rewardType === 'skin') {
-      newCoins += 1000;
-      newGems += 100;
-    }
-
-    const nextCount = Math.min(40, Math.max(collectedRewards, node.tier));
-    saveState(nextCount, newCoins, newGems, newClaimed);
-    setSelectedNode(null);
-    showToast(`Claimed ${node.rewardName}!`);
   };
 
+  // Claim Quest
   const handleClaimQuest = (questId: string) => {
     playClaimRewardSound();
     triggerCelebration();
@@ -603,168 +567,69 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
     setQuests(updated);
     localStorage.setItem('dasgar_season1_quests', JSON.stringify(updated));
 
-    const nextCount = Math.min(40, collectedRewards + 1);
-    saveState(nextCount, coins + quest.rewardCoins, gems + 25, claimedNodeIds);
-    showToast(`Quest Complete! +${quest.rewardCoins} Coins & +${quest.rewardXp} XP!`);
+    const addedGhosts = 150;
+    const newGhostTokens = ghostTokens + addedGhosts;
+    const newCoins = coins + quest.rewardCoins;
+    setGhostTokens(newGhostTokens);
+    setCoins(newCoins);
+
+    localStorage.setItem('dasgar_ghostTokenCount', newGhostTokens.toString());
+    localStorage.setItem('dasgar_player_coins', newCoins.toString());
+
+    // Advance tier if reached
+    if (currentTier < 30) {
+      const nextTier = Math.min(30, currentTier + 1);
+      setCurrentTier(nextTier);
+      localStorage.setItem('dasgar_season1_tier', nextTier.toString());
+    }
+
+    showToast(`Quest Complete! +${quest.rewardCoins} Coins & +${addedGhosts} Ghost Tokens!`);
   };
 
-  const progressPercent = Math.min(100, Math.round((collectedRewards / 40) * 100));
+  // Helper for rendering reward icon
+  const renderRewardIcon = (r: TierReward, size: 'sm' | 'md' | 'lg' = 'md') => {
+    const dim = size === 'sm' ? 'w-6 h-6' : size === 'lg' ? 'w-14 h-14' : 'w-10 h-10';
+    if (r.type === 'coins') {
+      return <Coins className={`${dim} text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]`} />;
+    }
+    if (r.type === 'gems') {
+      return <Diamond className={`${dim} text-cyan-300 drop-shadow-[0_0_8px_rgba(103,232,249,0.6)]`} />;
+    }
+    if (r.type === 'ghosts') {
+      return (
+        <img 
+          src="/ghost-token.png" 
+          alt="Ghost Token" 
+          className={`${dim} object-contain drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]`} 
+        />
+      );
+    }
+    if (r.type === 'chest') {
+      return <Gift className={`${dim} text-fuchsia-300 drop-shadow-[0_0_10px_rgba(240,171,252,0.6)]`} />;
+    }
+    if (r.type === 'skin') {
+      return <Crown className={`${dim} text-amber-300 fill-amber-300 drop-shadow-[0_0_12px_rgba(252,211,77,0.8)] animate-pulse`} />;
+    }
+    if (r.type === 'booster') {
+      return <Zap className={`${dim} text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]`} />;
+    }
+    return <Gift className={`${dim} text-white`} />;
+  };
 
-  // Determine if screen is in compact height / landscape mode (e.g. iPhone in landscape, screen height <= 520px)
-  const isLandscapeCompact = viewportSize.height <= 520 || (viewportSize.width > viewportSize.height && viewportSize.height < 600);
+  const progressPercent = Math.min(100, Math.round((currentTier / 30) * 100));
 
   return (
-    <div className="relative w-full h-full bg-slate-950 overflow-hidden select-none font-sans text-white">
-      {/* ========================================================================= */}
-      {/* INTERACTIVE ZOOMABLE & PANNABLE MAP VIEWPORT                               */}
-      {/* ========================================================================= */}
-      <div 
-        ref={viewportRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
-        className="absolute inset-0 z-0 overflow-hidden cursor-grab active:cursor-grabbing select-none"
-        style={{ touchAction: 'none' }}
-      >
-        {/* Transformable World Canvas (Background + All Nodes strictly bound together) */}
-        <div 
-          className="relative pointer-events-auto"
-          style={{
-            width: `${baseWorldWidth}px`,
-            height: `${baseWorldHeight}px`,
-            transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${scale})`,
-            transformOrigin: 'center center',
-            transition: isTransitioning ? 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none',
-          }}
-        >
-          {/* Lush 3D Isometric Green Candy World Background */}
-          <img 
-            src={seasonBgImage} 
-            alt="Season 1 Green Candy World" 
-            className="w-full h-full object-cover object-center pointer-events-none select-none block"
-            draggable={false}
-          />
+    <div className="relative w-full h-full bg-slate-950 overflow-hidden select-none font-sans text-white flex flex-col">
+      {/* Background with Scary Halloween Theme and Dark Blur Layer */}
+      <img 
+        src={seasonBgImage} 
+        alt="Halloween Season Background" 
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none opacity-40 brightness-75 scale-105"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-purple-950/70 pointer-events-none" />
+      <div className="absolute inset-0 bg-radial from-transparent via-purple-950/40 to-black/80 pointer-events-none" />
 
-          {/* Vignette and lighting layer */}
-          <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/70 via-transparent to-emerald-950/50 pointer-events-none" />
-          <div className="absolute inset-0 bg-emerald-900/10 mix-blend-color pointer-events-none" />
-
-          {/* Start Flag (bottom left on candy road) */}
-          <div 
-            className="absolute z-10 pointer-events-none transform -translate-x-1/2 -translate-y-1/2"
-            style={{ left: '17%', top: '76%' }}
-          >
-            <div className="bg-emerald-950/90 border-2 border-emerald-400 rounded-full px-2.5 sm:px-3 py-1 flex items-center gap-1.5 shadow-lg shadow-black/50">
-              <div className="w-3.5 h-3.5 rounded-full bg-lime-400 flex items-center justify-center text-emerald-950 font-black text-[9px]">
-                ★
-              </div>
-              <span className="font-black text-[10px] sm:text-xs text-lime-300 tracking-widest uppercase whitespace-nowrap">START</span>
-            </div>
-          </div>
-
-          {/* Boss Peak Tag (top right candy mountain peak) */}
-          <div 
-            className="absolute z-10 pointer-events-auto transform -translate-x-1/2 -translate-y-1/2"
-            style={{ left: '67%', top: '21%' }}
-          >
-            <motion.div 
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-              className="bg-emerald-950/90 border-2 border-amber-400/80 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-[0_0_20px_rgba(245,158,11,0.4)] cursor-pointer hud-tap whitespace-nowrap"
-              onClick={() => {
-                if (gestureRef.current.hasMoved) return;
-                const bossNode = SEASON_NODES.find(n => n.id === 10);
-                if (bossNode) {
-                  playNodeClickSound();
-                  setSelectedNode(bossNode);
-                }
-              }}
-            >
-              <Crown size={14} className="text-amber-400 fill-amber-400" />
-              <span className="font-black text-[9.5px] sm:text-xs text-amber-300 tracking-wider uppercase whitespace-nowrap">
-                BOSS: CANDY SWIRL PEAK
-              </span>
-            </motion.div>
-          </div>
-
-          {/* Interactive Checkpoints along the candy path */}
-          {SEASON_NODES.map((node) => {
-            const isClaimed = claimedNodeIds.includes(node.id);
-            const isUnlocked = node.tier <= collectedRewards;
-            const isCurrentActive = isUnlocked && !isClaimed;
-
-            return (
-              <div
-                key={node.id}
-                className="absolute z-10 pointer-events-auto transform -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${node.xPercent}%`, top: `${node.yPercent}%` }}
-              >
-                {/* Optional Floating Tag above node */}
-                {node.label && (
-                  <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none">
-                    <div className="bg-emerald-950/90 border border-lime-400/80 rounded-full px-2 py-0.5 text-[8.5px] sm:text-[9.5px] font-black tracking-wider text-lime-300 shadow-md uppercase whitespace-nowrap">
-                      {node.label}
-                    </div>
-                  </div>
-                )}
-
-                {/* Node Button with Pin Style and Glow */}
-                <TouchSafeButton
-                  onClick={() => {
-                    // Suppress node opening if user was dragging or pinching the map
-                    if (gestureRef.current.hasMoved) return;
-                    playNodeClickSound();
-                    setSelectedNode(node);
-                  }}
-                  className={`relative group rounded-full flex items-center justify-center transition-all select-none hud-tap ${
-                    isCurrentActive
-                      ? 'scale-110 sm:scale-125'
-                      : 'scale-90 sm:scale-100 hover:scale-110'
-                  }`}
-                >
-                  {/* Ripple Glow for Current Active Node */}
-                  {isCurrentActive && (
-                    <motion.div
-                      animate={{ scale: [1, 1.8, 1], opacity: [0.8, 0, 0.8] }}
-                      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
-                      className="absolute inset-0 rounded-full bg-lime-400 blur-sm pointer-events-none"
-                    />
-                  )}
-
-                  {/* Outer Pin Body */}
-                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-[2.5px] shadow-xl flex items-center justify-center ${
-                    isClaimed
-                      ? 'bg-emerald-600 border-lime-300 text-white shadow-emerald-500/40'
-                      : isCurrentActive
-                      ? 'bg-gradient-to-b from-lime-400 to-green-600 border-white text-emerald-950 shadow-lime-400/60 ring-2 ring-lime-400'
-                      : 'bg-emerald-950/90 border-emerald-600/70 text-emerald-400 shadow-black/50 opacity-90'
-                  }`}>
-                    {/* Pin Content Icon */}
-                    {isClaimed ? (
-                      <Check size={16} strokeWidth={3} className="text-white drop-shadow" />
-                    ) : node.badgeType === 'boss' ? (
-                      <Crown size={18} className="text-amber-300 fill-amber-300 drop-shadow" />
-                    ) : node.badgeType === 'chest' || node.badgeType === 'bonus' ? (
-                      <Gift size={16} className={isCurrentActive ? 'text-white' : 'text-lime-300'} />
-                    ) : node.badgeType === 'gem' ? (
-                      <Diamond size={16} className={isCurrentActive ? 'text-cyan-200 fill-cyan-200' : 'text-emerald-300'} />
-                    ) : (
-                      <Star size={16} className={isCurrentActive ? 'text-white fill-white' : 'text-lime-400'} />
-                    )}
-                  </div>
-
-                  {/* Ground ripple ring under pin */}
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-2 rounded-full bg-emerald-400/30 blur-[1px] pointer-events-none" />
-                </TouchSafeButton>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Floating Celebration Particles */}
+      {/* Floating Spooky Celebration Particles */}
       {celebrationParticles.map(p => (
         <motion.div
           key={p.id}
@@ -776,256 +641,445 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
             y: `${p.y - 25 - Math.random() * 20}vh`,
           }}
           transition={{ duration: 1.1, ease: 'easeOut' }}
-          className="absolute z-50 pointer-events-none w-3 h-3 sm:w-4 sm:h-4 rounded-full shadow-lg"
+          className="absolute z-50 pointer-events-none w-3.5 h-3.5 rounded-full shadow-lg"
           style={{ backgroundColor: p.color }}
         />
       ))}
 
-      {/* Toast Banner */}
+      {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-900/95 border-2 border-lime-400 text-lime-200 font-extrabold text-xs sm:text-sm px-5 py-2 rounded-full shadow-2xl flex items-center gap-2 pointer-events-none backdrop-blur-md"
+            className="fixed top-14 sm:top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-950/95 border-2 border-cyan-400 text-cyan-200 font-extrabold text-xs sm:text-sm px-5 py-2 rounded-full shadow-[0_0_25px_rgba(56,189,248,0.5)] flex items-center gap-2 pointer-events-none backdrop-blur-md"
           >
-            <Sparkles className="w-4 h-4 text-lime-400 animate-spin" />
+            <Sparkles className="w-4 h-4 text-cyan-400 animate-spin" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* ========================================================================= */}
-      {/* FLOATING ZOOM & NAV CONTROLS (Right Side HUD)                             */}
+      {/* TOP HEADER CONSOLE (Fixed Top Bar)                                        */}
       {/* ========================================================================= */}
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-2 pointer-events-auto">
-        <div className="bg-emerald-950/90 border border-emerald-500/60 rounded-full p-1 shadow-2xl backdrop-blur-md flex flex-col items-center gap-1">
+      <header className="relative z-30 w-full px-3 sm:px-6 pt-2 pb-1.5 flex items-center justify-between gap-2 border-b border-purple-900/40 bg-slate-950/80 backdrop-blur-md flex-shrink-0">
+        {/* Left: Back to Menu */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <TouchSafeButton
-            onClick={handleZoomIn}
-            className="w-8 h-8 rounded-full bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 hover:text-white flex items-center justify-center hud-tap transition-all"
-            title="Zoom In"
+            onClick={onBack}
+            className="bg-slate-900/90 hover:bg-slate-800 border-2 border-purple-500/70 rounded-full px-3 py-1.5 text-purple-200 hover:text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.35)] transition-all hud-tap"
+            title="Return to Main Menu"
           >
-            <ZoomIn size={16} />
+            <ArrowLeft size={16} className="text-cyan-400" />
+            <span className="font-black text-xs uppercase tracking-wider">Menu</span>
           </TouchSafeButton>
-          <div className="text-[9px] font-black text-lime-400 select-none py-0.5">
-            {Math.round(scale * 100)}%
+
+          {/* Season Title & Badge */}
+          <div className="flex items-center gap-2">
+            <img 
+              src="/ghost-token.png" 
+              alt="Ghost Token" 
+              className="w-6 h-6 object-contain drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]" 
+            />
+            <div className="hidden xs:flex flex-col">
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="font-black text-sm tracking-wider text-white">
+                  DASGAR<span className="text-cyan-400">.IO</span>
+                </span>
+                <span className="bg-purple-900/70 border border-purple-400/60 text-cyan-300 text-[9px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+                  GHOST PASS
+                </span>
+              </div>
+              <span className="text-[10px] text-purple-300/80 font-bold tracking-tight">
+                SEASON 1 • SPOOKY HAUNT
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Center: Jump to Current Tier */}
+        <div className="hidden md:flex items-center gap-2 bg-slate-900/80 border border-purple-600/50 rounded-full px-3 py-1 shadow-inner">
+          <Target size={14} className="text-cyan-400 animate-pulse" />
+          <span className="text-xs font-black text-purple-200 uppercase">
+            TIER {currentTier}/30
+          </span>
+          <div className="w-20 bg-slate-950 rounded-full h-2 overflow-hidden border border-purple-800/60">
+            <div 
+              className="bg-gradient-to-r from-purple-500 to-cyan-400 h-full rounded-full transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
           <TouchSafeButton
-            onClick={handleZoomOut}
-            className="w-8 h-8 rounded-full bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 hover:text-white flex items-center justify-center hud-tap transition-all"
-            title="Zoom Out"
+            onClick={handleJumpToCurrent}
+            className="text-[10px] font-black text-cyan-300 hover:text-white uppercase bg-purple-900/60 hover:bg-purple-800 px-2 py-0.5 rounded-full hud-tap"
           >
-            <ZoomOut size={16} />
+            Jump
           </TouchSafeButton>
-          <div className="w-4 h-[1px] bg-emerald-700/60 my-0.5" />
-          <TouchSafeButton
-            onClick={handleResetZoom}
-            className="w-8 h-8 rounded-full bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 hover:text-white flex items-center justify-center hud-tap transition-all"
-            title="Reset View"
+        </div>
+
+        {/* Right: Currencies & Season Timer */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Ghost Tokens (👻) */}
+          <div 
+            className="flex items-center gap-1 bg-slate-900/90 border border-cyan-500/70 rounded-full px-2.5 py-1 shadow-[0_0_12px_rgba(56,189,248,0.35)]"
+            title="Ghost Tokens"
           >
-            <RotateCcw size={14} />
-          </TouchSafeButton>
+            <img src="/ghost-token.png" alt="Ghost" className="w-3.5 h-3.5 object-contain" />
+            <span className="font-black text-xs text-cyan-300 font-mono">{ghostTokens.toLocaleString()}</span>
+          </div>
+
+          {/* Soul Gems */}
+          <div 
+            className="flex items-center gap-1 bg-slate-900/90 border border-purple-500/60 rounded-full px-2.5 py-1 shadow-inner"
+            title="Soul Gems"
+          >
+            <Diamond size={13} className="text-fuchsia-400 fill-fuchsia-400" />
+            <span className="font-black text-xs text-white">{gems.toLocaleString()}</span>
+          </div>
+
+          {/* Cursed Coins */}
+          <div 
+            className="flex items-center gap-1 bg-slate-900/90 border border-amber-500/60 rounded-full px-2.5 py-1 shadow-inner"
+            title="Cursed Coins"
+          >
+            <Coins size={13} className="text-amber-400 fill-amber-400" />
+            <span className="font-black text-xs text-white">{coins.toLocaleString()}</span>
+          </div>
+
+          {/* Season Countdown */}
+          <div className="hidden lg:flex items-center gap-1 bg-slate-900/90 border border-orange-500/60 rounded-full px-2.5 py-1 text-orange-300 text-[10px] font-black shadow-lg">
+            <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400" />
+            <span>14D 8H</span>
+          </div>
+        </div>
+      </header>
+
+      {/* ========================================================================= */}
+      {/* SUB-HEADER: TRACK LABELS & PASS STATUS STRIP                              */}
+      {/* ========================================================================= */}
+      <div className="relative z-20 w-full px-3 sm:px-6 py-1.5 flex items-center justify-between gap-3 bg-purple-950/30 border-b border-purple-900/30 flex-shrink-0">
+        {/* Left: Free vs Gold Legend / Pass Promo */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(56,189,248,0.8)]" />
+            <span className="text-[11px] font-black uppercase text-cyan-200">FREE TRACK</span>
+          </div>
+          <div className="w-[1px] h-3 bg-purple-700/60" />
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+            <span className="text-[11px] font-black uppercase text-amber-300">GOLD PASS TRACK</span>
+          </div>
+        </div>
+
+        {/* Right: Gold Pass VIP Trigger Banner */}
+        <div className="flex items-center gap-2">
+          {hasGoldPass ? (
+            <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-950/80 to-purple-950/80 border border-amber-400/80 rounded-full px-3 py-0.5 shadow-[0_0_12px_rgba(245,158,11,0.4)]">
+              <Crown size={13} className="text-amber-400 fill-amber-400 animate-pulse" />
+              <span className="text-[10px] font-black text-amber-300 uppercase tracking-wider">
+                GOLD PASS ACTIVE (VIP)
+              </span>
+            </div>
+          ) : (
+            <TouchSafeButton
+              onClick={() => setIsGoldPassModalOpen(true)}
+              className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-[11px] uppercase tracking-wider px-3.5 py-1 rounded-full shadow-[0_0_18px_rgba(245,158,11,0.6)] hud-tap flex items-center gap-1.5"
+            >
+              <Crown size={13} className="text-slate-950 fill-slate-950" />
+              <span>UPGRADE TO GOLD PASS</span>
+            </TouchSafeButton>
+          )}
+
+          {/* Quick jump arrows */}
+          <div className="flex items-center gap-1">
+            <TouchSafeButton
+              onClick={handleScrollLeft}
+              className="w-7 h-7 rounded-full bg-slate-900 border border-purple-700/70 hover:bg-slate-800 text-purple-200 hover:text-white flex items-center justify-center hud-tap"
+              title="Scroll Left"
+            >
+              <ChevronLeft size={16} />
+            </TouchSafeButton>
+            <TouchSafeButton
+              onClick={handleScrollRight}
+              className="w-7 h-7 rounded-full bg-slate-900 border border-purple-700/70 hover:bg-slate-800 text-purple-200 hover:text-white flex items-center justify-center hud-tap"
+              title="Scroll Right"
+            >
+              <ChevronRight size={16} />
+            </TouchSafeButton>
+          </div>
         </div>
       </div>
 
-      {/* Touch Gesture Prompt Hint (Fades out automatically) */}
-      <AnimatePresence>
-        {showHint && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute bottom-16 sm:bottom-20 left-1/2 -translate-x-1/2 z-30 bg-emerald-950/90 border border-emerald-500/60 rounded-full px-4 py-1 text-[11px] font-black text-lime-300 shadow-xl backdrop-blur-md pointer-events-none flex items-center gap-2"
-          >
-            <Move size={12} className="text-lime-400 animate-pulse" />
-            <span>Pinch with 2 fingers to zoom • Drag to explore</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ========================================================================= */}
-      {/* TOP HEADER CONSOLE: RESPONSIVE FOR ALL DEVICES (LANDSCAPE & PORTRAIT)    */}
+      {/* MAIN CARDS TRACK VIEWPORT (HORIZONTAL SCROLLING CAROUSEL)                 */}
       {/* ========================================================================= */}
-      <div className="absolute top-1.5 sm:top-3 left-0 right-0 z-30 px-2.5 sm:px-6 pointer-events-none">
-        {/* In Compact/Landscape orientation (like iPhone landscape shown in IMG_1911) */}
-        {isLandscapeCompact ? (
-          <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-2 pointer-events-auto">
-            {/* Left: Back / Exit Button */}
-            <TouchSafeButton
-              onClick={onBack}
-              className="bg-emerald-950/90 hover:bg-emerald-900 border-2 border-emerald-500/60 rounded-full px-3 py-1.5 text-emerald-200 hover:text-white flex items-center gap-1.5 shadow-lg shadow-emerald-950/80 transition-all hud-tap flex-shrink-0"
-              title="Return to Main Menu"
-            >
-              <ArrowLeft size={16} className="text-emerald-400 pointer-events-none" />
-              <span className="font-black text-[11px] uppercase tracking-wider pointer-events-none">Menu</span>
-            </TouchSafeButton>
+      <main className="relative z-10 flex-1 w-full overflow-hidden flex flex-col justify-center py-2 sm:py-3">
+        <div 
+          ref={scrollContainerRef}
+          className="w-full h-full overflow-x-auto overflow-y-hidden px-4 sm:px-8 flex items-center gap-3 sm:gap-4 scroll-smooth select-none cursor-grab active:cursor-grabbing no-scrollbar"
+          style={{ touchAction: 'pan-x' }}
+        >
+          {SEASON_TIERS.map((tier) => {
+            const isUnlocked = tier.tier <= currentTier;
+            const isCurrent = tier.tier === currentTier;
+            const isFreeClaimed = claimedFreeTiers.includes(tier.tier);
+            const isGoldClaimed = claimedGoldTiers.includes(tier.tier);
 
-            {/* Center: Sleek Unified Season Header & Progress Bar in a Single Compact Bar */}
-            <div className="bg-emerald-950/95 border-2 border-emerald-500/70 rounded-full px-3.5 py-1 shadow-xl backdrop-blur-md flex items-center gap-2.5 flex-shrink-0">
-              {/* Lollipop Swirl Mini Icon */}
-              <div className="w-5 h-5 flex-shrink-0">
-                <svg viewBox="0 0 40 40" className="w-full h-full">
-                  <rect x="18" y="22" width="4" height="16" rx="2" fill="#dcfce7" stroke="#15803d" strokeWidth="1" />
-                  <circle cx="20" cy="18" r="14" fill="#22c55e" stroke="#16a34a" strokeWidth="2" />
-                  <path d="M 20 6 A 12 12 0 0 1 32 18 A 9 9 0 0 1 23 27 A 6 6 0 0 1 17 21 A 3 3 0 0 1 20 18" fill="none" stroke="#f0fdf4" strokeWidth="2.5" strokeLinecap="round" />
-                </svg>
-              </div>
-
-              {/* Title & Season Tag */}
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-sm tracking-wider text-white">
-                  DASGAR<span className="text-lime-400">.IO</span>
-                </span>
-                <span className="bg-lime-400/20 border border-lime-400/50 text-lime-300 text-[9px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap">
-                  SEASON 1
-                </span>
-              </div>
-
-              {/* Divider */}
-              <div className="w-[1px] h-4 bg-emerald-700/80" />
-
-              {/* Progress Tracker */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-emerald-200 uppercase whitespace-nowrap">
-                  REWARDS {collectedRewards}/40
-                </span>
-                <div className="w-20 sm:w-28 bg-emerald-900/80 border border-emerald-600/50 rounded-full h-2.5 overflow-hidden p-0.5">
-                  <div 
-                    className="bg-gradient-to-r from-lime-400 to-green-500 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(74,222,128,0.9)]"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-black text-lime-300">{progressPercent}%</span>
-              </div>
-            </div>
-
-            {/* Right: Currencies & Season Timer */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-              {/* Gems */}
-              <div className="flex items-center gap-1 bg-emerald-950/90 border border-emerald-600/50 rounded-full px-2.5 py-1 shadow-inner">
-                <Diamond size={13} className="text-cyan-400 fill-cyan-400" />
-                <span className="font-black text-xs text-white">{gems.toLocaleString()}</span>
-              </div>
-
-              {/* Coins */}
-              <div className="flex items-center gap-1 bg-emerald-950/90 border border-emerald-600/50 rounded-full px-2.5 py-1 shadow-inner">
-                <Coins size={13} className="text-amber-400 fill-amber-400" />
-                <span className="font-black text-xs text-white">{coins.toLocaleString()}</span>
-              </div>
-
-              {/* Ends in 14D */}
-              <div className="hidden xs:flex items-center gap-1 bg-emerald-950/90 border border-emerald-500/50 rounded-full px-2.5 py-1 text-lime-300 text-[10px] font-black shadow-lg whitespace-nowrap">
-                <Flame className="w-3.5 h-3.5 text-lime-400 fill-lime-400" />
-                <span>14D 8H</span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* In Portrait / Tall Screen Orientation */
-          <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-1.5 pointer-events-auto">
-            {/* Top Row: Menu Button & Currencies & Timer */}
-            <div className="w-full flex items-center justify-between gap-2">
-              <TouchSafeButton
-                onClick={onBack}
-                className="bg-emerald-950/90 hover:bg-emerald-900 border-2 border-emerald-500/60 rounded-full px-3 py-1.5 text-emerald-200 hover:text-white flex items-center gap-1.5 shadow-lg shadow-emerald-950/80 transition-all hud-tap"
-                title="Return to Main Menu"
+            return (
+              <div
+                key={tier.tier}
+                className={`flex-shrink-0 w-[140px] sm:w-[155px] md:w-[168px] flex flex-col gap-2 relative transition-transform ${
+                  isCurrent ? 'scale-[1.02]' : ''
+                }`}
               >
-                <ArrowLeft size={16} className="text-emerald-400 pointer-events-none" />
-                <span className="font-black text-xs uppercase tracking-wider pointer-events-none">Menu</span>
-              </TouchSafeButton>
+                {/* ------------------------------------------------------------- */}
+                {/* TIER HEADER BADGE                                             */}
+                {/* ------------------------------------------------------------- */}
+                <div className={`w-full py-1 rounded-xl flex items-center justify-between px-2.5 border transition-all ${
+                  isCurrent
+                    ? 'bg-gradient-to-r from-purple-800 to-indigo-700 border-cyan-400 shadow-[0_0_12px_rgba(56,189,248,0.7)]'
+                    : isUnlocked
+                    ? 'bg-slate-900/90 border-purple-700/70 text-purple-200'
+                    : 'bg-slate-950/80 border-slate-800 text-slate-500'
+                }`}>
+                  <div className="flex items-center gap-1">
+                    {tier.isMilestone && <Crown size={12} className="text-amber-400 fill-amber-400 animate-pulse" />}
+                    <span className={`font-black text-[11px] sm:text-xs tracking-wider uppercase ${isCurrent ? 'text-white' : ''}`}>
+                      TIER {tier.tier}
+                    </span>
+                  </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <div className="flex items-center gap-1 bg-emerald-950/90 border border-emerald-600/50 rounded-full px-2.5 py-1 shadow-inner">
-                  <Diamond size={13} className="text-cyan-400 fill-cyan-400" />
-                  <span className="font-black text-xs text-white">{gems.toLocaleString()}</span>
+                  <div className="flex items-center gap-0.5 text-[10px] font-bold text-cyan-300 font-mono">
+                    <img src="/ghost-token.png" alt="Ghosts" className="w-3 h-3 object-contain" />
+                    <span>{tier.tokensRequired}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 bg-emerald-950/90 border border-emerald-600/50 rounded-full px-2.5 py-1 shadow-inner">
-                  <Coins size={13} className="text-amber-400 fill-amber-400" />
-                  <span className="font-black text-xs text-white">{coins.toLocaleString()}</span>
+
+                {/* ------------------------------------------------------------- */}
+                {/* FREE PASS REWARD CARD (Top Card)                             */}
+                {/* ------------------------------------------------------------- */}
+                <div 
+                  onClick={() => {
+                    playNodeClickSound();
+                    setSelectedReward({
+                      reward: tier.freeReward,
+                      tier: tier.tier,
+                      isGold: false,
+                      isClaimed: isFreeClaimed,
+                      isUnlocked,
+                    });
+                  }}
+                  className={`relative w-full rounded-2xl p-2.5 flex flex-col items-center text-center cursor-pointer transition-all border-2 hud-tap select-none ${
+                    isFreeClaimed
+                      ? 'bg-slate-950/70 border-cyan-700/40 text-cyan-400/80'
+                      : isUnlocked
+                      ? 'bg-gradient-to-b from-slate-900/90 to-purple-950/90 border-cyan-400/80 shadow-[0_0_15px_rgba(56,189,248,0.3)] hover:scale-[1.03]'
+                      : 'bg-slate-950/80 border-slate-800/80 opacity-75 hover:opacity-90'
+                  }`}
+                >
+                  {/* Top Free Track Pill */}
+                  <div className="w-full flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-black tracking-wider text-cyan-300 uppercase bg-cyan-950/60 border border-cyan-500/40 px-1.5 py-0.2 rounded-full">
+                      FREE
+                    </span>
+                    {isFreeClaimed ? (
+                      <span className="text-[9px] font-black text-cyan-400 flex items-center gap-0.5">
+                        <Check size={10} strokeWidth={3} /> Done
+                      </span>
+                    ) : isUnlocked ? (
+                      <span className="text-[9px] font-black text-lime-400 animate-pulse">
+                        Ready
+                      </span>
+                    ) : (
+                      <Lock size={10} className="text-slate-500" />
+                    )}
+                  </div>
+
+                  {/* Reward Artwork Display */}
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-slate-900/80 border border-purple-700/50 flex items-center justify-center my-1 relative shadow-inner">
+                    {renderRewardIcon(tier.freeReward, 'md')}
+                    {tier.freeReward.amount > 1 && (
+                      <span className="absolute bottom-1 right-1 bg-slate-950/90 border border-purple-500/60 rounded px-1 text-[9px] font-black font-mono text-cyan-300">
+                        x{tier.freeReward.amount}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Reward Title */}
+                  <h4 className="font-black text-[11px] sm:text-xs text-white leading-tight truncate w-full mt-0.5">
+                    {tier.freeReward.name}
+                  </h4>
+
+                  {/* Action / Claim Button */}
+                  <div className="w-full mt-2">
+                    {isFreeClaimed ? (
+                      <div className="w-full py-1 rounded-xl bg-slate-900/90 border border-cyan-500/40 text-cyan-300 text-[10px] font-black uppercase flex items-center justify-center gap-1 shadow-inner">
+                        <Check size={12} strokeWidth={3} /> CLAIMED
+                      </div>
+                    ) : isUnlocked ? (
+                      <TouchSafeButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleClaimFree(tier.tier);
+                        }}
+                        className="w-full py-1.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-black text-[10px] sm:text-xs uppercase shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-pulse"
+                      >
+                        CLAIM
+                      </TouchSafeButton>
+                    ) : (
+                      <div className="w-full py-1 rounded-xl bg-slate-900/40 border border-slate-800 text-slate-500 text-[10px] font-bold flex items-center justify-center gap-1">
+                        <Lock size={10} /> TIER {tier.tier}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="bg-emerald-950/90 border border-emerald-500/50 rounded-full px-2.5 py-1 flex items-center gap-1 text-lime-300 text-[10px] font-black shadow-lg">
-                  <Flame className="w-3.5 h-3.5 text-lime-400 fill-lime-400" />
-                  <span>14D 8H</span>
+
+                {/* ------------------------------------------------------------- */}
+                {/* CONNECTOR LINE & MILESTONE NODE                               */}
+                {/* ------------------------------------------------------------- */}
+                <div className="relative w-full flex items-center justify-center my-0.5">
+                  <div className={`w-full h-1 rounded-full ${
+                    isUnlocked ? 'bg-gradient-to-r from-purple-500 to-cyan-400' : 'bg-slate-800'
+                  }`} />
+                  <div className={`absolute w-4 h-4 rounded-full border-2 flex items-center justify-center text-[8px] font-black ${
+                    isCurrent
+                      ? 'bg-cyan-400 border-white text-slate-950 shadow-[0_0_8px_rgba(56,189,248,0.9)] animate-ping'
+                      : isUnlocked
+                      ? 'bg-purple-600 border-cyan-300 text-white'
+                      : 'bg-slate-900 border-slate-700 text-slate-500'
+                  }`} />
+                </div>
+
+                {/* ------------------------------------------------------------- */}
+                {/* GOLD PASS REWARD CARD (Bottom Card - VIP Track)              */}
+                {/* ------------------------------------------------------------- */}
+                <div 
+                  onClick={() => {
+                    playNodeClickSound();
+                    setSelectedReward({
+                      reward: tier.goldReward,
+                      tier: tier.tier,
+                      isGold: true,
+                      isClaimed: isGoldClaimed,
+                      isUnlocked,
+                    });
+                  }}
+                  className={`relative w-full rounded-2xl p-2.5 flex flex-col items-center text-center cursor-pointer transition-all border-2 hud-tap select-none ${
+                    isGoldClaimed
+                      ? 'bg-slate-950/70 border-amber-600/40 text-amber-300/80'
+                      : isUnlocked && hasGoldPass
+                      ? 'bg-gradient-to-b from-amber-950/90 via-slate-900/90 to-purple-950/90 border-amber-400/90 shadow-[0_0_18px_rgba(245,158,11,0.35)] hover:scale-[1.03]'
+                      : 'bg-gradient-to-b from-slate-950/90 to-amber-950/30 border-amber-600/40 hover:border-amber-400/60'
+                  }`}
+                >
+                  {/* Top Gold Track Pill */}
+                  <div className="w-full flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-black tracking-wider text-amber-300 uppercase bg-amber-950/80 border border-amber-400/50 px-1.5 py-0.2 rounded-full flex items-center gap-0.5 shadow-sm">
+                      <Crown size={9} className="text-amber-400 fill-amber-400" />
+                      GOLD PASS
+                    </span>
+                    {isGoldClaimed ? (
+                      <span className="text-[9px] font-black text-amber-400 flex items-center gap-0.5">
+                        <Check size={10} strokeWidth={3} /> Done
+                      </span>
+                    ) : isUnlocked && hasGoldPass ? (
+                      <span className="text-[9px] font-black text-yellow-300 animate-pulse">
+                        Ready
+                      </span>
+                    ) : (
+                      <Lock size={10} className="text-amber-500/70" />
+                    )}
+                  </div>
+
+                  {/* Reward Artwork Display */}
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-tr from-amber-950/70 to-slate-900 border border-amber-400/60 flex items-center justify-center my-1 relative shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                    {renderRewardIcon(tier.goldReward, 'md')}
+                    {tier.goldReward.amount > 1 && (
+                      <span className="absolute bottom-1 right-1 bg-amber-950/90 border border-amber-400/60 rounded px-1 text-[9px] font-black font-mono text-amber-300">
+                        x{tier.goldReward.amount}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Reward Title */}
+                  <h4 className="font-black text-[11px] sm:text-xs text-amber-200 leading-tight truncate w-full mt-0.5">
+                    {tier.goldReward.name}
+                  </h4>
+
+                  {/* Action / Claim Button */}
+                  <div className="w-full mt-2">
+                    {isGoldClaimed ? (
+                      <div className="w-full py-1 rounded-xl bg-slate-900/90 border border-amber-400/40 text-amber-300 text-[10px] font-black uppercase flex items-center justify-center gap-1 shadow-inner">
+                        <Check size={12} strokeWidth={3} /> CLAIMED
+                      </div>
+                    ) : hasGoldPass && isUnlocked ? (
+                      <TouchSafeButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleClaimGold(tier.tier);
+                        }}
+                        className="w-full py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 hover:brightness-110 text-slate-950 font-black text-[10px] sm:text-xs uppercase shadow-[0_0_15px_rgba(245,158,11,0.8)] animate-pulse"
+                      >
+                        CLAIM
+                      </TouchSafeButton>
+                    ) : !hasGoldPass && isUnlocked ? (
+                      <TouchSafeButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsGoldPassModalOpen(true);
+                        }}
+                        className="w-full py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-slate-950 font-black text-[9.5px] uppercase shadow-md flex items-center justify-center gap-1"
+                      >
+                        <Crown size={11} /> GET PASS
+                      </TouchSafeButton>
+                    ) : (
+                      <div className="w-full py-1 rounded-xl bg-slate-900/40 border border-amber-900/60 text-amber-600/70 text-[10px] font-bold flex items-center justify-center gap-1">
+                        <Lock size={10} /> LOCKED
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Second Row: Compact Season Title & Progress Bar Card */}
-            <div className="w-full bg-emerald-950/95 border-2 border-emerald-500/70 rounded-2xl px-4 py-2 shadow-xl backdrop-blur-md flex flex-col items-center">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-6 h-6 flex-shrink-0">
-                  <svg viewBox="0 0 40 40" className="w-full h-full">
-                    <rect x="18" y="22" width="4" height="16" rx="2" fill="#dcfce7" stroke="#15803d" strokeWidth="1" />
-                    <circle cx="20" cy="18" r="14" fill="#22c55e" stroke="#16a34a" strokeWidth="2" />
-                    <path d="M 20 6 A 12 12 0 0 1 32 18 A 9 9 0 0 1 23 27 A 6 6 0 0 1 17 21 A 3 3 0 0 1 20 18" fill="none" stroke="#f0fdf4" strokeWidth="2.5" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <h1 className="text-xl sm:text-2xl font-black tracking-wider text-white leading-none">
-                  DASGAR<span className="text-lime-400">.IO</span>
-                </h1>
-                <span className="bg-lime-400/20 border border-lime-400/50 text-lime-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full ml-1">
-                  SEASON 1
-                </span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full flex flex-col gap-0.5">
-                <div className="flex items-center justify-between text-[10px] font-black tracking-wider text-emerald-200 uppercase">
-                  <span>REWARDS {collectedRewards}/40 COLLECTED</span>
-                  <span className="text-lime-300">{progressPercent}%</span>
-                </div>
-                <div className="w-full bg-emerald-900/80 border border-emerald-600/50 rounded-full h-2.5 overflow-hidden p-0.5">
-                  <div 
-                    className="bg-gradient-to-r from-lime-400 to-green-500 h-full rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(74,222,128,0.9)]"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      </main>
 
       {/* ========================================================================= */}
-      {/* BOTTOM ACTION BAR: DAILY QUESTS, CLAIM REWARDS, SHOP                      */}
+      {/* BOTTOM ACTION BAR (CLAIM ALL, QUESTS, SHOP)                               */}
       {/* ========================================================================= */}
-      <div className="absolute bottom-2 sm:bottom-3 left-0 right-0 z-30 flex justify-center px-3 sm:px-6 pointer-events-none pb-[env(safe-area-inset-bottom)]">
-        <div className="w-full max-w-3xl flex items-center justify-between gap-2 sm:gap-3 pointer-events-auto">
-          {/* Left: DAILY QUESTS button */}
+      <footer className="relative z-30 w-full px-3 sm:px-6 py-2.5 bg-slate-950/90 border-t border-purple-900/40 backdrop-blur-md flex items-center justify-center flex-shrink-0 pb-[env(safe-area-inset-bottom)]">
+        <div className="w-full max-w-4xl flex items-center justify-between gap-2 sm:gap-3">
+          {/* Left: SPOOKY QUESTS button */}
           <TouchSafeButton
             onClick={() => {
               playNodeClickSound();
               setIsQuestsOpen(true);
             }}
-            className={`flex-1 sm:flex-initial bg-emerald-950/95 hover:bg-emerald-900 border-2 border-emerald-500/70 rounded-full flex items-center justify-center gap-1.5 text-white shadow-xl shadow-emerald-950/80 hud-tap transition-all ${
-              isLandscapeCompact ? 'py-1.5 sm:py-2 px-3 sm:px-5' : 'py-2.5 sm:py-3 px-4 sm:px-6'
-            }`}
+            className="flex-1 sm:flex-initial bg-slate-900/90 hover:bg-slate-800 border-2 border-purple-500/70 rounded-full px-3 sm:px-5 py-2 text-white flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.3)] hud-tap transition-all"
           >
-            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-lime-400 text-emerald-950 flex items-center justify-center font-black text-[10px] sm:text-xs flex-shrink-0">
+            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center font-black text-[10px] sm:text-xs flex-shrink-0">
               !
             </div>
-            <span className="font-black text-xs sm:text-sm tracking-wider uppercase text-emerald-100 whitespace-nowrap">
-              DAILY QUESTS
+            <span className="font-black text-xs sm:text-sm tracking-wider uppercase text-purple-100 whitespace-nowrap">
+              SPOOKY QUESTS
             </span>
           </TouchSafeButton>
 
-          {/* Center: CLAIM REWARDS Glowing Button */}
+          {/* Center: CLAIM ALL Rewards Glowing Button */}
           <TouchSafeButton
             onClick={handleClaimAll}
-            className={`flex-1 max-w-[280px] sm:max-w-[340px] bg-gradient-to-r from-lime-400 via-green-400 to-emerald-500 hover:from-lime-300 hover:to-emerald-400 active:scale-95 border-2 border-lime-100 rounded-full flex items-center justify-center shadow-[0_6px_25px_rgba(34,197,94,0.7)] text-emerald-950 hud-tap transition-all select-none ${
-              isLandscapeCompact ? 'py-2 px-4 sm:px-7' : 'py-2.5 sm:py-3.5 px-6 sm:px-8'
-            }`}
+            className="flex-1 max-w-[280px] sm:max-w-[340px] bg-gradient-to-r from-purple-700 via-indigo-600 to-cyan-500 hover:from-purple-600 hover:to-cyan-400 active:scale-95 border-2 border-cyan-300/90 rounded-full py-2.5 sm:py-3 px-5 sm:px-8 flex items-center justify-center shadow-[0_0_25px_rgba(56,189,248,0.7)] text-white hud-tap transition-all select-none"
           >
-            <Sparkles size={isLandscapeCompact ? 16 : 18} className="mr-1.5 text-emerald-950 fill-emerald-950 animate-bounce" />
-            <span className={`font-black tracking-wider uppercase whitespace-nowrap drop-shadow-sm ${
-              isLandscapeCompact ? 'text-xs sm:text-sm md:text-base' : 'text-sm sm:text-base md:text-lg'
-            }`}>
-              CLAIM REWARDS
+            <Sparkles size={18} className="mr-1.5 text-cyan-200 fill-cyan-200 animate-bounce" />
+            <span className="font-black text-xs sm:text-sm md:text-base tracking-wider uppercase whitespace-nowrap drop-shadow-md">
+              CLAIM ALL
             </span>
           </TouchSafeButton>
 
-          {/* Right: SHOP button */}
+          {/* Right: HALLOWEEN SHOP button */}
           <TouchSafeButton
             onClick={() => {
               playNodeClickSound();
@@ -1035,72 +1089,149 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
                 setIsShopOpen(true);
               }
             }}
-            className={`flex-1 sm:flex-initial bg-emerald-950/95 hover:bg-emerald-900 border-2 border-emerald-500/70 rounded-full flex items-center justify-center gap-1.5 text-white shadow-xl shadow-emerald-950/80 hud-tap transition-all ${
-              isLandscapeCompact ? 'py-1.5 sm:py-2 px-3 sm:px-5' : 'py-2.5 sm:py-3 px-4 sm:px-6'
-            }`}
+            className="flex-1 sm:flex-initial bg-slate-900/90 hover:bg-slate-800 border-2 border-purple-500/70 rounded-full px-3 sm:px-5 py-2 text-white flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.3)] hud-tap transition-all"
           >
-            <ShoppingBag size={16} className="text-lime-400 flex-shrink-0" />
-            <span className="font-black text-xs sm:text-sm tracking-wider uppercase text-emerald-100 whitespace-nowrap">
+            <ShoppingBag size={16} className="text-cyan-400 flex-shrink-0" />
+            <span className="font-black text-xs sm:text-sm tracking-wider uppercase text-purple-100 whitespace-nowrap">
               SHOP
             </span>
           </TouchSafeButton>
         </div>
-      </div>
+      </footer>
 
       {/* ========================================================================= */}
-      {/* NODE DETAILS MODAL                                                        */}
+      {/* REWARD DETAILS INSPECT MODAL                                              */}
       {/* ========================================================================= */}
       <AnimatePresence>
-        {selectedNode && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        {selectedReward && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-sm bg-emerald-950 border-[3px] border-emerald-500 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col items-center text-center text-white"
+              className="relative w-full max-w-sm bg-slate-950 border-[3px] border-purple-500/80 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(168,85,247,0.5)] flex flex-col items-center text-center text-white"
             >
               <button 
-                onClick={() => setSelectedNode(null)}
-                className="absolute top-3.5 right-3.5 text-emerald-400 hover:text-white p-1 rounded-full bg-emerald-900/50"
+                onClick={() => setSelectedReward(null)}
+                className="absolute top-3.5 right-3.5 text-purple-400 hover:text-white p-1 rounded-full bg-purple-950/60"
               >
                 <X size={18} />
               </button>
 
-              <div className="bg-emerald-900 border border-emerald-500/60 rounded-full px-3 py-1 text-xs font-black text-lime-300 uppercase tracking-wider mb-3">
-                TIER {selectedNode.tier} REWARD
+              <div className={`border rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider mb-3 ${
+                selectedReward.isGold 
+                  ? 'bg-amber-950/80 border-amber-400/70 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.4)]'
+                  : 'bg-purple-950 border-purple-500/60 text-cyan-300 shadow-[0_0_10px_rgba(56,189,248,0.3)]'
+              }`}>
+                TIER {selectedReward.tier} • {selectedReward.isGold ? 'GOLD PASS' : 'FREE TRACK'}
               </div>
 
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-emerald-900 to-green-600 border-2 border-lime-400 flex items-center justify-center shadow-lg shadow-green-500/30 mb-3">
-                {selectedNode.rewardType === 'coins' && <Coins size={40} className="text-amber-400" />}
-                {selectedNode.rewardType === 'gems' && <Diamond size={40} className="text-cyan-300" />}
-                {selectedNode.rewardType === 'chest' && <Gift size={40} className="text-yellow-300" />}
-                {selectedNode.rewardType === 'skin' && <Crown size={42} className="text-amber-400" />}
-                {selectedNode.rewardType === 'booster' && <Zap size={40} className="text-yellow-400" />}
+              <div className={`w-24 h-24 rounded-2xl flex items-center justify-center mb-3 border-2 shadow-2xl ${
+                selectedReward.isGold
+                  ? 'bg-gradient-to-tr from-amber-950 to-purple-900 border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.5)]'
+                  : 'bg-gradient-to-tr from-purple-950 to-indigo-900 border-cyan-400 shadow-[0_0_20px_rgba(56,189,248,0.4)]'
+              }`}>
+                {renderRewardIcon(selectedReward.reward, 'lg')}
               </div>
 
-              <h3 className="font-black text-lg sm:text-xl text-white mb-1">
-                {selectedNode.rewardName}
+              <h3 className="font-black text-xl text-white mb-1">
+                {selectedReward.reward.name}
               </h3>
-              <p className="text-xs text-emerald-300 font-medium mb-5">
-                Season 1: Green Candy Exclusive Trail Unlock
+              <p className="text-xs text-purple-300 font-medium mb-5 px-3">
+                {selectedReward.reward.description || 'Exclusive Season 1 Haunted Hollow reward'}
               </p>
 
-              {claimedNodeIds.includes(selectedNode.id) ? (
-                <div className="w-full bg-emerald-900/70 border border-emerald-600 rounded-2xl py-3 font-black text-emerald-300 text-sm uppercase flex items-center justify-center gap-2">
-                  <Check size={16} /> CLAIMED
+              {selectedReward.isClaimed ? (
+                <div className="w-full bg-slate-900/90 border border-cyan-500/60 rounded-2xl py-3 font-black text-cyan-300 text-sm uppercase flex items-center justify-center gap-2">
+                  <Check size={16} /> ALREADY CLAIMED
                 </div>
-              ) : selectedNode.tier <= collectedRewards ? (
-                <TouchSafeButton
-                  onClick={() => handleClaimSingleNode(selectedNode)}
-                  className="w-full bg-gradient-to-r from-lime-400 to-green-500 border border-lime-200 text-emerald-950 rounded-2xl py-3 font-black text-sm uppercase tracking-wider shadow-lg shadow-green-500/40 hud-tap hover:brightness-110"
-                >
-                  CLAIM REWARD
-                </TouchSafeButton>
+              ) : selectedReward.isUnlocked ? (
+                selectedReward.isGold && !hasGoldPass ? (
+                  <TouchSafeButton
+                    onClick={() => {
+                      setSelectedReward(null);
+                      setIsGoldPassModalOpen(true);
+                    }}
+                    className="w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 text-slate-950 rounded-2xl py-3 font-black text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(245,158,11,0.6)] hud-tap"
+                  >
+                    UPGRADE TO GOLD PASS TO CLAIM
+                  </TouchSafeButton>
+                ) : (
+                  <TouchSafeButton
+                    onClick={() => {
+                      if (selectedReward.isGold) {
+                        handleClaimGold(selectedReward.tier);
+                      } else {
+                        handleClaimFree(selectedReward.tier);
+                      }
+                    }}
+                    className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 border border-cyan-300 text-white rounded-2xl py-3 font-black text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(56,189,248,0.6)] hud-tap hover:brightness-110"
+                  >
+                    CLAIM REWARD NOW
+                  </TouchSafeButton>
+                )
               ) : (
-                <div className="w-full bg-emerald-900/40 border border-emerald-800 rounded-2xl py-3 font-black text-emerald-500 text-xs uppercase">
-                  LOCKED • REACH TIER {selectedNode.tier}
+                <div className="w-full bg-slate-900/60 border border-purple-900 rounded-2xl py-3 font-black text-purple-400 text-xs uppercase">
+                  LOCKED • REACH TIER {selectedReward.tier}
                 </div>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* GOLD PASS UPGRADE PROMO MODAL                                             */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {isGoldPassModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-md bg-slate-950 border-[3px] border-amber-400 rounded-3xl p-6 shadow-[0_0_40px_rgba(245,158,11,0.5)] flex flex-col items-center text-center text-white"
+            >
+              <button 
+                onClick={() => setIsGoldPassModalOpen(false)}
+                className="absolute top-3.5 right-3.5 text-amber-400 hover:text-white p-1 rounded-full bg-amber-950/60"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-600 to-yellow-300 flex items-center justify-center text-slate-950 mb-3 shadow-[0_0_25px_rgba(245,158,11,0.8)]">
+                <Crown size={36} className="fill-slate-950" />
+              </div>
+
+              <h2 className="font-black text-2xl text-white mb-1">
+                GHOST PASS VIP
+              </h2>
+              <p className="text-xs text-amber-200/90 mb-4 px-4">
+                Unlock 30 exclusive Gold Track tiers, legendary skins, and collect double rewards!
+              </p>
+
+              <div className="w-full bg-slate-900/80 border border-amber-500/40 rounded-2xl p-3.5 text-left space-y-2 mb-5">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+                  <Check size={16} className="text-amber-400 flex-shrink-0" />
+                  <span>Instant unlock for all previous reached Gold tiers</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+                  <Check size={16} className="text-amber-400 flex-shrink-0" />
+                  <span>Exclusive Phantom Lord Specter Legendary Skin</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-200">
+                  <Check size={16} className="text-amber-400 flex-shrink-0" />
+                  <span>Double Ghost Tokens (👻) from games and quests</span>
+                </div>
+              </div>
+
+              <TouchSafeButton
+                onClick={handleActivateGoldPass}
+                className="w-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:brightness-110 text-slate-950 font-black text-sm uppercase py-3.5 rounded-2xl shadow-[0_0_25px_rgba(245,158,11,0.8)] hud-tap flex items-center justify-center gap-2"
+              >
+                <Diamond size={16} className="text-slate-950 fill-slate-950" />
+                <span>ACTIVATE FOR 250 SOUL GEMS</span>
+              </TouchSafeButton>
             </motion.div>
           </div>
         )}
@@ -1111,26 +1242,26 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
       {/* ========================================================================= */}
       <AnimatePresence>
         {isQuestsOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md bg-emerald-950 border-[3px] border-emerald-500 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col text-white max-h-[85vh] overflow-y-auto"
+              className="relative w-full max-w-md bg-slate-950 border-[3px] border-purple-500/80 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(168,85,247,0.4)] flex flex-col text-white max-h-[85vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between border-b border-emerald-800/80 pb-3 mb-4">
+              <div className="flex items-center justify-between border-b border-purple-800/80 pb-3 mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-lime-400 text-emerald-950 flex items-center justify-center font-black text-sm">
+                  <div className="w-7 h-7 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center font-black text-sm shadow-sm">
                     !
                   </div>
                   <div>
-                    <h2 className="font-black text-lg text-white">Daily Quests</h2>
-                    <p className="text-[10px] text-lime-300 font-bold uppercase tracking-wider">Refreshes in 18h 42m</p>
+                    <h2 className="font-black text-lg text-white">Halloween Quests</h2>
+                    <p className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">Refreshes in 18h 42m</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setIsQuestsOpen(false)}
-                  className="text-emerald-400 hover:text-white p-1 rounded-full bg-emerald-900/50"
+                  className="text-purple-400 hover:text-white p-1 rounded-full bg-purple-950/60"
                 >
                   <X size={20} />
                 </button>
@@ -1138,41 +1269,42 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
 
               <div className="space-y-3">
                 {quests.map(quest => (
-                  <div key={quest.id} className="bg-emerald-900/60 border border-emerald-700/60 rounded-2xl p-3.5 flex flex-col gap-2">
+                  <div key={quest.id} className="bg-purple-950/40 border border-purple-700/60 rounded-2xl p-3.5 flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <h4 className="font-black text-sm text-white">{quest.title}</h4>
-                      <div className="flex items-center gap-1 text-xs font-bold text-amber-300">
-                        <Coins size={12} />
-                        <span>+{quest.rewardCoins}</span>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-300">
+                        <img src="/ghost-token.png" alt="Ghost" className="w-3.5 h-3.5 object-contain" />
+                        <span>+150</span>
+                        <span className="text-amber-300 ml-1">+{quest.rewardCoins}🪙</span>
                       </div>
                     </div>
-                    <p className="text-xs text-emerald-300">{quest.desc}</p>
+                    <p className="text-xs text-purple-300">{quest.desc}</p>
 
                     <div className="flex items-center gap-3 mt-1">
-                      <div className="flex-1 bg-emerald-950 rounded-full h-2.5 overflow-hidden border border-emerald-700/50">
+                      <div className="flex-1 bg-slate-900 rounded-full h-2.5 overflow-hidden border border-purple-700/50">
                         <div 
-                          className="bg-lime-400 h-full rounded-full" 
+                          className="bg-cyan-400 h-full rounded-full shadow-[0_0_8px_rgba(56,189,248,0.7)]" 
                           style={{ width: `${Math.min(100, (quest.progress / quest.target) * 100)}%` }} 
                         />
                       </div>
-                      <span className="text-[11px] font-bold text-emerald-200 whitespace-nowrap">
+                      <span className="text-[11px] font-bold text-cyan-200 whitespace-nowrap font-mono">
                         {quest.progress}/{quest.target}
                       </span>
                     </div>
 
                     {quest.claimed ? (
-                      <div className="text-center py-1 font-bold text-xs text-emerald-400 flex items-center justify-center gap-1">
+                      <div className="text-center py-1 font-bold text-xs text-cyan-400 flex items-center justify-center gap-1">
                         <Check size={14} /> Claimed
                       </div>
                     ) : quest.completed ? (
                       <TouchSafeButton
                         onClick={() => handleClaimQuest(quest.id)}
-                        className="w-full bg-gradient-to-r from-lime-400 to-green-500 text-emerald-950 font-black text-xs uppercase py-2 rounded-xl mt-1 shadow hud-tap"
+                        className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 text-white font-black text-xs uppercase py-2 rounded-xl mt-1 shadow-[0_0_15px_rgba(56,189,248,0.5)] hud-tap"
                       >
                         Claim Reward
                       </TouchSafeButton>
                     ) : (
-                      <div className="text-center py-1 font-bold text-[11px] text-emerald-500 uppercase">
+                      <div className="text-center py-1 font-bold text-[11px] text-purple-400 uppercase">
                         In Progress
                       </div>
                     )}
@@ -1189,21 +1321,21 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
       {/* ========================================================================= */}
       <AnimatePresence>
         {isShopOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md bg-emerald-950 border-[3px] border-emerald-500 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col text-white max-h-[85vh] overflow-y-auto"
+              className="relative w-full max-w-md bg-slate-950 border-[3px] border-purple-500/80 rounded-3xl p-5 sm:p-6 shadow-[0_0_35px_rgba(168,85,247,0.4)] flex flex-col text-white max-h-[85vh] overflow-y-auto"
             >
-              <div className="flex items-center justify-between border-b border-emerald-800/80 pb-3 mb-4">
+              <div className="flex items-center justify-between border-b border-purple-800/80 pb-3 mb-4">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag size={20} className="text-lime-400" />
-                  <h2 className="font-black text-lg text-white">Season 1 Candy Shop</h2>
+                  <img src="/ghost-token.png" alt="Ghost" className="w-6 h-6 object-contain drop-shadow-[0_0_6px_rgba(56,189,248,0.8)]" />
+                  <h2 className="font-black text-lg text-white">Halloween Ghost Shop</h2>
                 </div>
                 <button 
                   onClick={() => setIsShopOpen(false)}
-                  className="text-emerald-400 hover:text-white p-1 rounded-full bg-emerald-900/50"
+                  className="text-purple-400 hover:text-white p-1 rounded-full bg-purple-950/60"
                 >
                   <X size={20} />
                 </button>
@@ -1211,78 +1343,92 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
 
               <div className="space-y-3">
                 {/* Item 1 */}
-                <div className="bg-emerald-900/60 border border-emerald-700/60 rounded-2xl p-3.5 flex items-center justify-between">
+                <div className="bg-purple-950/40 border border-purple-700/60 rounded-2xl p-3.5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-emerald-950">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-cyan-500 flex items-center justify-center text-white shadow-md">
                       <Zap size={20} />
                     </div>
                     <div>
-                      <h4 className="font-black text-sm text-white">+5 Tier Skip Pass</h4>
-                      <p className="text-xs text-emerald-300">Instantly advance 5 Season Tiers</p>
+                      <h4 className="font-black text-sm text-white">+5 Tier Phantom Skip</h4>
+                      <p className="text-xs text-purple-300">Instantly advance 5 Season Tiers</p>
                     </div>
                   </div>
                   <TouchSafeButton
                     onClick={() => {
                       if (gems >= 150) {
-                        saveState(Math.min(40, collectedRewards + 5), coins, gems - 150, claimedNodeIds);
+                        const nextGems = gems - 150;
+                        const nextTier = Math.min(30, currentTier + 5);
+                        setGems(nextGems);
+                        setCurrentTier(nextTier);
+                        localStorage.setItem('dasgar_player_gems', nextGems.toString());
+                        localStorage.setItem('dasgar_season1_tier', nextTier.toString());
                         playClaimRewardSound();
                         showToast('Skipped 5 Tiers!');
                       } else {
-                        showToast('Not enough Gems!');
+                        showToast('Not enough Soul Gems!');
                       }
                     }}
-                    className="bg-lime-400 hover:bg-lime-300 text-emerald-950 font-black text-xs px-3 py-2 rounded-xl hud-tap flex items-center gap-1"
+                    className="bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs px-3 py-2 rounded-xl hud-tap flex items-center gap-1 shadow-[0_0_12px_rgba(56,189,248,0.5)]"
                   >
                     <Diamond size={12} /> 150
                   </TouchSafeButton>
                 </div>
 
                 {/* Item 2 */}
-                <div className="bg-emerald-900/60 border border-emerald-700/60 rounded-2xl p-3.5 flex items-center justify-between">
+                <div className="bg-purple-950/40 border border-purple-700/60 rounded-2xl p-3.5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-lime-400 flex items-center justify-center text-emerald-950">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-yellow-400 flex items-center justify-center text-slate-950 shadow-md">
                       <Coins size={20} />
                     </div>
                     <div>
-                      <h4 className="font-black text-sm text-white">5,000 Coin Bag</h4>
-                      <p className="text-xs text-emerald-300">Boost your coin reserve</p>
+                      <h4 className="font-black text-sm text-white">5,000 Cursed Coins</h4>
+                      <p className="text-xs text-purple-300">Boost your gold reserve</p>
                     </div>
                   </div>
                   <TouchSafeButton
                     onClick={() => {
                       if (gems >= 100) {
-                        saveState(collectedRewards, coins + 5000, gems - 100, claimedNodeIds);
+                        const nextGems = gems - 100;
+                        const nextCoins = coins + 5000;
+                        setGems(nextGems);
+                        setCoins(nextCoins);
+                        localStorage.setItem('dasgar_player_gems', nextGems.toString());
+                        localStorage.setItem('dasgar_player_coins', nextCoins.toString());
                         playClaimRewardSound();
-                        showToast('Added 5,000 Coins!');
+                        showToast('Added 5,000 Cursed Coins!');
                       } else {
-                        showToast('Not enough Gems!');
+                        showToast('Not enough Soul Gems!');
                       }
                     }}
-                    className="bg-lime-400 hover:bg-lime-300 text-emerald-950 font-black text-xs px-3 py-2 rounded-xl hud-tap flex items-center gap-1"
+                    className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-3 py-2 rounded-xl hud-tap flex items-center gap-1 shadow-md"
                   >
                     <Diamond size={12} /> 100
                   </TouchSafeButton>
                 </div>
 
                 {/* Item 3 */}
-                <div className="bg-emerald-900/60 border border-emerald-700/60 rounded-2xl p-3.5 flex items-center justify-between">
+                <div className="bg-purple-950/40 border border-purple-700/60 rounded-2xl p-3.5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-400 flex items-center justify-center text-white">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-700 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-md">
                       <Crown size={20} />
                     </div>
                     <div>
-                      <h4 className="font-black text-sm text-white">Season 1 VIP Pass</h4>
-                      <p className="text-xs text-emerald-300">Double XP & VIP Candy Badge</p>
+                      <h4 className="font-black text-sm text-white">Ghost Season VIP Pass</h4>
+                      <p className="text-xs text-purple-300">Double Ghost Tokens & Gold Pass</p>
                     </div>
                   </div>
                   <TouchSafeButton
                     onClick={() => {
-                      playClaimRewardSound();
-                      showToast('Season 1 VIP Pass Activated!');
+                      if (hasGoldPass) {
+                        showToast('Already Active!');
+                      } else {
+                        setIsGoldPassModalOpen(true);
+                        setIsShopOpen(false);
+                      }
                     }}
-                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-xs px-3 py-2 rounded-xl hud-tap"
+                    className="bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-black text-xs px-3 py-2 rounded-xl hud-tap shadow-[0_0_15px_rgba(56,189,248,0.5)]"
                   >
-                    ACTIVE
+                    {hasGoldPass ? 'ACTIVE' : 'UPGRADE'}
                   </TouchSafeButton>
                 </div>
               </div>

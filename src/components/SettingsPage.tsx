@@ -254,6 +254,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     try {
       localStorage.removeItem('dasgario_equipped_skin');
       localStorage.removeItem('dasgario_player_rank');
+      localStorage.removeItem('dasgar_ghostTokenCount');
       localStorage.removeItem('dasgar_greenCandyCount');
     } catch {
       // Ignore

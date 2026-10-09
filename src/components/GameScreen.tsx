@@ -25,9 +25,10 @@ const FOOD_COUNT = 700;
 const NORMAL_FOOD_RADIUS = 4.5;
 const EJECTED_MASS_RADIUS = 12;
 const EJECTED_MASS_VALUE = 32;
-const GREEN_CANDY_TARGET_COUNT = 35;
-const GREEN_CANDY_RADIUS = 9;
-const GREEN_CANDY_MASS = 3.5;
+const GHOST_TOKEN_TARGET_COUNT = 35;
+const GHOST_TOKEN_RADIUS = 10;
+const GHOST_TOKEN_MASS = 3.5;
+const STORAGE_KEY_GHOST_TOKEN = 'dasgar_ghostTokenCount';
 const STORAGE_KEY_GREEN_CANDY = 'dasgar_greenCandyCount';
 const BOT_COUNT = 15;
 const VIRUS_COUNT = 20;
@@ -65,7 +66,7 @@ type BotPlayer = Circle & {
   renderRadius?: number;
   phaseOffset?: number;
 };
-type GreenCandy = {
+type GhostToken = {
   id: string;
   x: number;
   y: number;
@@ -73,6 +74,7 @@ type GreenCandy = {
   pulsePhase?: number;
   eaten?: boolean;
 };
+type GreenCandy = GhostToken;
 type Food = Circle & {
   vx?: number;
   vy?: number;
@@ -194,17 +196,17 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const drawablePoolRef = useRef<{ type: 'player' | 'bot' | 'virus'; entity: any; radius: number }[]>([]);
   
   const foodsRef = useRef<Food[]>([]);
-  const greenCandiesRef = useRef<GreenCandy[]>([]);
-  const greenCandyImgRef = useRef<HTMLImageElement | null>(null);
+  const ghostTokensRef = useRef<GhostToken[]>([]);
+  const ghostTokenImgRef = useRef<HTMLImageElement | null>(null);
   const botsRef = useRef<BotPlayer[]>([]);
   const virusesRef = useRef<Virus[]>([]);
   const scoreRef = useRef(PLAYER_START_SCORE);
   const isGameOverRef = useRef(false);
   const isPausedRef = useRef(false);
 
-  const getInitialGreenCandyCount = (): number => {
+  const getInitialGhostTokenCount = (): number => {
     try {
-      const val = localStorage.getItem(STORAGE_KEY_GREEN_CANDY);
+      const val = localStorage.getItem(STORAGE_KEY_GHOST_TOKEN) ?? localStorage.getItem(STORAGE_KEY_GREEN_CANDY);
       if (val !== null) {
         const parsed = parseInt(val, 10);
         return isNaN(parsed) ? 0 : parsed;
@@ -214,8 +216,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     }
     return 0;
   };
-  const greenCandyCountRef = useRef<number>(getInitialGreenCandyCount());
-  const [greenCandyCount, setGreenCandyCount] = useState<number>(() => greenCandyCountRef.current);
+  const ghostTokenCountRef = useRef<number>(getInitialGhostTokenCount());
+  const [ghostTokenCount, setGhostTokenCount] = useState<number>(() => ghostTokenCountRef.current);
 
   const inputRef = useRef<{
     active: boolean;
@@ -417,11 +419,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       };
     });
 
-    greenCandiesRef.current = Array.from({ length: GREEN_CANDY_TARGET_COUNT }).map(() => ({
+    ghostTokensRef.current = Array.from({ length: GHOST_TOKEN_TARGET_COUNT }).map(() => ({
       id: generateId(),
       x: Math.random() * (MAP_SIZE - 100) + 50,
       y: Math.random() * (MAP_SIZE - 100) + 50,
-      radius: GREEN_CANDY_RADIUS,
+      radius: GHOST_TOKEN_RADIUS,
       pulsePhase: Math.random() * Math.PI * 2
     }));
 
@@ -864,13 +866,13 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       };
     }
 
-    // Preload Green Candy image asset
-    const candyImg = new Image();
-    candyImg.src = '/green-candy.png';
-    candyImg.onload = () => {
-      greenCandyImgRef.current = candyImg;
+    // Preload Ghost Token image asset
+    const ghostImg = new Image();
+    ghostImg.src = '/ghost-token.png';
+    ghostImg.onload = () => {
+      ghostTokenImgRef.current = ghostImg;
     };
-    greenCandyImgRef.current = candyImg;
+    ghostTokenImgRef.current = ghostImg;
 
     // Preload custom cell emojis (only these 3 in the game)
     const emojiMap: { [key: string]: HTMLImageElement } = {};
@@ -991,41 +993,56 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       }
     };
 
-    const drawGreenCandy = (candy: GreenCandy, time: number) => {
-      const cx = candy.x;
-      const cy = candy.y;
-      const r = candy.radius;
+    const drawGhostToken = (token: GhostToken, time: number) => {
+      const cx = token.x;
+      const cy = token.y;
+      const r = token.radius;
 
-      const pulse = 0.88 + 0.12 * Math.sin(time * 0.0035 + (candy.pulsePhase || 0));
+      // Spooky ethereal bobbing & gentle sway
+      const pulse = 0.92 + 0.08 * Math.sin(time * 0.0035 + (token.pulsePhase || 0));
+      const floatY = Math.sin(time * 0.0028 + (token.pulsePhase || 0)) * 3;
+      const floatX = Math.cos(time * 0.0022 + (token.pulsePhase || 0)) * 1.5;
+      const drawX = cx + floatX;
+      const drawY = cy + floatY;
       const effectiveR = r * pulse;
 
       ctx.save();
-      // Gentle aura glow behind candy
+      // Spectral cyan & purple eerie aura glow behind ghost token
       ctx.beginPath();
-      ctx.arc(cx, cy, effectiveR + 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(74, 222, 128, 0.22)';
+      ctx.arc(drawX, drawY, effectiveR + 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.26)';
       ctx.fill();
 
-      if (greenCandyImgRef.current && greenCandyImgRef.current.complete && greenCandyImgRef.current.naturalWidth > 0) {
-        const size = (effectiveR + 3) * 2;
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, effectiveR + 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(192, 132, 252, 0.2)';
+      ctx.fill();
+
+      if (ghostTokenImgRef.current && ghostTokenImgRef.current.complete && ghostTokenImgRef.current.naturalWidth > 0) {
+        const size = (effectiveR + 6) * 2;
         ctx.drawImage(
-          greenCandyImgRef.current,
-          cx - size / 2,
-          cy - size / 2,
+          ghostTokenImgRef.current,
+          drawX - size / 2,
+          drawY - size / 2,
           size,
           size
         );
       } else {
+        // Fallback glowing ghost shape
         const grad = ctx.createRadialGradient(
-          cx - r * 0.3, cy - r * 0.3, r * 0.15,
-          cx, cy, r
+          drawX - r * 0.2, drawY - r * 0.2, r * 0.2,
+          drawX, drawY, r * 1.2
         );
-        grad.addColorStop(0, '#a7f3d0');
-        grad.addColorStop(0.45, '#22c55e');
-        grad.addColorStop(1, '#15803d');
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.5, '#7dd3fc');
+        grad.addColorStop(1, '#38bdf8');
 
         ctx.beginPath();
-        ctx.arc(cx, cy, effectiveR, 0, Math.PI * 2);
+        ctx.arc(drawX, drawY - 2, effectiveR, Math.PI, 0, false);
+        ctx.lineTo(drawX + effectiveR, drawY + effectiveR);
+        ctx.lineTo(drawX, drawY + effectiveR * 0.6);
+        ctx.lineTo(drawX - effectiveR, drawY + effectiveR);
+        ctx.closePath();
         ctx.fillStyle = grad;
         ctx.fill();
       }
@@ -1676,24 +1693,24 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         });
       }
 
-      // Green Candy consumption & persistent collection
-      const currentCandies = greenCandiesRef.current;
-      let anyCandyEaten = false;
-      let candiesEatenByPlayer = 0;
+      // Ghost Token consumption & persistent collection
+      const currentTokens = ghostTokensRef.current;
+      let anyTokenEaten = false;
+      let tokensEatenByPlayer = 0;
 
       for (let i = 0; i < currentCells.length; i++) {
         const cell = currentCells[i];
         const cellSqR = cell.radius * cell.radius;
-        for (let j = 0; j < currentCandies.length; j++) {
-          const candy = currentCandies[j];
-          if (candy.eaten) continue;
-          const cdx = cell.x - candy.x;
-          const cdy = cell.y - candy.y;
+        for (let j = 0; j < currentTokens.length; j++) {
+          const token = currentTokens[j];
+          if (token.eaten) continue;
+          const cdx = cell.x - token.x;
+          const cdy = cell.y - token.y;
           if (cdx * cdx + cdy * cdy < cellSqR) {
-            cell.radius = Math.sqrt(cell.radius * cell.radius + GREEN_CANDY_MASS);
-            candy.eaten = true;
-            anyCandyEaten = true;
-            candiesEatenByPlayer++;
+            cell.radius = Math.sqrt(cell.radius * cell.radius + GHOST_TOKEN_MASS);
+            token.eaten = true;
+            anyTokenEaten = true;
+            tokensEatenByPlayer++;
           }
         }
       }
@@ -1701,47 +1718,47 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       for (let i = 0; i < currentBots.length; i++) {
         const bot = currentBots[i];
         const botSqR = bot.radius * bot.radius;
-        for (let j = 0; j < currentCandies.length; j++) {
-          const candy = currentCandies[j];
-          if (candy.eaten) continue;
-          const cdx = bot.x - candy.x;
-          const cdy = bot.y - candy.y;
+        for (let j = 0; j < currentTokens.length; j++) {
+          const token = currentTokens[j];
+          if (token.eaten) continue;
+          const cdx = bot.x - token.x;
+          const cdy = bot.y - token.y;
           if (cdx * cdx + cdy * cdy < botSqR) {
-            bot.radius = Math.sqrt(bot.radius * bot.radius + GREEN_CANDY_MASS);
-            candy.eaten = true;
-            anyCandyEaten = true;
+            bot.radius = Math.sqrt(bot.radius * bot.radius + GHOST_TOKEN_MASS);
+            token.eaten = true;
+            anyTokenEaten = true;
           }
         }
       }
 
-      if (candiesEatenByPlayer > 0) {
-        greenCandyCountRef.current += candiesEatenByPlayer;
-        setGreenCandyCount(greenCandyCountRef.current);
+      if (tokensEatenByPlayer > 0) {
+        ghostTokenCountRef.current += tokensEatenByPlayer;
+        setGhostTokenCount(ghostTokenCountRef.current);
         try {
-          localStorage.setItem(STORAGE_KEY_GREEN_CANDY, greenCandyCountRef.current.toString());
+          localStorage.setItem(STORAGE_KEY_GHOST_TOKEN, ghostTokenCountRef.current.toString());
         } catch {
           // safe ignore for restricted sandboxes
         }
       }
 
-      if (anyCandyEaten) {
-        let candyWriteIdx = 0;
-        for (let i = 0; i < currentCandies.length; i++) {
-          if (!currentCandies[i].eaten) {
-            currentCandies[candyWriteIdx++] = currentCandies[i];
+      if (anyTokenEaten) {
+        let tokenWriteIdx = 0;
+        for (let i = 0; i < currentTokens.length; i++) {
+          if (!currentTokens[i].eaten) {
+            currentTokens[tokenWriteIdx++] = currentTokens[i];
           }
         }
-        currentCandies.length = candyWriteIdx;
+        currentTokens.length = tokenWriteIdx;
       }
 
-      while (greenCandiesRef.current.length < GREEN_CANDY_TARGET_COUNT) {
+      while (ghostTokensRef.current.length < GHOST_TOKEN_TARGET_COUNT) {
         const cx = Math.random() * (MAP_SIZE - 100) + 50;
         const cy = Math.random() * (MAP_SIZE - 100) + 50;
-        greenCandiesRef.current.push({
+        ghostTokensRef.current.push({
           id: generateId(),
           x: cx,
           y: cy,
-          radius: GREEN_CANDY_RADIUS,
+          radius: GHOST_TOKEN_RADIUS,
           pulsePhase: Math.random() * Math.PI * 2
         });
       }
@@ -2239,9 +2256,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
       }
 
-      const candies = greenCandiesRef.current;
-      for (let i = 0; i < candies.length; i++) {
-        drawGreenCandy(candies[i], now);
+      const tokens = ghostTokensRef.current;
+      for (let i = 0; i < tokens.length; i++) {
+        drawGhostToken(tokens[i], now);
       }
 
       // Re-use preallocated drawable list to eliminate per-frame GC allocation
@@ -2550,15 +2567,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             </span>
             <div 
               className="flex items-center gap-1 sm:gap-1.5 md:gap-2 mt-0.5 md:mt-1.5 w-fit"
-              title="Green Candies collected"
+              title="Ghost Tokens collected"
             >
               <img
-                src="/green-candy.png"
-                alt="Green Candy"
-                className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 lg:w-9 lg:h-9 object-contain select-none pointer-events-none drop-shadow-sm"
+                src="/ghost-token.png"
+                alt="Ghost Token"
+                className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 lg:w-9 lg:h-9 object-contain select-none pointer-events-none drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]"
               />
-              <span className="text-xs sm:text-base md:text-xl lg:text-2xl font-black text-emerald-500 font-mono tracking-wide">
-                {greenCandyCount}
+              <span className="text-xs sm:text-base md:text-xl lg:text-2xl font-black text-cyan-400 font-mono tracking-wide drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">
+                {ghostTokenCount}
               </span>
             </div>
           </div>
@@ -3266,9 +3283,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center pointer-events-auto z-50">
           <h2 className="text-6xl font-black text-red-500 mb-4 tracking-widest drop-shadow-lg">WASTED</h2>
           <p className="text-white text-2xl mb-2">Final Score: {scoreRef.current}</p>
-          <div className="flex items-center gap-2 mb-8 bg-white/10 px-4 py-1.5 rounded-full border border-emerald-500/40">
-            <img src="/green-candy.png" alt="Green candy" className="w-6 h-6 object-contain" />
-            <span className="text-emerald-400 font-bold text-lg font-mono">Candies: {greenCandyCount}</span>
+          <div className="flex items-center gap-2 mb-8 bg-purple-950/40 px-4 py-1.5 rounded-full border border-cyan-500/50 shadow-[0_0_15px_rgba(56,189,248,0.3)]">
+            <img src="/ghost-token.png" alt="Ghost token" className="w-6 h-6 object-contain drop-shadow-[0_0_6px_rgba(56,189,248,0.8)]" />
+            <span className="text-cyan-300 font-bold text-lg font-mono">Ghosts: {ghostTokenCount}</span>
           </div>
           <div className="flex gap-4">
             <TouchSafeButton  
