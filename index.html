@@ -69,6 +69,23 @@
       // CRITICAL NATIVE FIX: physically intercept and kill all drag events at the root browser level
       document.addEventListener('dragstart', function(e){ e.preventDefault(); }, { passive: false, capture: true });
       document.addEventListener('drop', function(e){ e.preventDefault(); }, { passive: false, capture: true });
+
+      // Suppress Vite dev client WebSocket errors in preview/iframe environment
+      window.addEventListener('unhandledrejection', function(event) {
+        var reason = event && event.reason;
+        var msg = (reason && (reason.message || String(reason))) || '';
+        var stack = (reason && reason.stack) || '';
+        if (msg.includes('WebSocket') || msg.includes('vite:ws') || stack.includes('@vite/client')) {
+          event.preventDefault();
+        }
+      });
+      window.addEventListener('error', function(event) {
+        var msg = (event && (event.message || '')) || '';
+        var file = (event && (event.filename || '')) || '';
+        if (file.includes('@vite/client') || msg.includes('WebSocket')) {
+          event.preventDefault();
+        }
+      });
     </script>
   </head>
   <body>
