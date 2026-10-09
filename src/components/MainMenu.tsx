@@ -821,7 +821,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           'season',
           <TouchSafeButton 
             onClick={isEditingHud ? undefined : onSeason}
-            className="w-[165px] sm:w-[195px] md:w-[220px] h-[80px] sm:h-[94px] md:h-[106px] flex items-center justify-end select-none hud-tap pointer-events-auto"
+            className="w-[165px] sm:w-[195px] md:w-[220px] h-[80px] sm:h-[94px] md:h-[106px] flex items-center justify-end select-none hud-tap pointer-events-auto translate-x-3 sm:translate-x-4 md:translate-x-5"
           >
             <SeasonVideoBtn className="w-full h-full pointer-events-none" />
           </TouchSafeButton>,
