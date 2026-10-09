@@ -11,7 +11,6 @@ import { getStarStyleForLevel } from '../utils/levelUtils';
 import spectateBtnImg from '../assets/images/spectate-button.png';
 import playBtnImg from '../assets/images/play-button.png';
 import moreBtnImg from '../assets/images/more-button.png';
-import seasonBtnImg from '../assets/images/season-button.png';
 import { SeasonVideoBtn } from './SeasonVideoBtn';
 
 interface MainMenuProps {
