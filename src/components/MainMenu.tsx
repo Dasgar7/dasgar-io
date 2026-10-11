@@ -523,40 +523,32 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
 
       {/* ========================================================================= */}
       {/* 1. CENTER CONSOLE: LOGO, AVATAR, NICKNAME BAR, ACTIONS & DRAWER           */}
-      {/*    Anchored at screen center so Spectate/Play/More always stay centered   */}
-      {/*    even when the Skin (Avatar) button is larger or scaled up.             */}
+      {/*    Spectate, Play, and More are exactly centered on landscape screen.     */}
+      {/*    Skin button is smaller and nickname is upped directly above actions.   */}
       {/* ========================================================================= */}
       <div 
-        className={`absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[460px] sm:max-w-[520px] md:max-w-[560px] px-2 pointer-events-none transition-all duration-300 ease-out ${
-          isMoreOpen && !isEditingHud 
-            ? 'top-[52%] sm:top-[54%]' 
-            : 'top-[56%] sm:top-[58%]'
-        }`}
+        className="absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[440px] sm:max-w-[500px] md:max-w-[540px] px-2 pointer-events-none transition-all duration-300 ease-out top-1/2 -translate-y-[34px] sm:-translate-y-[39px] md:-translate-y-[44px]"
       >
-        {/* UPPER STACK (LOGO + BIGGER SKIN BUTTON + NICKNAME) - Grows upward above center */}
-        <div className="absolute bottom-full left-0 right-0 pb-1 sm:pb-1.5 flex flex-col items-center pointer-events-none">
+        {/* UPPER STACK (LOGO + SMALLER SKIN BUTTON + NICKNAME) - Grows upward above centered actions */}
+        <div className="absolute bottom-full left-0 right-0 pb-0.5 sm:pb-1 flex flex-col items-center pointer-events-none">
           {/* LOGO */}
           {renderEditableItem(
             'logo',
-            <h1 className={`font-black tracking-wide leading-none translate-y-1 sm:translate-y-1.5 mb-0.5 pointer-events-auto transition-all duration-300 ease-out ${
-              isMoreOpen && !isEditingHud ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'
-            }`}>
+            <h1 className="font-black tracking-wide leading-none text-2xl sm:text-3xl md:text-4xl translate-y-0.5 mb-0.5 pointer-events-auto transition-all duration-300 ease-out">
               <span className="text-slate-800">Dasgar</span>
               <span className="text-[#22c55e]">.io</span>
             </h1>,
             'pointer-events-auto z-10'
           )}
 
-          {/* AVATAR (SKIN BUTTON) + BADGES - Larger size without pushing action buttons down */}
+          {/* AVATAR (SKIN BUTTON) + BADGES - Compact smaller size */}
           {renderEditableItem(
             'avatar',
             <TouchSafeButton 
               className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-0.5"
               onClick={isEditingHud ? undefined : onSkins}
             >
-              <div className={`rounded-full bg-slate-200 border-4 border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out ${
-                isMoreOpen && !isEditingHud ? 'w-20 h-20 sm:w-22 sm:h-22' : 'w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32'
-              }`}>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full bg-slate-200 border-[3px] border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out">
                 {equippedSkinSvg ? (
                   <img 
                     src={equippedSkinSvg} 
@@ -585,26 +577,20 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               </div>
               
               {/* Plus button (top right) */}
-              <div className={`absolute top-[2px] right-[2px] w-6 h-6 sm:w-7 sm:h-7 bg-[#22c55e] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
-                isMoreOpen && !isEditingHud ? 'scale-85' : 'scale-100'
-              }`}>
-                <Plus size={14} strokeWidth={3.5} className="pointer-events-none" />
+              <div className="absolute top-[1px] right-[1px] w-5 h-5 sm:w-5.5 sm:h-5.5 bg-[#22c55e] border-[1.5px] border-white rounded-full flex items-center justify-center text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
+                <Plus size={11} strokeWidth={3.5} className="pointer-events-none" />
               </div>
 
               {/* XP Star button (top left) */}
-              <div className={`absolute -top-[2px] -left-[2px] w-8 h-8 sm:w-9 sm:h-9 bg-[#f59e0b] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
-                isMoreOpen && !isEditingHud ? 'scale-85 -top-[4px] -left-[4px]' : 'scale-100'
-              }`}>
-                <Star size={18} className="fill-white text-white pointer-events-none" />
-                <span className="absolute text-amber-900 font-black text-[8px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
+              <div className="absolute -top-[1px] -left-[1px] w-6 h-6 sm:w-6.5 sm:h-6.5 bg-[#f59e0b] border-[1.5px] border-white rounded-full flex items-center justify-center text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
+                <Star size={13} className="fill-white text-white pointer-events-none" />
+                <span className="absolute text-amber-900 font-black text-[6.5px] sm:text-[7px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
               </div>
 
               {/* Boost Zap button (bottom left) */}
-              <div className={`absolute -bottom-[2px] -left-[2px] w-8 h-8 sm:w-9 sm:h-9 bg-[#0ea5e9] border-2 border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300 ${
-                isMoreOpen && !isEditingHud ? 'scale-85 -bottom-[4px] -left-[4px]' : 'scale-100'
-              }`}>
-                <Zap size={12} className="fill-white pointer-events-none" />
-                <span className="text-white font-black text-[7.5px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
+              <div className="absolute -bottom-[1px] -left-[1px] w-6 h-6 sm:w-6.5 sm:h-6.5 bg-[#0ea5e9] border-[1.5px] border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
+                <Zap size={10} className="fill-white pointer-events-none" />
+                <span className="text-white font-black text-[6px] sm:text-[6.5px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
               </div>
             </TouchSafeButton>,
             'pointer-events-auto'
@@ -613,7 +599,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           {/* NICKNAME BAR */}
           {renderEditableItem(
             'nickname',
-            <div className="w-full max-w-[260px] sm:max-w-[290px] mx-auto bg-white border-2 border-slate-300 rounded-xl shadow-xs text-center transition-all duration-300 ease-out focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 mt-1 px-3.5 py-1.5 pointer-events-auto">
+            <div className="w-full max-w-[240px] sm:max-w-[270px] mx-auto bg-white border-2 border-slate-300 rounded-xl shadow-xs text-center transition-all duration-300 ease-out focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 mt-0.5 sm:mt-1 px-3 py-1 sm:py-1.5 pointer-events-auto">
               <input 
                 type="text" 
                 placeholder="Nickname" 
@@ -627,16 +613,16 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           )}
         </div>
 
-        {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER - Locked at center of screen */}
+        {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER - Centered on screen */}
         <div className="w-full flex flex-col items-center pointer-events-auto">
           {/* Action Buttons Row - Nestled closely together */}
-          <div className="flex items-center justify-center gap-0.5 sm:gap-1 w-full max-w-[340px] sm:max-w-[390px] md:max-w-[430px] mx-auto pointer-events-auto">
+          <div className="flex items-center justify-center gap-0.5 sm:gap-1 w-full max-w-[330px] sm:max-w-[380px] md:max-w-[420px] mx-auto pointer-events-auto">
             {/* SPECTATE BUTTON */}
             {renderEditableItem(
               'spectate',
               <TouchSafeButton 
                 onClick={() => onPlay('classic')}
-                className="w-full h-[80px] sm:h-[92px] md:h-[100px] flex items-center justify-end select-none hud-tap pointer-events-auto"
+                className="w-full h-[68px] sm:h-[78px] md:h-[88px] flex items-center justify-end select-none hud-tap pointer-events-auto"
                 title="Spectate"
               >
                 <img
@@ -655,7 +641,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'play',
               <TouchSafeButton 
                 onClick={() => onPlay('classic')}
-                className="w-full h-[80px] sm:h-[92px] md:h-[100px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                className="w-full h-[68px] sm:h-[78px] md:h-[88px] flex items-center justify-center select-none hud-tap pointer-events-auto"
               >
                 <img
                   src={playBtnImg}
@@ -673,7 +659,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               'more',
               <TouchSafeButton 
                 onClick={() => setIsMoreOpen(prev => !prev)}
-                className="w-full h-[80px] sm:h-[92px] md:h-[100px] flex items-center justify-start select-none hud-tap pointer-events-auto"
+                className="w-full h-[68px] sm:h-[78px] md:h-[88px] flex items-center justify-start select-none hud-tap pointer-events-auto"
               >
                 <img
                   src={moreBtnImg}

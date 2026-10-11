@@ -624,10 +624,10 @@ export function SeasonsPage({ onBack, onOpenShop }: SeasonsPageProps) {
       <img 
         src={seasonBgImage} 
         alt="Halloween Season Background" 
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none opacity-40 brightness-75 scale-105"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none opacity-55 brightness-85 contrast-105 scale-105"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-purple-950/70 pointer-events-none" />
-      <div className="absolute inset-0 bg-radial from-transparent via-purple-950/40 to-black/80 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-purple-950/60 pointer-events-none" />
+      <div className="absolute inset-0 bg-radial from-transparent via-purple-950/30 to-black/85 pointer-events-none" />
 
       {/* Floating Spooky Celebration Particles */}
       {celebrationParticles.map(p => (
