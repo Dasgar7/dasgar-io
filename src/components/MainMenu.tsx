@@ -522,37 +522,46 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
       </AnimatePresence>
 
       {/* ========================================================================= */}
-      {/* 1. CENTER CONSOLE: LOGO, AVATAR, NICKNAME BAR, ACTIONS & DRAWER           */}
-      {/*    Centered layout with original large HUD proportions and BIG buttons    */}
+      {/* 1. TOP LOGO: "Dasgar.io" at the top center like agar.io                  */}
+      {/* ========================================================================= */}
+      <div 
+        className="absolute top-0 left-0 right-0 flex justify-center items-center pointer-events-none z-20 select-none"
+        style={{
+          paddingTop: 'max(0.6rem, env(safe-area-inset-top))',
+        }}
+      >
+        {renderEditableItem(
+          'logo',
+          <h1 className="font-black tracking-tight leading-none text-3xl sm:text-4xl md:text-5xl pointer-events-auto select-none drop-shadow-xs transition-all duration-300 ease-out">
+            <span className="text-[#334155]">Dasgar</span>
+            <span className="text-[#22c55e]">.io</span>
+          </h1>,
+          'pointer-events-auto z-10 flex justify-center'
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. CENTER CONSOLE: AVATAR, NICKNAME BAR, ACTIONS (SPECTATE, PLAY, MORE)   */}
+      {/*    Centered vertically and horizontally, clean & balanced like agar.io    */}
       {/* ========================================================================= */}
       <div 
         className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20 px-2 sm:px-4 select-none"
         style={{
-          paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
-          paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          paddingTop: 'max(3.5rem, calc(env(safe-area-inset-top) + 2.75rem))',
+          paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
           paddingLeft: 'max(1rem, env(safe-area-inset-left))',
           paddingRight: 'max(1rem, env(safe-area-inset-right))',
         }}
       >
-        <div className="w-full max-w-[380px] sm:max-w-[440px] md:max-w-[480px] lg:max-w-[520px] flex flex-col items-center pointer-events-none transition-all duration-300 ease-out my-auto">
-          {/* LOGO - Original iconic typography, fully visible without clipping */}
-          {renderEditableItem(
-            'logo',
-            <h1 className="font-black tracking-wide leading-none text-3xl sm:text-4xl md:text-5xl pointer-events-auto select-none transition-all duration-300 ease-out">
-              <span className="text-slate-800">Dasgar</span>
-              <span className="text-[#22c55e]">.io</span>
-            </h1>,
-            'pointer-events-auto z-10 flex justify-center mb-1 sm:mb-2'
-          )}
-
-          {/* AVATAR (SKIN BUTTON) + BADGES - Restored to original large proportions */}
+        <div className="w-full max-w-[360px] sm:max-w-[420px] md:max-w-[460px] lg:max-w-[500px] flex flex-col items-center pointer-events-none transition-all duration-300 ease-out my-auto">
+          {/* AVATAR (SKIN BUTTON) + BADGES */}
           {renderEditableItem(
             'avatar',
             <TouchSafeButton 
-              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-1 sm:my-1.5"
+              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out mb-2"
               onClick={isEditingHud ? undefined : onSkins}
             >
-              <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-slate-200 border-4 border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out">
+              <div className="w-18 h-18 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-slate-200 border-4 border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out">
                 {equippedSkinSvg ? (
                   <img 
                     src={equippedSkinSvg} 
@@ -580,30 +589,30 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 ) : null}
               </div>
               
-              {/* Plus button (top right) - Restored full size */}
-              <div className="absolute top-[2px] right-[2px] w-6 h-6 sm:w-7 sm:h-7 bg-[#22c55e] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300">
-                <Plus size={14} strokeWidth={3.5} className="pointer-events-none" />
+              {/* Plus button (top right) */}
+              <div className="absolute top-[1px] right-[1px] w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] border-2 border-white rounded-full flex items-center justify-center text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
+                <Plus size={13} strokeWidth={3.5} className="pointer-events-none" />
               </div>
 
-              {/* XP Star button (top left) - Restored full size */}
-              <div className="absolute -top-[2px] -left-[2px] w-8 h-8 sm:w-9 sm:h-9 bg-[#f59e0b] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300">
-                <Star size={18} className="fill-white text-white pointer-events-none" />
-                <span className="absolute text-amber-900 font-black text-[8px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
+              {/* XP Star button (top left) */}
+              <div className="absolute -top-[1px] -left-[1px] w-7 h-7 sm:w-8 sm:h-8 bg-[#f59e0b] border-2 border-white rounded-full flex items-center justify-center text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
+                <Star size={16} className="fill-white text-white pointer-events-none" />
+                <span className="absolute text-amber-900 font-black text-[7.5px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
               </div>
 
-              {/* Boost Zap button (bottom left) - Restored full size */}
-              <div className="absolute -bottom-[2px] -left-[2px] w-8 h-8 sm:w-9 sm:h-9 bg-[#0ea5e9] border-2 border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300">
-                <Zap size={12} className="fill-white pointer-events-none" />
-                <span className="text-white font-black text-[7.5px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
+              {/* Boost Zap button (bottom left) */}
+              <div className="absolute -bottom-[1px] -left-[1px] w-7 h-7 sm:w-8 sm:h-8 bg-[#0ea5e9] border-2 border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
+                <Zap size={11} className="fill-white pointer-events-none" />
+                <span className="text-white font-black text-[7px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
               </div>
             </TouchSafeButton>,
             'pointer-events-auto flex justify-center'
           )}
 
-          {/* NICKNAME BAR - Polished native mobile game input, compact & clean */}
+          {/* NICKNAME BAR - Polished, clean white input centered above buttons */}
           {renderEditableItem(
             'nickname',
-            <div className="w-[200px] sm:w-[240px] md:w-[270px] mx-auto bg-white border-2 border-slate-300 rounded-xl shadow-xs text-center transition-all duration-200 focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 px-3.5 py-1.5 pointer-events-auto">
+            <div className="w-[190px] sm:w-[220px] md:w-[250px] mx-auto bg-white border border-slate-300/90 rounded-xl shadow-xs text-center transition-all duration-200 focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 px-3.5 py-1.5 pointer-events-auto">
               <input 
                 type="text" 
                 placeholder="Nickname" 
@@ -613,19 +622,19 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 maxLength={15}
               />
             </div>,
-            'w-full flex justify-center pointer-events-auto my-1.5 sm:my-2'
+            'w-full flex justify-center pointer-events-auto mb-2 sm:mb-2.5'
           )}
 
           {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER */}
-          <div className="w-full flex flex-col items-center pointer-events-auto mt-1 sm:mt-1.5">
-            {/* Action Buttons Row - BIG, prominent, balanced Agar.io-style button group */}
-            <div className="flex items-center justify-center gap-0.5 sm:gap-1 w-full max-w-[360px] sm:max-w-[420px] md:max-w-[460px] lg:max-w-[500px] mx-auto pointer-events-auto">
+          <div className="w-full flex flex-col items-center pointer-events-auto">
+            {/* Action Buttons Row - Centered and clean like agar.io */}
+            <div className="flex items-center justify-center gap-1 sm:gap-1.5 w-full max-w-[340px] sm:max-w-[400px] md:max-w-[440px] lg:max-w-[480px] mx-auto pointer-events-auto">
               {/* SPECTATE BUTTON */}
               {renderEditableItem(
                 'spectate',
                 <TouchSafeButton 
                   onClick={() => onPlay('classic')}
-                  className="w-full h-[72px] sm:h-[84px] md:h-[92px] lg:h-[98px] flex items-center justify-end select-none hud-tap pointer-events-auto"
+                  className="w-full h-[62px] sm:h-[72px] md:h-[80px] lg:h-[86px] flex items-center justify-center select-none hud-tap pointer-events-auto transition-transform hover:scale-[1.02] active:scale-[0.98]"
                   title="Spectate"
                 >
                   <img
@@ -636,7 +645,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                     draggable={false}
                   />
                 </TouchSafeButton>,
-                'flex-1 flex justify-end pointer-events-auto'
+                'flex-1 flex justify-center pointer-events-auto'
               )}
               
               {/* PLAY BUTTON */}
@@ -644,7 +653,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 'play',
                 <TouchSafeButton 
                   onClick={() => onPlay('classic')}
-                  className="w-full h-[72px] sm:h-[84px] md:h-[92px] lg:h-[98px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                  className="w-full h-[62px] sm:h-[72px] md:h-[80px] lg:h-[86px] flex items-center justify-center select-none hud-tap pointer-events-auto transition-transform hover:scale-[1.02] active:scale-[0.98]"
                   title="Play"
                 >
                   <img
@@ -655,7 +664,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                     draggable={false}
                   />
                 </TouchSafeButton>,
-                'flex-1 flex justify-center pointer-events-auto'
+                'flex-[1.25] flex justify-center pointer-events-auto'
               )}
 
               {/* MORE BUTTON */}
@@ -663,7 +672,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 'more',
                 <TouchSafeButton 
                   onClick={() => setIsMoreOpen(prev => !prev)}
-                  className="w-full h-[72px] sm:h-[84px] md:h-[92px] lg:h-[98px] flex items-center justify-start select-none hud-tap pointer-events-auto"
+                  className="w-full h-[62px] sm:h-[72px] md:h-[80px] lg:h-[86px] flex items-center justify-center select-none hud-tap pointer-events-auto transition-transform hover:scale-[1.02] active:scale-[0.98]"
                   title="More Modes"
                 >
                   <img
@@ -674,7 +683,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                     draggable={false}
                   />
                 </TouchSafeButton>,
-                'flex-1 flex justify-start pointer-events-auto'
+                'flex-1 flex justify-center pointer-events-auto'
               )}
             </div>
 
@@ -706,7 +715,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   }}
                   className="pointer-events-auto w-full overflow-hidden select-none"
                 >
-                  <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[360px] sm:max-w-[420px] md:max-w-[460px] lg:max-w-[500px] mx-auto pt-2 pb-0.5">
+                  <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[340px] sm:max-w-[400px] md:max-w-[440px] lg:max-w-[480px] mx-auto pt-2 pb-0.5">
                     {/* 1. BOTS: Private server, bots only, no friends */}
                     <TouchSafeButton
                       onClick={() => onPlay('bots')}
