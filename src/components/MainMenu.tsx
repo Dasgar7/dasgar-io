@@ -389,7 +389,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
 
   return (
     <div 
-      className="relative w-full h-full bg-slate-50 flex flex-col justify-between p-4 overflow-hidden select-none"
+      className="relative w-full h-full h-[100dvh] bg-slate-50 flex flex-col justify-between p-4 overflow-hidden select-none"
       style={{ 
         backgroundImage: 'linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)',
         backgroundSize: '40px 40px',
@@ -523,32 +523,36 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
 
       {/* ========================================================================= */}
       {/* 1. CENTER CONSOLE: LOGO, AVATAR, NICKNAME BAR, ACTIONS & DRAWER           */}
-      {/*    Spectate, Play, and More are exactly centered on landscape screen.     */}
-      {/*    Skin button is smaller and nickname is upped directly above actions.   */}
+      {/*    Centered flexbox layout accounting for 100dvh & safe-area insets       */}
       {/* ========================================================================= */}
       <div 
-        className="absolute left-1/2 -translate-x-1/2 z-20 w-full max-w-[440px] sm:max-w-[500px] md:max-w-[540px] px-2 pointer-events-none transition-all duration-300 ease-out top-1/2 -translate-y-[34px] sm:-translate-y-[39px] md:-translate-y-[44px]"
+        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20 px-3 select-none"
+        style={{
+          paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
+          paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+          paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+          paddingRight: 'max(1rem, env(safe-area-inset-right))',
+        }}
       >
-        {/* UPPER STACK (LOGO + SMALLER SKIN BUTTON + NICKNAME) - Grows upward above centered actions */}
-        <div className="absolute bottom-full left-0 right-0 pb-0.5 sm:pb-1 flex flex-col items-center pointer-events-none">
-          {/* LOGO */}
+        <div className="w-full max-w-[320px] sm:max-w-[360px] md:max-w-[400px] flex flex-col items-center pointer-events-none transition-all duration-300 ease-out my-auto">
+          {/* LOGO - Clean, fully visible, safe margin from top, never clipped */}
           {renderEditableItem(
             'logo',
-            <h1 className="font-black tracking-wide leading-none text-2xl sm:text-3xl md:text-4xl translate-y-0.5 mb-0.5 pointer-events-auto transition-all duration-300 ease-out">
+            <h1 className="font-black tracking-wide leading-none text-xl sm:text-2xl md:text-3xl pointer-events-auto select-none transition-all duration-300 ease-out">
               <span className="text-slate-800">Dasgar</span>
               <span className="text-[#22c55e]">.io</span>
             </h1>,
-            'pointer-events-auto z-10'
+            'pointer-events-auto z-10 flex justify-center mb-1 sm:mb-1.5'
           )}
 
-          {/* AVATAR (SKIN BUTTON) + BADGES - Compact smaller size */}
+          {/* AVATAR (SKIN BUTTON) + BADGES - Balanced mobile game size */}
           {renderEditableItem(
             'avatar',
             <TouchSafeButton 
-              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-0.5"
+              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-0.5 sm:my-1"
               onClick={isEditingHud ? undefined : onSkins}
             >
-              <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full bg-slate-200 border-[3px] border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 rounded-full bg-slate-200 border-[3px] border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out">
                 {equippedSkinSvg ? (
                   <img 
                     src={equippedSkinSvg} 
@@ -593,154 +597,156 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 <span className="text-white font-black text-[6px] sm:text-[6.5px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
               </div>
             </TouchSafeButton>,
-            'pointer-events-auto'
+            'pointer-events-auto flex justify-center'
           )}
 
-          {/* NICKNAME BAR */}
+          {/* NICKNAME BAR - Polished native mobile game input, compact & centered */}
           {renderEditableItem(
             'nickname',
-            <div className="w-full max-w-[240px] sm:max-w-[270px] mx-auto bg-white border-2 border-slate-300 rounded-xl shadow-xs text-center transition-all duration-300 ease-out focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 mt-0.5 sm:mt-1 px-3 py-1 sm:py-1.5 pointer-events-auto">
+            <div className="w-[180px] sm:w-[210px] md:w-[230px] mx-auto bg-white border border-slate-300 rounded-xl shadow-xs text-center transition-all duration-200 focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 px-3 py-1 sm:py-1.5 pointer-events-auto">
               <input 
                 type="text" 
                 placeholder="Nickname" 
                 value={nickname}
                 onChange={(e) => handleNicknameChange(e.target.value)}
-                className="w-full bg-transparent outline-none text-center text-slate-800 font-bold placeholder-slate-400 text-sm sm:text-base"
+                className="w-full bg-transparent outline-none text-center text-slate-800 font-bold placeholder:text-slate-400 placeholder:font-medium text-xs sm:text-sm tracking-wide"
                 maxLength={15}
               />
             </div>,
-            'w-full flex justify-center pointer-events-auto'
+            'w-full flex justify-center pointer-events-auto my-1 sm:my-1.5'
           )}
-        </div>
 
-        {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER - Centered on screen */}
-        <div className="w-full flex flex-col items-center pointer-events-auto">
-          {/* Action Buttons Row - Nestled closely together */}
-          <div className="flex items-center justify-center gap-0.5 sm:gap-1 w-full max-w-[330px] sm:max-w-[380px] md:max-w-[420px] mx-auto pointer-events-auto">
-            {/* SPECTATE BUTTON */}
-            {renderEditableItem(
-              'spectate',
-              <TouchSafeButton 
-                onClick={() => onPlay('classic')}
-                className="w-full h-[68px] sm:h-[78px] md:h-[88px] flex items-center justify-end select-none hud-tap pointer-events-auto"
-                title="Spectate"
-              >
-                <img
-                  src={spectateBtnImg}
-                  alt="Spectate"
-                  style={{ imageRendering: '-webkit-optimize-contrast' as any }}
-                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
-                  draggable={false}
-                />
-              </TouchSafeButton>,
-              'flex-1 flex justify-end pointer-events-auto'
-            )}
-            
-            {/* PLAY BUTTON */}
-            {renderEditableItem(
-              'play',
-              <TouchSafeButton 
-                onClick={() => onPlay('classic')}
-                className="w-full h-[68px] sm:h-[78px] md:h-[88px] flex items-center justify-center select-none hud-tap pointer-events-auto"
-              >
-                <img
-                  src={playBtnImg}
-                  alt="Play"
-                  style={{ imageRendering: '-webkit-optimize-contrast' as any }}
-                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
-                  draggable={false}
-                />
-              </TouchSafeButton>,
-              'flex-1 flex justify-center pointer-events-auto'
-            )}
+          {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER */}
+          <div className="w-full flex flex-col items-center pointer-events-auto mt-0.5">
+            {/* Action Buttons Row - Horizontal row, close together, consistent heights */}
+            <div className="flex items-center justify-center gap-0 sm:gap-0.5 w-full max-w-[290px] sm:max-w-[330px] md:max-w-[370px] mx-auto pointer-events-auto">
+              {/* SPECTATE BUTTON */}
+              {renderEditableItem(
+                'spectate',
+                <TouchSafeButton 
+                  onClick={() => onPlay('classic')}
+                  className="w-full h-[54px] sm:h-[64px] md:h-[74px] flex items-center justify-end select-none hud-tap pointer-events-auto"
+                  title="Spectate"
+                >
+                  <img
+                    src={spectateBtnImg}
+                    alt="Spectate"
+                    style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                    className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                    draggable={false}
+                  />
+                </TouchSafeButton>,
+                'flex-1 flex justify-end pointer-events-auto'
+              )}
+              
+              {/* PLAY BUTTON */}
+              {renderEditableItem(
+                'play',
+                <TouchSafeButton 
+                  onClick={() => onPlay('classic')}
+                  className="w-full h-[54px] sm:h-[64px] md:h-[74px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                  title="Play"
+                >
+                  <img
+                    src={playBtnImg}
+                    alt="Play"
+                    style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                    className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                    draggable={false}
+                  />
+                </TouchSafeButton>,
+                'flex-1 flex justify-center pointer-events-auto'
+              )}
 
-            {/* MORE BUTTON */}
-            {renderEditableItem(
-              'more',
-              <TouchSafeButton 
-                onClick={() => setIsMoreOpen(prev => !prev)}
-                className="w-full h-[68px] sm:h-[78px] md:h-[88px] flex items-center justify-start select-none hud-tap pointer-events-auto"
-              >
-                <img
-                  src={moreBtnImg}
-                  alt="More"
-                  style={{ imageRendering: '-webkit-optimize-contrast' as any }}
-                  className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
-                  draggable={false}
-                />
-              </TouchSafeButton>,
-              'flex-1 flex justify-start pointer-events-auto'
-            )}
+              {/* MORE BUTTON */}
+              {renderEditableItem(
+                'more',
+                <TouchSafeButton 
+                  onClick={() => setIsMoreOpen(prev => !prev)}
+                  className="w-full h-[54px] sm:h-[64px] md:h-[74px] flex items-center justify-start select-none hud-tap pointer-events-auto"
+                  title="More Modes"
+                >
+                  <img
+                    src={moreBtnImg}
+                    alt="More"
+                    style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                    className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                    draggable={false}
+                  />
+                </TouchSafeButton>,
+                'flex-1 flex justify-start pointer-events-auto'
+              )}
+            </div>
+
+            {/* MORE Buttons Drawer (Opens smoothly directly below action buttons) */}
+            <AnimatePresence initial={false}>
+              {isMoreOpen && (
+                <motion.div
+                  key="more-buttons-drawer"
+                  initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                  animate={{ 
+                    opacity: 1, 
+                    height: 'auto', 
+                    scale: 1,
+                    transition: {
+                      height: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
+                      opacity: { duration: 0.2, ease: 'easeOut' },
+                      scale: { duration: 0.28, ease: [0.16, 1, 0.3, 1] }
+                    }
+                  }}
+                  exit={{ 
+                    opacity: 0, 
+                    height: 0, 
+                    scale: 0.95,
+                    transition: {
+                      height: { duration: 0.24, ease: [0.4, 0, 0.2, 1] },
+                      opacity: { duration: 0.18, ease: 'easeIn' },
+                      scale: { duration: 0.2, ease: 'easeIn' }
+                    }
+                  }}
+                  className="pointer-events-auto w-full overflow-hidden select-none"
+                >
+                  <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[290px] sm:max-w-[330px] md:max-w-[370px] mx-auto pt-1.5 pb-0.5">
+                    {/* 1. BOTS: Private server, bots only, no friends */}
+                    <TouchSafeButton
+                      onClick={() => onPlay('bots')}
+                      className="h-[44px] sm:h-[48px] bg-gradient-to-b from-[#06b6d4] to-[#0891b2] border border-[#0e7490] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                    >
+                      <Bot className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white mb-0.5 pointer-events-none" />
+                      <span className="font-black text-[9.5px] sm:text-[10.5px] tracking-wider uppercase pointer-events-none leading-none">
+                        BOTS
+                      </span>
+                    </TouchSafeButton>
+
+                    {/* 2. INSTANT MERGE: Fast recombine, exclusive mode */}
+                    <TouchSafeButton
+                      onClick={() => onPlay('instantMerge')}
+                      className="h-[44px] sm:h-[48px] bg-gradient-to-b from-[#f97316] to-[#ea580c] border border-[#c2410c] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                    >
+                      <Zap className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white fill-white mb-0.5 pointer-events-none" />
+                      <span className="font-black text-[8px] sm:text-[9.5px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+                        INSTANT MERGE
+                      </span>
+                    </TouchSafeButton>
+
+                    {/* 3. EDIT HUD: Customize main menu HUD elements specifically */}
+                    <TouchSafeButton
+                      onClick={() => {
+                        setIsMoreOpen(false);
+                        setIsEditingHud(true);
+                      }}
+                      className="h-[44px] sm:h-[48px] bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                    >
+                      <Sliders className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white mb-0.5 pointer-events-none" />
+                      <span className="font-black text-[9.5px] sm:text-[10.5px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+                        EDIT HUD
+                      </span>
+                    </TouchSafeButton>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-
-          {/* MORE Buttons Drawer (Opens smoothly directly below action buttons) */}
-          <AnimatePresence initial={false}>
-            {isMoreOpen && (
-              <motion.div
-                key="more-buttons-drawer"
-                initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                animate={{ 
-                  opacity: 1, 
-                  height: 'auto', 
-                  scale: 1,
-                  transition: {
-                    height: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
-                    opacity: { duration: 0.25, ease: 'easeOut' },
-                    scale: { duration: 0.32, ease: [0.16, 1, 0.3, 1] }
-                  }
-                }}
-                exit={{ 
-                  opacity: 0, 
-                  height: 0, 
-                  scale: 0.95,
-                  transition: {
-                    height: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
-                    opacity: { duration: 0.2, ease: 'easeIn' },
-                    scale: { duration: 0.24, ease: 'easeIn' }
-                  }
-                }}
-                className="pointer-events-auto w-full overflow-hidden select-none"
-              >
-                <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[340px] sm:max-w-[390px] md:max-w-[430px] mx-auto pt-2 pb-0.5">
-                  {/* 1. BOTS: Private server, bots only, no friends */}
-                  <TouchSafeButton
-                    onClick={() => onPlay('bots')}
-                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#06b6d4] to-[#0891b2] border border-[#0e7490] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
-                  >
-                    <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none" />
-                    <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none">
-                      BOTS
-                    </span>
-                  </TouchSafeButton>
-
-                  {/* 2. INSTANT MERGE: Fast recombine, exclusive mode */}
-                  <TouchSafeButton
-                    onClick={() => onPlay('instantMerge')}
-                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#f97316] to-[#ea580c] border border-[#c2410c] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
-                  >
-                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white mb-0.5 pointer-events-none" />
-                    <span className="font-black text-[8.5px] sm:text-[10px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
-                      INSTANT MERGE
-                    </span>
-                  </TouchSafeButton>
-
-                  {/* 3. EDIT HUD: Customize main menu HUD elements specifically */}
-                  <TouchSafeButton
-                    onClick={() => {
-                      setIsMoreOpen(false);
-                      setIsEditingHud(true);
-                    }}
-                    className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
-                  >
-                    <Sliders className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none" />
-                    <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
-                      EDIT HUD
-                    </span>
-                  </TouchSafeButton>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
