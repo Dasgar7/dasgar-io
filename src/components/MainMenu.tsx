@@ -523,10 +523,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
 
       {/* ========================================================================= */}
       {/* 1. CENTER CONSOLE: LOGO, AVATAR, NICKNAME BAR, ACTIONS & DRAWER           */}
-      {/*    Centered flexbox layout accounting for 100dvh & safe-area insets       */}
+      {/*    Centered layout with original large HUD proportions and BIG buttons    */}
       {/* ========================================================================= */}
       <div 
-        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20 px-3 select-none"
+        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20 px-2 sm:px-4 select-none"
         style={{
           paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
           paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
@@ -534,25 +534,25 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           paddingRight: 'max(1rem, env(safe-area-inset-right))',
         }}
       >
-        <div className="w-full max-w-[320px] sm:max-w-[360px] md:max-w-[400px] flex flex-col items-center pointer-events-none transition-all duration-300 ease-out my-auto">
-          {/* LOGO - Clean, fully visible, safe margin from top, never clipped */}
+        <div className="w-full max-w-[380px] sm:max-w-[440px] md:max-w-[480px] lg:max-w-[520px] flex flex-col items-center pointer-events-none transition-all duration-300 ease-out my-auto">
+          {/* LOGO - Original iconic typography, fully visible without clipping */}
           {renderEditableItem(
             'logo',
-            <h1 className="font-black tracking-wide leading-none text-xl sm:text-2xl md:text-3xl pointer-events-auto select-none transition-all duration-300 ease-out">
+            <h1 className="font-black tracking-wide leading-none text-3xl sm:text-4xl md:text-5xl pointer-events-auto select-none transition-all duration-300 ease-out">
               <span className="text-slate-800">Dasgar</span>
               <span className="text-[#22c55e]">.io</span>
             </h1>,
-            'pointer-events-auto z-10 flex justify-center mb-1 sm:mb-1.5'
+            'pointer-events-auto z-10 flex justify-center mb-1 sm:mb-2'
           )}
 
-          {/* AVATAR (SKIN BUTTON) + BADGES - Balanced mobile game size */}
+          {/* AVATAR (SKIN BUTTON) + BADGES - Restored to original large proportions */}
           {renderEditableItem(
             'avatar',
             <TouchSafeButton 
-              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-0.5 sm:my-1"
+              className="relative group hud-tap pointer-events-auto transition-all duration-300 ease-out my-1 sm:my-1.5"
               onClick={isEditingHud ? undefined : onSkins}
             >
-              <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 rounded-full bg-slate-200 border-[3px] border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-slate-200 border-4 border-[#22c55e] shadow-md flex items-center justify-center pointer-events-none overflow-hidden relative transition-all duration-300 ease-out">
                 {equippedSkinSvg ? (
                   <img 
                     src={equippedSkinSvg} 
@@ -580,30 +580,30 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 ) : null}
               </div>
               
-              {/* Plus button (top right) */}
-              <div className="absolute top-[1px] right-[1px] w-5 h-5 sm:w-5.5 sm:h-5.5 bg-[#22c55e] border-[1.5px] border-white rounded-full flex items-center justify-center text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
-                <Plus size={11} strokeWidth={3.5} className="pointer-events-none" />
+              {/* Plus button (top right) - Restored full size */}
+              <div className="absolute top-[2px] right-[2px] w-6 h-6 sm:w-7 sm:h-7 bg-[#22c55e] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300">
+                <Plus size={14} strokeWidth={3.5} className="pointer-events-none" />
               </div>
 
-              {/* XP Star button (top left) */}
-              <div className="absolute -top-[1px] -left-[1px] w-6 h-6 sm:w-6.5 sm:h-6.5 bg-[#f59e0b] border-[1.5px] border-white rounded-full flex items-center justify-center text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
-                <Star size={13} className="fill-white text-white pointer-events-none" />
-                <span className="absolute text-amber-900 font-black text-[6.5px] sm:text-[7px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
+              {/* XP Star button (top left) - Restored full size */}
+              <div className="absolute -top-[2px] -left-[2px] w-8 h-8 sm:w-9 sm:h-9 bg-[#f59e0b] border-2 border-white rounded-full flex items-center justify-center text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300">
+                <Star size={18} className="fill-white text-white pointer-events-none" />
+                <span className="absolute text-amber-900 font-black text-[8px] pointer-events-none tracking-tighter pt-0.5 ml-0.5 z-10">XP</span>
               </div>
 
-              {/* Boost Zap button (bottom left) */}
-              <div className="absolute -bottom-[1px] -left-[1px] w-6 h-6 sm:w-6.5 sm:h-6.5 bg-[#0ea5e9] border-[1.5px] border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-xs z-10 select-none overflow-hidden transition-all duration-300">
-                <Zap size={10} className="fill-white pointer-events-none" />
-                <span className="text-white font-black text-[6px] sm:text-[6.5px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
+              {/* Boost Zap button (bottom left) - Restored full size */}
+              <div className="absolute -bottom-[2px] -left-[2px] w-8 h-8 sm:w-9 sm:h-9 bg-[#0ea5e9] border-2 border-white rounded-full flex flex-col items-center justify-center pt-0.5 text-white shadow-sm z-10 select-none overflow-hidden transition-all duration-300">
+                <Zap size={12} className="fill-white pointer-events-none" />
+                <span className="text-white font-black text-[7.5px] leading-none mt-0.5 pointer-events-none tracking-wide">BST</span>
               </div>
             </TouchSafeButton>,
             'pointer-events-auto flex justify-center'
           )}
 
-          {/* NICKNAME BAR - Polished native mobile game input, compact & centered */}
+          {/* NICKNAME BAR - Polished native mobile game input, compact & clean */}
           {renderEditableItem(
             'nickname',
-            <div className="w-[180px] sm:w-[210px] md:w-[230px] mx-auto bg-white border border-slate-300 rounded-xl shadow-xs text-center transition-all duration-200 focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 px-3 py-1 sm:py-1.5 pointer-events-auto">
+            <div className="w-[200px] sm:w-[240px] md:w-[270px] mx-auto bg-white border-2 border-slate-300 rounded-xl shadow-xs text-center transition-all duration-200 focus-within:border-[#22c55e] focus-within:ring-2 focus-within:ring-[#22c55e]/20 px-3.5 py-1.5 pointer-events-auto">
               <input 
                 type="text" 
                 placeholder="Nickname" 
@@ -613,19 +613,19 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 maxLength={15}
               />
             </div>,
-            'w-full flex justify-center pointer-events-auto my-1 sm:my-1.5'
+            'w-full flex justify-center pointer-events-auto my-1.5 sm:my-2'
           )}
 
           {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER */}
-          <div className="w-full flex flex-col items-center pointer-events-auto mt-0.5">
-            {/* Action Buttons Row - Horizontal row, close together, consistent heights */}
-            <div className="flex items-center justify-center gap-0 sm:gap-0.5 w-full max-w-[290px] sm:max-w-[330px] md:max-w-[370px] mx-auto pointer-events-auto">
+          <div className="w-full flex flex-col items-center pointer-events-auto mt-1 sm:mt-1.5">
+            {/* Action Buttons Row - BIG, prominent, balanced Agar.io-style button group */}
+            <div className="flex items-center justify-center gap-0.5 sm:gap-1 w-full max-w-[360px] sm:max-w-[420px] md:max-w-[460px] lg:max-w-[500px] mx-auto pointer-events-auto">
               {/* SPECTATE BUTTON */}
               {renderEditableItem(
                 'spectate',
                 <TouchSafeButton 
                   onClick={() => onPlay('classic')}
-                  className="w-full h-[54px] sm:h-[64px] md:h-[74px] flex items-center justify-end select-none hud-tap pointer-events-auto"
+                  className="w-full h-[72px] sm:h-[84px] md:h-[92px] lg:h-[98px] flex items-center justify-end select-none hud-tap pointer-events-auto"
                   title="Spectate"
                 >
                   <img
@@ -644,7 +644,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 'play',
                 <TouchSafeButton 
                   onClick={() => onPlay('classic')}
-                  className="w-full h-[54px] sm:h-[64px] md:h-[74px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                  className="w-full h-[72px] sm:h-[84px] md:h-[92px] lg:h-[98px] flex items-center justify-center select-none hud-tap pointer-events-auto"
                   title="Play"
                 >
                   <img
@@ -663,7 +663,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 'more',
                 <TouchSafeButton 
                   onClick={() => setIsMoreOpen(prev => !prev)}
-                  className="w-full h-[54px] sm:h-[64px] md:h-[74px] flex items-center justify-start select-none hud-tap pointer-events-auto"
+                  className="w-full h-[72px] sm:h-[84px] md:h-[92px] lg:h-[98px] flex items-center justify-start select-none hud-tap pointer-events-auto"
                   title="More Modes"
                 >
                   <img
@@ -706,14 +706,14 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   }}
                   className="pointer-events-auto w-full overflow-hidden select-none"
                 >
-                  <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[290px] sm:max-w-[330px] md:max-w-[370px] mx-auto pt-1.5 pb-0.5">
+                  <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[360px] sm:max-w-[420px] md:max-w-[460px] lg:max-w-[500px] mx-auto pt-2 pb-0.5">
                     {/* 1. BOTS: Private server, bots only, no friends */}
                     <TouchSafeButton
                       onClick={() => onPlay('bots')}
-                      className="h-[44px] sm:h-[48px] bg-gradient-to-b from-[#06b6d4] to-[#0891b2] border border-[#0e7490] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                      className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#06b6d4] to-[#0891b2] border border-[#0e7490] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
                     >
-                      <Bot className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white mb-0.5 pointer-events-none" />
-                      <span className="font-black text-[9.5px] sm:text-[10.5px] tracking-wider uppercase pointer-events-none leading-none">
+                      <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none" />
+                      <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none">
                         BOTS
                       </span>
                     </TouchSafeButton>
@@ -721,10 +721,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                     {/* 2. INSTANT MERGE: Fast recombine, exclusive mode */}
                     <TouchSafeButton
                       onClick={() => onPlay('instantMerge')}
-                      className="h-[44px] sm:h-[48px] bg-gradient-to-b from-[#f97316] to-[#ea580c] border border-[#c2410c] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                      className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#f97316] to-[#ea580c] border border-[#c2410c] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
                     >
-                      <Zap className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white fill-white mb-0.5 pointer-events-none" />
-                      <span className="font-black text-[8px] sm:text-[9.5px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+                      <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white mb-0.5 pointer-events-none" />
+                      <span className="font-black text-[8.5px] sm:text-[10px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                         INSTANT MERGE
                       </span>
                     </TouchSafeButton>
@@ -735,10 +735,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                         setIsMoreOpen(false);
                         setIsEditingHud(true);
                       }}
-                      className="h-[44px] sm:h-[48px] bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                      className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
                     >
-                      <Sliders className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white mb-0.5 pointer-events-none" />
-                      <span className="font-black text-[9.5px] sm:text-[10.5px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
+                      <Sliders className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none" />
+                      <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
                         EDIT HUD
                       </span>
                     </TouchSafeButton>
