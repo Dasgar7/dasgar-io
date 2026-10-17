@@ -3246,33 +3246,27 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       )}
 
       {isPaused && !isGameOverRef.current && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center pointer-events-auto z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900/95 border-2 border-slate-700/80 p-7 sm:p-8 rounded-3xl max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shadow-inner">
-              <HelpCircle className="w-8 h-8 text-amber-400" />
-            </div>
-            <div className="space-y-1.5">
-              <h2 className="text-2xl sm:text-3xl font-black tracking-wide text-white drop-shadow">
-                Are you sure you want to quit the game?
-              </h2>
-              <p className="text-xs font-medium text-slate-400">
-                Your match progress and current score of <span className="text-emerald-400 font-bold">{score}</span> will be lost.
-              </p>
-            </div>
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center pointer-events-auto z-50 p-4 animate-in fade-in duration-150">
+          <div className="bg-[#f1f5f9] border-[3px] border-[#cbd5e1] p-6 sm:p-8 rounded-3xl max-w-sm sm:max-w-md w-full shadow-2xl text-center flex flex-col items-center gap-4 sm:gap-6">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-slate-800">
+              Are you sure you want to leave?
+            </h2>
 
-            <div className="w-full grid grid-cols-2 gap-3 mt-2">
-              <TouchSafeButton
-                onClick={onBack}
-                className="w-full py-3.5 px-5 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-black text-sm tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-rose-950/50 transition-all cursor-pointer"
-              >
-                Yes
-              </TouchSafeButton>
-
+            <div className="w-full grid grid-cols-2 gap-3 sm:gap-4 mt-1">
+              {/* Red NO button */}
               <TouchSafeButton
                 onClick={togglePause}
-                className="w-full py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-sm tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all cursor-pointer"
+                className="w-full py-3 sm:py-3.5 px-4 rounded-xl sm:rounded-2xl bg-gradient-to-b from-[#ef4444] to-[#dc2626] border-2 border-[#b91c1c] hover:brightness-110 active:scale-95 text-white font-black text-sm sm:text-base tracking-wider shadow-md shadow-red-900/30 transition-all cursor-pointer flex items-center justify-center select-none"
               >
                 No
+              </TouchSafeButton>
+
+              {/* Green YES button */}
+              <TouchSafeButton
+                onClick={onBack}
+                className="w-full py-3 sm:py-3.5 px-4 rounded-xl sm:rounded-2xl bg-gradient-to-b from-[#22c55e] to-[#16a34a] border-2 border-[#15803d] hover:brightness-110 active:scale-95 text-white font-black text-sm sm:text-base tracking-wider shadow-md shadow-green-900/30 transition-all cursor-pointer flex items-center justify-center select-none"
+              >
+                Yes
               </TouchSafeButton>
             </div>
           </div>

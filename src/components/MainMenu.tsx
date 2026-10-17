@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Settings, Star, Zap, ShoppingCart, 
   Plus, Eye, EyeOff, Gamepad2, MoreHorizontal, User, Play,
-  Coins, Banknote, Crown, Bot, Sliders, Check, RotateCcw, Move
+  Coins, Banknote, Crown, Bot, Sliders, Check, RotateCcw, Move,
+  X, Copy, Users
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TouchSafeButton } from './TouchSafeButton';
@@ -115,6 +116,12 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
   const [isEditingHud, setIsEditingHud] = useState(false);
   const [selectedKey, setSelectedKey] = useState<HudElementKey | null>('nickname');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Party Mode Modal state
+  const [isPartyOpen, setIsPartyOpen] = useState(false);
+  const [createdPartyCode, setCreatedPartyCode] = useState<string | null>(null);
+  const [inputPartyCode, setInputPartyCode] = useState('');
+  const [partyCopied, setPartyCopied] = useState(false);
 
   // Nickname state with persistence
   const [nickname, setNickname] = useState(() => {
@@ -507,6 +514,109 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         )}
       </AnimatePresence>
 
+      {/* Party Modal */}
+      <AnimatePresence>
+        {isPartyOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150 pointer-events-auto">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-sm sm:max-w-md bg-[#1e293b] border-2 border-slate-600 rounded-3xl p-5 sm:p-6 shadow-2xl text-white select-none pointer-events-auto"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setIsPartyOpen(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-1 rounded-full hover:bg-slate-700/50 cursor-pointer"
+              >
+                <X size={22} />
+              </button>
+
+              {/* Title */}
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                  <Users size={18} />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">Party Mode</h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-400 mb-5">
+                Play with your friends in the same arena!
+              </p>
+
+              {/* Create Party */}
+              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 mb-4">
+                <div className="font-extrabold text-xs uppercase tracking-wider text-slate-300 mb-2">Create Party</div>
+                {createdPartyCode ? (
+                  <div className="flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between bg-slate-900 border border-purple-500/40 rounded-xl px-3.5 py-2">
+                      <span className="font-mono font-black text-purple-300 tracking-widest text-base sm:text-lg">
+                        {createdPartyCode}
+                      </span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard?.writeText(createdPartyCode);
+                          setPartyCopied(true);
+                          setTimeout(() => setPartyCopied(false), 2000);
+                        }}
+                        className="flex items-center gap-1 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-600 transition-colors cursor-pointer"
+                      >
+                        <Copy size={13} />
+                        <span>{partyCopied ? 'Copied!' : 'Copy'}</span>
+                      </button>
+                    </div>
+                    <TouchSafeButton
+                      onClick={() => {
+                        setIsPartyOpen(false);
+                        onPlay('classic');
+                      }}
+                      className="w-full py-2.5 bg-gradient-to-b from-[#22c55e] to-[#16a34a] border border-[#15803d] rounded-xl font-black text-sm uppercase tracking-wider text-white shadow-md hover:brightness-110 active:scale-98 transition-all flex items-center justify-center"
+                    >
+                      Join Party Arena
+                    </TouchSafeButton>
+                  </div>
+                ) : (
+                  <TouchSafeButton
+                    onClick={() => {
+                      const code = `DASGAR-${Math.floor(1000 + Math.random() * 9000)}`;
+                      setCreatedPartyCode(code);
+                    }}
+                    className="w-full py-2.5 bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl font-black text-sm uppercase tracking-wider text-white shadow-md hover:brightness-110 active:scale-98 transition-all flex items-center justify-center"
+                  >
+                    Create Party
+                  </TouchSafeButton>
+                )}
+              </div>
+
+              {/* Join Party */}
+              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4">
+                <div className="font-extrabold text-xs uppercase tracking-wider text-slate-300 mb-2">Join with Code</div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={inputPartyCode}
+                    onChange={(e) => setInputPartyCode(e.target.value.toUpperCase())}
+                    placeholder="DASGAR-XXXX"
+                    className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-center font-mono font-bold text-sm tracking-widest text-white placeholder:text-slate-500 uppercase outline-none focus:border-purple-500"
+                    maxLength={12}
+                  />
+                  <TouchSafeButton
+                    onClick={() => {
+                      if (inputPartyCode.trim()) {
+                        setIsPartyOpen(false);
+                        onPlay('classic');
+                      }
+                    }}
+                    className="px-5 py-2 bg-gradient-to-b from-[#0ea5e9] to-[#0284c7] border border-[#0369a1] rounded-xl font-black text-sm uppercase tracking-wider text-white shadow-md hover:brightness-110 active:scale-98 transition-all flex items-center justify-center disabled:opacity-50"
+                  >
+                    Join
+                  </TouchSafeButton>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMsg && (
@@ -766,6 +876,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
         'shop',
         <TouchSafeButton 
           id="shop-cart-button" 
+          onClick={isEditingHud ? undefined : onSkins}
           className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-b from-[#ef4444] to-[#dc2626] border border-[#b91c1c] rounded-2xl flex items-center justify-center text-white shadow-sm shadow-red-500/20 select-none hud-tap pointer-events-auto"
         >
           <ShoppingCart size={28} className="pointer-events-none text-white" />
@@ -795,7 +906,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               <Coins size={15} className="text-white pointer-events-none" />
             </div>
             <span className="text-slate-800 font-black flex-1 text-center pointer-events-none text-sm sm:text-base tabular-nums">613</span>
-            <TouchSafeButton className="w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] rounded-full flex items-center justify-center text-white shadow-xs ml-1.5 select-none hud-tap">
+            <TouchSafeButton 
+              onClick={isEditingHud ? undefined : onSkins}
+              className="w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] rounded-full flex items-center justify-center text-white shadow-xs ml-1.5 select-none hud-tap"
+            >
               <Plus size={13} strokeWidth={3.5} className="pointer-events-none" />
             </TouchSafeButton>
           </div>,
@@ -810,7 +924,10 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
               <Banknote size={15} className="text-white pointer-events-none" />
             </div>
             <span className="text-slate-800 font-black flex-1 text-center pointer-events-none text-sm sm:text-base tabular-nums">15</span>
-            <TouchSafeButton className="w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] rounded-full flex items-center justify-center text-white shadow-xs ml-1.5 select-none hud-tap">
+            <TouchSafeButton 
+              onClick={isEditingHud ? undefined : onSkins}
+              className="w-5 h-5 sm:w-6 sm:h-6 bg-[#22c55e] rounded-full flex items-center justify-center text-white shadow-xs ml-1.5 select-none hud-tap"
+            >
               <Plus size={13} strokeWidth={3.5} className="pointer-events-none" />
             </TouchSafeButton>
           </div>,
@@ -861,7 +978,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           'party',
           <TouchSafeButton 
             id="party-button"
-            onClick={() => {}}
+            onClick={isEditingHud ? undefined : () => setIsPartyOpen(true)}
             className="w-[50px] sm:w-14 h-[50px] sm:h-14 bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap pointer-events-auto"
           >
             <User size={20} className="pointer-events-none text-white mb-0.5" />
