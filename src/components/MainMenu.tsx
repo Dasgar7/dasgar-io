@@ -11,6 +11,9 @@ import { getStarStyleForLevel } from '../utils/levelUtils';
 import spectateBtnImg from '../assets/images/spectate-button.png';
 import playBtnImg from '../assets/images/play-button.png';
 import moreBtnImg from '../assets/images/more-button.png';
+import btnBotsImg from '../assets/images/btn_bots.png';
+import btnInstantMergeImg from '../assets/images/btn_instant_merge.png';
+import btnEditHudImg from '../assets/images/btn_edit_hud.png';
 import { SeasonVideoBtn } from './SeasonVideoBtn';
 
 interface MainMenuProps {
@@ -715,27 +718,35 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   }}
                   className="pointer-events-auto w-full overflow-hidden select-none"
                 >
-                  <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[420px] sm:max-w-[480px] md:max-w-[530px] lg:max-w-[560px] mx-auto pt-2 pb-0.5">
+                  <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[360px] sm:max-w-[420px] md:max-w-[460px] lg:max-w-[490px] mx-auto pt-2 pb-0.5">
                     {/* 1. BOTS: Private server, bots only, no friends */}
                     <TouchSafeButton
                       onClick={() => onPlay('bots')}
-                      className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#06b6d4] to-[#0891b2] border border-[#0e7490] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                      className="w-full h-[52px] sm:h-[60px] md:h-[68px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                      title="Bots Mode"
                     >
-                      <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none" />
-                      <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none">
-                        BOTS
-                      </span>
+                      <img
+                        src={btnBotsImg}
+                        alt="Bots"
+                        style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                        className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                        draggable={false}
+                      />
                     </TouchSafeButton>
 
                     {/* 2. INSTANT MERGE: Fast recombine, exclusive mode */}
                     <TouchSafeButton
                       onClick={() => onPlay('instantMerge')}
-                      className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#f97316] to-[#ea580c] border border-[#c2410c] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                      className="w-full h-[52px] sm:h-[60px] md:h-[68px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                      title="Instant Merge Mode"
                     >
-                      <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white fill-white mb-0.5 pointer-events-none" />
-                      <span className="font-black text-[8.5px] sm:text-[10px] tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
-                        INSTANT MERGE
-                      </span>
+                      <img
+                        src={btnInstantMergeImg}
+                        alt="Instant Merge"
+                        style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                        className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                        draggable={false}
+                      />
                     </TouchSafeButton>
 
                     {/* 3. EDIT HUD: Customize main menu HUD elements specifically */}
@@ -744,12 +755,16 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                         setIsMoreOpen(false);
                         setIsEditingHud(true);
                       }}
-                      className="h-[46px] sm:h-[52px] bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed] border border-[#6d28d9] rounded-xl px-1 flex flex-col items-center justify-center text-white shadow-xs select-none hud-tap"
+                      className="w-full h-[52px] sm:h-[60px] md:h-[68px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                      title="Edit HUD"
                     >
-                      <Sliders className="w-4 h-4 sm:w-5 sm:h-5 text-white mb-0.5 pointer-events-none" />
-                      <span className="font-black text-[10px] sm:text-xs tracking-wider uppercase pointer-events-none leading-none whitespace-nowrap">
-                        EDIT HUD
-                      </span>
+                      <img
+                        src={btnEditHudImg}
+                        alt="Edit HUD"
+                        style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                        className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                        draggable={false}
+                      />
                     </TouchSafeButton>
                   </div>
                 </motion.div>
