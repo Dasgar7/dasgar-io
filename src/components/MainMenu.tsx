@@ -628,13 +628,13 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
           {/* ACTION BUTTONS (SPECTATE, PLAY, MORE) + MORE DRAWER */}
           <div className="w-full flex flex-col items-center pointer-events-auto">
             {/* Action Buttons Row - Centered, big & clean like Agar.io with tight spacing */}
-            <div className="flex items-center justify-center gap-0.5 sm:gap-1 w-full max-w-[420px] sm:max-w-[480px] md:max-w-[530px] lg:max-w-[560px] mx-auto pointer-events-auto">
+            <div className="flex items-center justify-center gap-0 sm:gap-0.5 w-full max-w-[390px] sm:max-w-[450px] md:max-w-[490px] lg:max-w-[520px] mx-auto pointer-events-auto">
               {/* SPECTATE BUTTON */}
               {renderEditableItem(
                 'spectate',
                 <TouchSafeButton 
                   onClick={() => onPlay('classic')}
-                  className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-end select-none hud-tap pointer-events-auto"
                   title="Spectate"
                 >
                   <img
@@ -645,7 +645,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                     draggable={false}
                   />
                 </TouchSafeButton>,
-                'flex-1 flex justify-center pointer-events-auto'
+                'flex-1 flex justify-end pointer-events-auto'
               )}
               
               {/* PLAY BUTTON */}
@@ -653,7 +653,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 'play',
                 <TouchSafeButton 
                   onClick={() => onPlay('classic')}
-                  className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
                   title="Play"
                 >
                   <img
@@ -664,7 +664,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                     draggable={false}
                   />
                 </TouchSafeButton>,
-                'flex-[1.2] flex justify-center pointer-events-auto'
+                'flex-[1.15] flex justify-center pointer-events-auto'
               )}
 
               {/* MORE BUTTON */}
@@ -672,7 +672,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                 'more',
                 <TouchSafeButton 
                   onClick={() => setIsMoreOpen(prev => !prev)}
-                  className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-start select-none hud-tap pointer-events-auto"
                   title="More Modes"
                 >
                   <img
@@ -683,7 +683,7 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                     draggable={false}
                   />
                 </TouchSafeButton>,
-                'flex-1 flex justify-center pointer-events-auto'
+                'flex-1 flex justify-start pointer-events-auto'
               )}
             </div>
 
