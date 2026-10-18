@@ -718,54 +718,60 @@ export function MainMenu({ onPlay, onSkins, onSettings, onSeason }: MainMenuProp
                   }}
                   className="pointer-events-auto w-full overflow-hidden select-none"
                 >
-                  <div className="grid grid-cols-3 gap-1 sm:gap-1.5 w-full max-w-[360px] sm:max-w-[420px] md:max-w-[460px] lg:max-w-[490px] mx-auto pt-2 pb-0.5">
+                  <div className="flex items-center justify-center -space-x-1 sm:-space-x-1.5 md:-space-x-2 w-full max-w-[340px] sm:max-w-[390px] md:max-w-[440px] lg:max-w-[470px] mx-auto pt-1 pb-0.5">
                     {/* 1. BOTS: Private server, bots only, no friends */}
-                    <TouchSafeButton
-                      onClick={() => onPlay('bots')}
-                      className="w-full h-[52px] sm:h-[60px] md:h-[68px] flex items-center justify-center select-none hud-tap pointer-events-auto"
-                      title="Bots Mode"
-                    >
-                      <img
-                        src={btnBotsImg}
-                        alt="Bots"
-                        style={{ imageRendering: '-webkit-optimize-contrast' as any }}
-                        className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
-                        draggable={false}
-                      />
-                    </TouchSafeButton>
+                    <div className="flex-1 flex justify-center pointer-events-auto z-10">
+                      <TouchSafeButton
+                        onClick={() => onPlay('bots')}
+                        className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                        title="Bots Mode"
+                      >
+                        <img
+                          src={btnBotsImg}
+                          alt="Bots"
+                          style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                          className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                          draggable={false}
+                        />
+                      </TouchSafeButton>
+                    </div>
 
                     {/* 2. INSTANT MERGE: Fast recombine, exclusive mode */}
-                    <TouchSafeButton
-                      onClick={() => onPlay('instantMerge')}
-                      className="w-full h-[52px] sm:h-[60px] md:h-[68px] flex items-center justify-center select-none hud-tap pointer-events-auto"
-                      title="Instant Merge Mode"
-                    >
-                      <img
-                        src={btnInstantMergeImg}
-                        alt="Instant Merge"
-                        style={{ imageRendering: '-webkit-optimize-contrast' as any }}
-                        className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
-                        draggable={false}
-                      />
-                    </TouchSafeButton>
+                    <div className="flex-1 flex justify-center pointer-events-auto z-20">
+                      <TouchSafeButton
+                        onClick={() => onPlay('instantMerge')}
+                        className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                        title="Instant Merge Mode"
+                      >
+                        <img
+                          src={btnInstantMergeImg}
+                          alt="Instant Merge"
+                          style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                          className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                          draggable={false}
+                        />
+                      </TouchSafeButton>
+                    </div>
 
                     {/* 3. EDIT HUD: Customize main menu HUD elements specifically */}
-                    <TouchSafeButton
-                      onClick={() => {
-                        setIsMoreOpen(false);
-                        setIsEditingHud(true);
-                      }}
-                      className="w-full h-[52px] sm:h-[60px] md:h-[68px] flex items-center justify-center select-none hud-tap pointer-events-auto"
-                      title="Edit HUD"
-                    >
-                      <img
-                        src={btnEditHudImg}
-                        alt="Edit HUD"
-                        style={{ imageRendering: '-webkit-optimize-contrast' as any }}
-                        className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
-                        draggable={false}
-                      />
-                    </TouchSafeButton>
+                    <div className="flex-1 flex justify-center pointer-events-auto z-10">
+                      <TouchSafeButton
+                        onClick={() => {
+                          setIsMoreOpen(false);
+                          setIsEditingHud(true);
+                        }}
+                        className="w-full h-[76px] sm:h-[88px] md:h-[96px] lg:h-[104px] flex items-center justify-center select-none hud-tap pointer-events-auto"
+                        title="Edit HUD"
+                      >
+                        <img
+                          src={btnEditHudImg}
+                          alt="Edit HUD"
+                          style={{ imageRendering: '-webkit-optimize-contrast' as any }}
+                          className="w-full h-full object-contain pointer-events-none select-none drop-shadow-sm"
+                          draggable={false}
+                        />
+                      </TouchSafeButton>
+                    </div>
                   </div>
                 </motion.div>
               )}

@@ -11,7 +11,7 @@ interface GameScreenProps {
 // Game Constants
 const MAP_SIZE = 3000;
 const INITIAL_RADIUS = 20;
-const BASE_PLAYER_SPEED = 2.4;
+const BASE_PLAYER_SPEED = 1.6;
 const SPEED_SCALE = 0.439;
 const DEBUG_FORCE_PHONE_ZOOM = false;
 const DEBUG_PLAYER_SPAWN_SCORE: number | null = null;
@@ -263,7 +263,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const [isModPressed, setIsModPressed] = useState(false);
   const [modZoom, setModZoom] = useState(1.0);
   const [modMacroInterval, setModMacroInterval] = useState(MACRO_FEED_INTERVAL);
-  const [modFeedSpeed, setModFeedSpeed] = useState(14);
+  const [modFeedSpeed, setModFeedSpeed] = useState(11.5);
   const isInstantMergeMode = mode === 'instantMerge';
   const [instantMerge, setInstantMerge] = useState(isInstantMergeMode);
   const modZoomRef = useRef(modZoom);
@@ -589,13 +589,13 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         cell.splitTime = now;
 
         // Authentic Agar.io / Sarok.io Mobile split launch burst & parent recoil
-        const burstSpeed = 24;
+        const burstSpeed = 17.5;
         const spawnX = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.x + dirX * (cell.radius * 0.85)));
         const spawnY = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.y + dirY * (cell.radius * 0.85)));
 
         // Parent recoil: smooth physical kickback
-        cell.vx = -dirX * 2.2;
-        cell.vy = -dirY * 2.2;
+        cell.vx = -dirX * 1.6;
+        cell.vy = -dirY * 1.6;
         cell.moveVx = 0;
         cell.moveVy = 0;
 
@@ -1099,26 +1099,37 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       }
 
       const angle = Math.atan2(inputRef.current.dirY, inputRef.current.dirX);
-      const gap = 16;
-      const arrowDist = maxRadius + gap;
+      const gap = 4.5;
+      const arrowLength = 10.5;
+      const arrowBase = 10.5;
+
+      // Find the leading rim distance along the movement direction so arrow sits cleanly outside
+      let leadingDist = 0;
+      for (let i = 0; i < cells.length; i++) {
+        const c = cells[i];
+        const r = c.renderRadius ?? c.radius;
+        const cx = (c.renderX ?? c.x) - clusterCenterX;
+        const cy = (c.renderY ?? c.y) - clusterCenterY;
+        const distAlongAngle = (cx * Math.cos(angle) + cy * Math.sin(angle)) + r;
+        if (distAlongAngle > leadingDist) {
+          leadingDist = distAlongAngle;
+        }
+      }
+      const arrowDist = (leadingDist > 0 ? leadingDist : maxRadius) + gap;
       const arrowX = clusterCenterX + Math.cos(angle) * arrowDist;
       const arrowY = clusterCenterY + Math.sin(angle) * arrowDist;
-      const arrowSize = Math.max(14, Math.min(maxRadius * 0.24, 28));
 
+      // Draw authentic Agar.io small solid gray triangle pointer
       ctx.save();
       ctx.translate(arrowX, arrowY);
       ctx.rotate(angle);
       ctx.beginPath();
-      ctx.moveTo(arrowSize * 1.15, 0);
-      ctx.lineTo(-arrowSize * 0.7, -arrowSize * 0.65);
-      ctx.lineTo(-arrowSize * 0.35, 0);
-      ctx.lineTo(-arrowSize * 0.7, arrowSize * 0.65);
+      ctx.moveTo(arrowLength, 0); // Tip pointing outward
+      ctx.lineTo(0, -arrowBase / 2); // Base top corner
+      ctx.lineTo(0, arrowBase / 2); // Base bottom corner
       ctx.closePath();
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = '#c0c0c0';
       ctx.fill();
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#0284c7';
-      ctx.stroke();
       ctx.restore();
     };
 
@@ -1349,7 +1360,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
         // Mass-dependent turning agility & smooth coasting on release
         const massTurnAgility = Math.max(0.65, Math.min(1.0, 48 / (cell.radius + 20)));
-        const accelRate = (inputMag > 0.02 || gatherMode) ? 10.0 * massTurnAgility : 4.0;
+        const accelRate = (inputMag > 0.02 || gatherMode) ? 6.5 * massTurnAgility : 3.0;
         const accel = 1 - Math.exp(-accelRate * (dt / 1000));
         cell.moveVx = (cell.moveVx || 0) + (targetVx - (cell.moveVx || 0)) * accel;
         cell.moveVy = (cell.moveVy || 0) + (targetVy - (cell.moveVy || 0)) * accel;
@@ -1545,11 +1556,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           bot.targetX = Math.random() * (MAP_SIZE - 200) + 100;
           bot.targetY = Math.random() * (MAP_SIZE - 200) + 100;
         } else {
-          const botSpeed = 2.0 / Math.pow(Math.max(12, bot.radius) / INITIAL_RADIUS, 0.44);
+          const botSpeed = 1.38 / Math.pow(Math.max(12, bot.radius) / INITIAL_RADIUS, 0.44);
           const targetVx = (dx / dist) * botSpeed;
           const targetVy = (dy / dist) * botSpeed;
 
-          const accel = 1 - Math.exp(-6.0 * (dt / 1000));
+          const accel = 1 - Math.exp(-4.2 * (dt / 1000));
           bot.vx = (bot.vx || 0) + (targetVx - (bot.vx || 0)) * accel;
           bot.vy = (bot.vy || 0) + (targetVy - (bot.vy || 0)) * accel;
 
