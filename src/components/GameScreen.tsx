@@ -2548,7 +2548,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         style={{ top: 'max(0.5rem, env(safe-area-inset-top))', left: 'max(0.5rem, env(safe-area-inset-left))' }}
       >
         {/* Pause Button & Score next to it (aligned high/up at the top like Agar.io) */}
-        <div className="flex items-start gap-2 sm:gap-3 md:gap-4 pointer-events-auto">
+        <div className="flex items-start gap-2 sm:gap-2.5 md:gap-3 pointer-events-auto">
           <TouchSafeButton
             onClick={togglePause}
             onMouseDown={() => setIsPausePressed(true)}
@@ -2557,11 +2557,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             onTouchStart={() => setIsPausePressed(true)}
             onTouchEnd={() => setIsPausePressed(false)}
             onTouchCancel={() => setIsPausePressed(false)}
-            className="w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none group shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none group shrink-0"
             title={isPaused ? "Resume Game (P)" : "Pause Game (P)"}
           >
             <Pause 
-              className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11 transition-colors duration-75" 
+              className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 transition-colors duration-75" 
               style={{ 
                 color: isPausePressed ? '#000000' : '#9E9E9E',
                 fill: isPausePressed ? '#000000' : '#9E9E9E'
@@ -2569,23 +2569,23 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             />
           </TouchSafeButton>
 
-          <div className="flex flex-col select-none pt-0 sm:pt-0.5 md:pt-1.5">
+          <div className="flex flex-col select-none pt-0 sm:pt-0.5">
             <span 
-              className="text-base sm:text-xl md:text-3xl lg:text-4xl font-extrabold tracking-tight whitespace-nowrap"
+              className="text-sm sm:text-base md:text-xl font-extrabold tracking-tight whitespace-nowrap"
               style={{ color: '#9E9E9E' }}
             >
               Score: {score}
             </span>
             <div 
-              className="flex items-center gap-1 sm:gap-1.5 md:gap-2 mt-0.5 md:mt-1.5 w-fit"
+              className="flex items-center gap-1 sm:gap-1.5 mt-0.5 w-fit"
               title="Ghost Tokens collected"
             >
               <img
                 src="/ghost-token.png"
                 alt="Ghost Token"
-                className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 lg:w-9 lg:h-9 object-contain select-none pointer-events-none drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]"
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 object-contain select-none pointer-events-none drop-shadow-[0_0_6px_rgba(56,189,248,0.7)]"
               />
-              <span className="text-xs sm:text-base md:text-xl lg:text-2xl font-black text-cyan-400 font-mono tracking-wide drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">
+              <span className="text-xs sm:text-sm md:text-base font-black text-cyan-400 font-mono tracking-wide drop-shadow-[0_0_6px_rgba(56,189,248,0.5)]">
                 {ghostTokenCount}
               </span>
             </div>
@@ -2593,7 +2593,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         </div>
 
         {/* Social / Communication Row: Emoji + Chat */}
-        <div className="flex items-start gap-1.5 sm:gap-2.5 md:gap-3 pointer-events-auto">
+        <div className="flex items-start gap-1.5 sm:gap-2 md:gap-2.5 pointer-events-auto">
           {/* Emoji Button & Agar.io-style Vertical Tray */}
           <div className="relative flex flex-col items-center">
             <TouchSafeButton
@@ -2607,19 +2607,19 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onTouchStart={() => setIsEmojiPressed(true)}
               onTouchEnd={() => setIsEmojiPressed(false)}
               onTouchCancel={() => setIsEmojiPressed(false)}
-              className={`w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
-                showEmojiPicker ? 'rounded-t-xl sm:rounded-t-2xl md:rounded-t-3xl border-b-0 bg-[rgba(140,140,140,0.28)]' : 'rounded-xl sm:rounded-2xl md:rounded-3xl'
+              className={`w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
+                showEmojiPicker ? 'rounded-t-xl sm:rounded-t-2xl border-b-0 bg-[rgba(140,140,140,0.28)]' : 'rounded-xl sm:rounded-2xl'
               }`}
               title="Emotes"
             >
               <Smile 
-                className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11 transition-colors duration-75" 
+                className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 transition-colors duration-75" 
                 style={{ color: showEmojiPicker || isEmojiPressed ? '#000000' : '#9E9E9E' }} 
               />
             </TouchSafeButton>
 
             {showEmojiPicker && (
-              <div className="w-10 sm:w-13 md:w-18 lg:w-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-t-0 border-[rgba(140,140,140,0.45)] rounded-b-xl sm:rounded-b-2xl md:rounded-b-3xl shadow-lg flex flex-col items-center py-1.5 sm:py-2.5 md:py-3 gap-1.5 sm:gap-2 md:gap-3 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto overflow-x-hidden no-scrollbar panel-animate-in animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="w-9 sm:w-10 md:w-11 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 border-t-0 rounded-b-xl sm:rounded-b-2xl shadow-lg flex flex-col items-center py-1 sm:py-1.5 gap-1 sm:gap-1.5 max-h-[50vh] overflow-y-auto overflow-x-hidden no-scrollbar panel-animate-in animate-in fade-in slide-in-from-top-1 duration-150">
                 {QUICK_EMOJIS.map(emojiItem => (
                   <button
                     key={emojiItem.id}
@@ -2627,7 +2627,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                       activeEmojiRef.current = { emoji: emojiItem.id, timeLeft: EMOJI_DISPLAY_DURATION };
                       setShowEmojiPicker(false);
                     }}
-                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 lg:w-18 lg:h-18 rounded-full flex items-center justify-center p-0.5 hover:bg-white/20 active:scale-90 transition-transform cursor-pointer select-none shrink-0"
+                    className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center p-0.5 hover:bg-white/20 active:scale-90 transition-transform cursor-pointer select-none shrink-0"
                     title={emojiItem.name}
                   >
                     <img
@@ -2654,30 +2654,30 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onTouchStart={() => setIsChatPressed(true)}
               onTouchEnd={() => setIsChatPressed(false)}
               onTouchCancel={() => setIsChatPressed(false)}
-              className={`w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
-                showChat ? 'bg-[rgba(140,140,140,0.28)] rounded-xl sm:rounded-2xl md:rounded-3xl' : 'rounded-xl sm:rounded-2xl md:rounded-3xl'
+              className={`w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
+                showChat ? 'bg-[rgba(140,140,140,0.28)] rounded-xl sm:rounded-2xl' : 'rounded-xl sm:rounded-2xl'
               }`}
               title="Chat"
             >
               <MessageCircle 
-                className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11 transition-colors duration-75" 
+                className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5 transition-colors duration-75" 
                 style={{ color: showChat || isChatPressed ? '#000000' : '#9E9E9E' }} 
               />
             </TouchSafeButton>
 
             {showChat && (
-              <div className="absolute top-12 sm:top-16 md:top-20 lg:top-26 left-0 w-60 sm:w-76 md:w-96 lg:w-[28rem] bg-[rgba(140,140,140,0.22)] backdrop-blur-md border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-2xl md:rounded-3xl shadow-xl p-2.5 sm:p-3.5 md:p-4.5 space-y-2 sm:space-y-2.5 md:space-y-3.5 z-40 panel-animate-in animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between border-b border-black/10 pb-1.5 md:pb-2">
-                  <span className="text-[11px] sm:text-xs md:text-sm font-black text-slate-600 uppercase tracking-wider">Chat</span>
+              <div className="absolute top-11 sm:top-12 md:top-13 left-0 w-56 sm:w-64 md:w-72 max-w-[calc(100vw-2.5rem)] bg-[rgba(140,140,140,0.22)] backdrop-blur-md border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-xl p-2 sm:p-2.5 space-y-1.5 sm:space-y-2 z-40 panel-animate-in animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between border-b border-black/10 pb-1">
+                  <span className="text-[10px] sm:text-[11px] md:text-xs font-black text-slate-600 uppercase tracking-wider">Chat</span>
                   <button
                     onClick={() => setShowChat(false)}
-                    className="text-xs sm:text-sm md:text-base text-slate-500 hover:text-slate-800 px-1.5 py-0.5 rounded cursor-pointer font-bold"
+                    className="text-xs text-slate-500 hover:text-slate-800 px-1 py-0.5 rounded cursor-pointer font-bold leading-none"
                   >
                     ✕
                   </button>
                 </div>
 
-                <div className="h-36 sm:h-48 md:h-60 lg:h-72 overflow-y-auto space-y-2 pr-1 no-scrollbar text-xs sm:text-sm md:text-base">
+                <div className="h-28 sm:h-36 md:h-44 overflow-y-auto space-y-1.5 pr-1 no-scrollbar text-[11px] sm:text-xs">
                   {chatMessages.map(msg => (
                     <div key={msg.id} className="leading-tight break-words">
                       <span className={`font-bold ${msg.isPlayer ? 'text-emerald-600' : 'text-slate-700'}`}>
@@ -2703,7 +2703,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     ]);
                     setChatInput('');
                   }}
-                  className="flex items-center gap-2 pt-1.5 md:pt-2 border-t border-black/10"
+                  className="flex items-center gap-1.5 pt-1.5 border-t border-black/10"
                 >
                   <input
                     type="text"
@@ -2712,14 +2712,14 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     onKeyDown={(e) => e.stopPropagation()}
                     placeholder="Type message..."
                     maxLength={60}
-                    className="flex-1 bg-white/40 border border-[rgba(140,140,140,0.45)] rounded-xl md:rounded-2xl px-3 py-1.5 md:py-2 text-xs sm:text-sm md:text-base text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                    className="flex-1 bg-white/40 border border-[rgba(140,140,140,0.45)] rounded-lg px-2.5 py-1 text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
                   />
                   <button
                     type="submit"
-                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-transform shrink-0"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white flex items-center justify-center cursor-pointer transition-transform shrink-0"
                     title="Send"
                   >
-                    <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                    <Send className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </button>
                 </form>
               </div>
@@ -2731,7 +2731,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       {/* Floating Mod Menu Button when custom positioned via hold-and-drag */}
       {mode === 'bots' && (
         <div 
-          className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-teal-600/90 backdrop-blur-xs border border-teal-300 text-white px-3 py-1 rounded-full text-[10px] sm:text-xs font-black tracking-wider uppercase shadow-md flex items-center gap-1.5"
+          className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-teal-600/90 backdrop-blur-xs border border-teal-300 text-white px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-[10px] md:text-xs font-black tracking-wider uppercase shadow-md flex items-center gap-1.5"
           style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}
         >
           <span>🤖</span>
@@ -2741,7 +2741,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       )}
       {mode === 'instantMerge' && (
         <div 
-          className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-amber-600/90 backdrop-blur-xs border border-amber-300 text-white px-3 py-1 rounded-full text-[10px] sm:text-xs font-black tracking-wider uppercase shadow-md flex items-center gap-1.5"
+          className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none bg-amber-600/90 backdrop-blur-xs border border-amber-300 text-white px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-[10px] md:text-xs font-black tracking-wider uppercase shadow-md flex items-center gap-1.5"
           style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}
         >
           <span>⚡</span>
@@ -2755,7 +2755,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           onPointerMove={handleModPointerMove}
           onPointerUp={handleModPointerUp}
           onPointerCancel={handleModPointerCancel}
-          className={`pointer-events-auto fixed z-30 w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 border-2 md:border-[3px] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-md flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
+          className={`pointer-events-auto fixed z-30 w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-md flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
             isModDragging ? 'ring-2 ring-emerald-400 scale-105 shadow-xl' : ''
           }`}
           style={{
@@ -2767,15 +2767,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           }}
           title="Mod Menu (Hold to Reposition)"
         >
-          <Sliders className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
+          <Sliders className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
         </button>
       )}
 
       <div
-        className="absolute flex flex-col items-end gap-1.5 sm:gap-3 md:gap-4 z-10"
+        className="absolute flex flex-col items-end gap-1.5 sm:gap-2 md:gap-2.5 z-10"
         style={{ top: 'max(0.5rem, env(safe-area-inset-top))', right: 'max(0.5rem, env(safe-area-inset-right))' }}
       >
-        <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-3.5">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5">
           {/* Mod Menu button in default spot (immediately to the LEFT of Leaderboard toggle) */}
           {!modBtnPos && (
             <button
@@ -2783,7 +2783,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onPointerMove={handleModPointerMove}
               onPointerUp={handleModPointerUp}
               onPointerCancel={handleModPointerCancel}
-              className={`pointer-events-auto w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 border-2 md:border-[3px] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
+              className={`pointer-events-auto w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
                 isModDragging ? 'ring-2 ring-emerald-400 scale-105 shadow-xl' : ''
               }`}
               style={{
@@ -2793,38 +2793,38 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               }}
               title="Mod Menu (Hold to Reposition)"
             >
-              <Sliders className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
+              <Sliders className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
             </button>
           )}
 
           <TouchSafeButton
             onClick={() => setShowLeaderboard(prev => !prev)}
-            className="pointer-events-auto w-10 h-10 sm:w-13 sm:h-13 md:w-18 md:h-18 lg:w-22 lg:h-22 bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-sm flex items-center justify-center cursor-pointer select-none"
+            className="pointer-events-auto w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none"
             title="Leaderboard"
           >
-            <ListOrdered className="w-5 h-5 sm:w-6.5 sm:h-6.5 md:w-9 md:h-9 lg:w-11 lg:h-11" style={{ color: '#9E9E9E' }} />
+            <ListOrdered className="w-4 h-4 sm:w-4.5 sm:h-4.5 md:w-5 md:h-5" style={{ color: '#9E9E9E' }} />
           </TouchSafeButton>
         </div>
 
         {showLeaderboard && leaderboard.length > 0 && (
-          <div className="bg-[rgba(140,140,140,0.18)] border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-xl sm:rounded-2xl md:rounded-3xl shadow-sm px-2.5 sm:px-4 md:px-6 py-1.5 sm:py-3 md:py-4.5 pointer-events-none w-36 sm:w-56 md:w-72 lg:w-80 panel-animate-in animate-in fade-in zoom-in-95 duration-150">
-            <div className="text-[9px] sm:text-xs md:text-sm lg:text-base font-black text-slate-600 uppercase tracking-widest mb-1 sm:mb-2 text-center">
+          <div className="bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm px-2.5 py-1.5 sm:px-3 sm:py-2 pointer-events-none w-36 sm:w-44 md:w-48 panel-animate-in animate-in fade-in zoom-in-95 duration-150">
+            <div className="text-[9px] sm:text-[10px] md:text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1 text-center">
               {mode === 'bots' ? 'Bots Leaderboard' : (mode === 'instantMerge' ? 'Instant Merge' : 'Leaderboard')}
             </div>
             {leaderboard.map((entry, idx) => (
-              <div key={idx} className="flex items-center justify-between text-[10px] sm:text-xs md:text-base lg:text-lg font-bold py-0.5 sm:py-1 md:py-1.5">
-                <span className={entry.isPlayer ? 'text-emerald-600' : 'text-slate-600'}>
+              <div key={idx} className="flex items-center justify-between text-[10px] sm:text-[11px] md:text-xs font-bold py-0.5">
+                <span className={`truncate max-w-[70%] ${entry.isPlayer ? 'text-emerald-600' : 'text-slate-600'}`}>
                   {idx + 1}. {entry.name}
                 </span>
-                <span className={`font-mono ${entry.isPlayer ? 'text-emerald-600' : 'text-slate-500'}`}>{entry.score}</span>
+                <span className={`font-mono shrink-0 ml-1.5 ${entry.isPlayer ? 'text-emerald-600' : 'text-slate-500'}`}>{entry.score}</span>
               </div>
             ))}
             {playerRank && playerRank > 5 && (
               <>
-                <div className="my-1 border-t border-black/10" />
-                <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-base lg:text-lg font-bold py-0.5 sm:py-1 md:py-1.5 text-emerald-600">
-                  <span>{playerRank}. {playerNameRef.current || 'You'}</span>
-                  <span className="font-mono">{score}</span>
+                <div className="my-0.5 border-t border-black/10" />
+                <div className="flex items-center justify-between text-[10px] sm:text-[11px] md:text-xs font-bold py-0.5 text-emerald-600">
+                  <span className="truncate max-w-[70%]">{playerRank}. {playerNameRef.current || 'You'}</span>
+                  <span className="font-mono shrink-0 ml-1.5">{score}</span>
                 </div>
               </>
             )}
@@ -2833,22 +2833,31 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
         {showModMenu && (
           <div
-            className={`bg-[rgba(140,140,140,0.18)] backdrop-blur-md border-2 md:border-[3px] border-[rgba(140,140,140,0.45)] rounded-2xl md:rounded-3xl shadow-lg px-4 sm:px-5 md:px-6 py-3 sm:py-4 md:py-5 pointer-events-auto w-56 sm:w-72 md:w-84 lg:w-96 space-y-3 sm:space-y-4 md:space-y-4.5 panel-animate-in animate-in fade-in zoom-in-95 duration-150 ${
+            className={`bg-[rgba(140,140,140,0.22)] backdrop-blur-md border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-xl px-3 py-2 sm:px-3.5 sm:py-2.5 pointer-events-auto w-52 sm:w-60 md:w-64 max-w-[85vw] max-h-[82vh] overflow-y-auto no-scrollbar space-y-2 panel-animate-in animate-in fade-in zoom-in-95 duration-150 ${
               modBtnPos ? 'fixed z-30' : ''
             }`}
             style={
               modBtnPos
                 ? {
-                    left: `${Math.max(10, Math.min(window.innerWidth - 300, modBtnPos.x - 80))}px`,
-                    top: `${Math.min(window.innerHeight - 300, modBtnPos.y + 54)}px`
+                    left: `${Math.max(10, Math.min(window.innerWidth - 260, modBtnPos.x - 70))}px`,
+                    top: `${Math.min(window.innerHeight - 320, modBtnPos.y + 44)}px`
                   }
                 : undefined
             }
           >
-            <div className="text-[10px] sm:text-xs md:text-sm lg:text-base font-black text-slate-600 uppercase tracking-widest text-center">Mod Menu</div>
+            <div className="flex items-center justify-between border-b border-black/10 pb-1">
+              <span className="text-[10px] sm:text-[11px] font-black text-slate-600 uppercase tracking-wider">Mod Menu</span>
+              <button
+                onClick={() => setShowModMenu(false)}
+                className="text-xs text-slate-500 hover:text-slate-800 px-1 rounded cursor-pointer font-bold leading-none"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
 
-            <div className="space-y-1 sm:space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm font-bold text-slate-600 uppercase tracking-wide">
+            <div className="space-y-0.5">
+              <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wide">
                 <span>Zoom</span>
                 <span className="text-emerald-600 font-mono">{modZoom.toFixed(2)}x</span>
               </div>
@@ -2863,13 +2872,13 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   setModZoom(v);
                   modZoomRef.current = v;
                 }}
-                className="w-full accent-emerald-500 cursor-pointer"
+                className="w-full h-1 accent-emerald-500 cursor-pointer"
               />
             </div>
 
-            {/* MACRO SPEED — UPDATED to allow up to 10,000 feeds/second */}
-            <div className="space-y-1 sm:space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm font-bold text-slate-600 uppercase tracking-wide">
+            {/* MACRO SPEED — allows up to 10,000 feeds/second */}
+            <div className="space-y-0.5">
+              <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wide">
                 <span>Macro Speed</span>
                 <span className="text-emerald-600 font-mono">{Math.round(1000 / modMacroInterval)}/s</span>
               </div>
@@ -2880,18 +2889,16 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                 step={0.1}
                 value={200.1 - modMacroInterval}
                 onChange={(e) => {
-                  // Slider is inverted so dragging RIGHT = faster (lower ms interval)
-                  // min 0.1ms = 10,000/s, max 200ms = 5/s
                   const interval = 200.1 - parseFloat(e.target.value);
                   setModMacroInterval(interval);
                   modMacroIntervalRef.current = interval;
                 }}
-                className="w-full accent-emerald-500 cursor-pointer"
+                className="w-full h-1 accent-emerald-500 cursor-pointer"
               />
             </div>
 
-            <div className="space-y-1 sm:space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm font-bold text-slate-600 uppercase tracking-wide">
+            <div className="space-y-0.5">
+              <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wide">
                 <span>Feed Speed</span>
                 <span className="text-emerald-600 font-mono">{modFeedSpeed.toFixed(0)}</span>
               </div>
@@ -2906,21 +2913,21 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   setModFeedSpeed(v);
                   modFeedSpeedRef.current = v;
                 }}
-                className="w-full accent-emerald-500 cursor-pointer"
+                className="w-full h-1 accent-emerald-500 cursor-pointer"
               />
             </div>
 
             {isInstantMergeMode && (
-              <div className="flex items-center justify-between pt-0.5 pb-0.5 bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20">
-                <span className="text-[10px] sm:text-xs md:text-sm font-black text-amber-600 uppercase tracking-wide">Instant Merge</span>
-                <span className="text-[9px] sm:text-[10px] font-black text-emerald-600 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/40 uppercase">Active</span>
+              <div className="flex items-center justify-between py-0.5 px-1.5 bg-amber-500/10 rounded border border-amber-500/20">
+                <span className="text-[9px] sm:text-[10px] font-black text-amber-600 uppercase tracking-wide">Instant Merge</span>
+                <span className="text-[8px] sm:text-[9px] font-black text-emerald-600 bg-emerald-500/20 px-1.5 py-0.2 rounded-full border border-emerald-500/40 uppercase">Active</span>
               </div>
             )}
 
             {/* Test Mass Controls */}
-            <div className="space-y-1.5 sm:space-y-2 pt-1.5 border-t border-slate-300/60">
-              <span className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-600 uppercase tracking-wide block">Test Mass</span>
-              <div className="grid grid-cols-3 gap-1 sm:gap-2">
+            <div className="space-y-1 pt-1 border-t border-slate-300/60">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wide block">Test Mass</span>
+              <div className="grid grid-cols-3 gap-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -2933,7 +2940,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                       setScore(newScore);
                     }
                   }}
-                  className="px-1 py-1 sm:py-1.5 bg-white/70 hover:bg-white text-slate-700 text-[10px] sm:text-xs md:text-sm font-bold rounded-lg md:rounded-xl border border-slate-300 shadow-xs cursor-pointer active:scale-95 text-center"
+                  className="px-1 py-0.5 sm:py-1 bg-white/70 hover:bg-white text-slate-700 text-[9px] sm:text-[10px] font-bold rounded border border-slate-300 shadow-xs cursor-pointer active:scale-95 text-center"
                 >
                   +1k
                 </button>
@@ -2949,7 +2956,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                       setScore(newScore);
                     }
                   }}
-                  className="px-1 py-1 sm:py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] sm:text-xs md:text-sm font-bold rounded-lg md:rounded-xl shadow-xs cursor-pointer active:scale-95 text-center"
+                  className="px-1 py-0.5 sm:py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold rounded shadow-xs cursor-pointer active:scale-95 text-center"
                 >
                   +10k
                 </button>
@@ -2973,7 +2980,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     scoreRef.current = newScore;
                     setScore(newScore);
                   }}
-                  className="px-1 py-1 sm:py-1.5 bg-white/70 hover:bg-white text-rose-600 text-[10px] sm:text-xs md:text-sm font-bold rounded-lg md:rounded-xl border border-slate-300 shadow-xs cursor-pointer active:scale-95 text-center"
+                  className="px-1 py-0.5 sm:py-1 bg-white/70 hover:bg-white text-rose-600 text-[9px] sm:text-[10px] font-bold rounded border border-slate-300 shadow-xs cursor-pointer active:scale-95 text-center"
                 >
                   Reset
                 </button>
@@ -2981,23 +2988,23 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             </div>
 
             {/* Mod Menu: Controls Reference & Touch Buttons Toggle */}
-            <div className="pt-2 border-t border-slate-300/60 space-y-1.5">
+            <div className="pt-1 border-t border-slate-300/60 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-600 uppercase tracking-wide">Touch Buttons</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wide">Touch Buttons</span>
                 <button
                   type="button"
                   onClick={() => setIsTouchDevice(prev => !prev)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold transition-colors cursor-pointer ${isTouchDevice ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-slate-700'}`}
+                  className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold transition-colors cursor-pointer ${isTouchDevice ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-slate-700'}`}
                 >
-                  {isTouchDevice ? 'Visible' : 'Hidden (PC)'}
+                  {isTouchDevice ? 'Visible' : 'Hidden'}
                 </button>
               </div>
-              <div className="bg-slate-100/90 rounded-xl p-2 border border-slate-200 text-[10px] sm:text-xs text-slate-600 font-mono space-y-1">
-                <div className="font-bold uppercase tracking-wider text-slate-500 text-[9px] sm:text-[10px]">PC Controls</div>
-                <div className="flex justify-between"><span>Mouse:</span><span className="font-bold text-slate-800">Move / Aim</span></div>
+              <div className="bg-slate-100/90 rounded-lg p-1.5 border border-slate-200 text-[9px] sm:text-[10px] text-slate-600 font-mono space-y-0.5">
+                <div className="font-bold uppercase tracking-wider text-slate-500 text-[8px] sm:text-[9px]">PC Controls</div>
+                <div className="flex justify-between"><span>Mouse:</span><span className="font-bold text-slate-800">Aim</span></div>
                 <div className="flex justify-between"><span>Feed:</span><span className="font-bold text-amber-600">W</span></div>
                 <div className="flex justify-between"><span>Split:</span><span className="font-bold text-cyan-600">SPACE</span></div>
-                <div className="flex justify-between"><span>Macro Feed:</span><span className="font-bold text-emerald-600">E</span></div>
+                <div className="flex justify-between"><span>Macro:</span><span className="font-bold text-emerald-600">E</span></div>
                 <div className="flex justify-between"><span>Double Split:</span><span className="font-bold text-purple-600">Q</span></div>
                 <div className="flex justify-between"><span>Master Split:</span><span className="font-bold text-rose-600">F</span></div>
               </div>
@@ -3011,7 +3018,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     localStorage.removeItem(STORAGE_KEY_MOD_POS);
                   } catch {}
                 }}
-                className="w-full text-center text-[10px] sm:text-xs text-slate-500 hover:text-slate-800 underline py-0.5 cursor-pointer"
+                className="w-full text-center text-[9px] sm:text-[10px] text-slate-500 hover:text-slate-800 underline py-0.5 cursor-pointer"
               >
                 Reset button position
               </button>
