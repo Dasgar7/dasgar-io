@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Target, Zap, Play, Pause, RotateCcw, Home, HelpCircle, Smile, ListOrdered, Sliders, MessageCircle, Send } from 'lucide-react';
 import { TouchSafeButton } from './TouchSafeButton';
-import { PRESET_SKINS, SkinItem } from '../data/skinsData';
+import { PRESET_SKINS, SkinItem, BOT_SKIN_ITEMS, BOT_NAME_POOL, BOT_COLOR_POOL } from '../data/skinsData';
 
 interface GameScreenProps {
   onBack: () => void;
@@ -34,6 +34,177 @@ const BOT_COUNT = 15;
 const VIRUS_COUNT = 20;
 const VIRUS_RADIUS = 48;
 
+// Shared bot skin preloading cache (shared across all bots)
+const sharedBotSkinImages = new Map<string, HTMLImageElement>();
+export function getSharedSkinImage(skinId: string, svgUrl: string): HTMLImageElement {
+  let img = sharedBotSkinImages.get(skinId);
+  if (!img) {
+    img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = svgUrl;
+    sharedBotSkinImages.set(skinId, img);
+  }
+  return img;
+}
+
+// Color parsing & cached shading for jelly cells (darker border, soft inner radial gradient, thin rim)
+const darkerColorCache = new Map<string, string>();
+const lighterColorCache = new Map<string, string>();
+
+function parseColorToRgb(color: string): [number, number, number] {
+  if (color.startsWith('#')) {
+    let hex = color.slice(1);
+    if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    const num = parseInt(hex, 16);
+    return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+  }
+  if (color.startsWith('rgb')) {
+    const parts = color.match(/\d+/g);
+    if (parts && parts.length >= 3) {
+      return [parseInt(parts[0], 10), parseInt(parts[1], 10), parseInt(parts[2], 10)];
+    }
+  }
+  if (color.startsWith('hsl')) {
+    const m = color.match(/hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)/);
+    if (m) {
+      const h = parseFloat(m[1]) / 360;
+      const s = parseFloat(m[2]) / 100;
+      const l = parseFloat(m[3]) / 100;
+      if (s === 0) {
+        const val = Math.round(l * 255);
+        return [val, val, val];
+      }
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      const hue2rgb = (t: number) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      return [
+        Math.round(hue2rgb(h + 1 / 3) * 255),
+        Math.round(hue2rgb(h) * 255),
+        Math.round(hue2rgb(h - 1 / 3) * 255)
+      ];
+    }
+  }
+  return [40, 140, 240];
+}
+
+export function getDarkerColor(color: string, factor: number = 0.35): string {
+  const key = `${color}_${factor.toFixed(2)}`;
+  let cached = darkerColorCache.get(key);
+  if (cached) return cached;
+  const [r, g, b] = parseColorToRgb(color);
+  const dr = Math.max(0, Math.round(r * (1 - factor)));
+  const dg = Math.max(0, Math.round(g * (1 - factor)));
+  const db = Math.max(0, Math.round(b * (1 - factor)));
+  cached = `rgb(${dr},${dg},${db})`;
+  darkerColorCache.set(key, cached);
+  return cached;
+}
+
+export function getLighterColor(color: string, factor: number = 0.28): string {
+  const key = `${color}_${factor.toFixed(2)}`;
+  let cached = lighterColorCache.get(key);
+  if (cached) return cached;
+  const [r, g, b] = parseColorToRgb(color);
+  const lr = Math.min(255, Math.round(r + (255 - r) * factor));
+  const lg = Math.min(255, Math.round(g + (255 - g) * factor));
+  const lb = Math.min(255, Math.round(b + (255 - b) * factor));
+  cached = `rgb(${lr},${lg},${lb})`;
+  lighterColorCache.set(key, cached);
+  return cached;
+}
+
+// Bot Personalities
+export type BotPersonality = 'aggressive' | 'cautious' | 'farmer';
+
+export interface BotProfile {
+  name: string;
+  color: string;
+  personality: BotPersonality;
+  skill: number;
+}
+
+// Soft-Body Jelly Physics: 48-point spring-damper membrane vertices with spring pulse
+export type SoftBodyJelly = {
+  dr: Float32Array; // 48 radial offset deviations
+  vr: Float32Array; // 48 radial velocities
+  pulse: number;    // spring scale pulse (1 -> 1.06 -> 1 on eat)
+  pulseVel: number;
+  ripplePhase: number;
+  rippleAmp: number;
+};
+
+export function createCellJelly(): SoftBodyJelly {
+  return {
+    dr: new Float32Array(48),
+    vr: new Float32Array(48),
+    pulse: 1.0,
+    pulseVel: 0,
+    ripplePhase: 0,
+    rippleAmp: 0
+  };
+}
+
+// Scratch buffers for Catmull-Rom bezier curve computation (zero allocation during render loop)
+const scratchCurveX = new Float32Array(48);
+const scratchCurveY = new Float32Array(48);
+
+// Pre-allocated Eating Animation pool (prey pulled toward predator center while shrinking and fading)
+export interface EatingAnim {
+  active: boolean;
+  startX: number;
+  startY: number;
+  predatorCell: { x: number; y: number; renderX?: number; renderY?: number; radius: number } | null;
+  radius: number;
+  initialRadius: number;
+  color: string;
+  timeStart: number;
+  duration: number;
+}
+const EATING_POOL_SIZE = 64;
+
+// Pre-allocated Pellet Pop Particle pool
+export interface PelletPopAnim {
+  active: boolean;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  color: string;
+  timeStart: number;
+  duration: number;
+}
+const POP_POOL_SIZE = 64;
+
+// Spatial Hashing Grid: Pre-allocated typed arrays for zero-allocation pellet queries on mobile
+const GRID_CELL_SIZE = 250;
+const GRID_COLS = 12; // 3000 / 250
+const GRID_ROWS = 12;
+const GRID_TOTAL_CELLS = 144;
+const foodGridHead = new Int32Array(GRID_TOTAL_CELLS);
+const foodGridNext = new Int32Array(1600);
+const foodGridCount = new Int32Array(GRID_TOTAL_CELLS);
+const foodGridSumX = new Float32Array(GRID_TOTAL_CELLS);
+const foodGridSumY = new Float32Array(GRID_TOTAL_CELLS);
+
+// Zero-allocation distance from point (px, py) to line segment (x1, y1)-(x2, y2)
+function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
 // Types
 type Vector2 = { x: number; y: number };
 type Circle = { id: string; x: number; y: number; radius: number; color: string };
@@ -53,14 +224,48 @@ type PlayerCell = {
   phaseOffset?: number;
   ignoreParentId?: string;
   ignoreParentUntil?: number;
+  jelly?: SoftBodyJelly;
 };
-type BotPlayer = Circle & {
+export type BotCell = Circle & {
+  vx: number;
+  vy: number;
+  moveVx?: number;
+  moveVy?: number;
+  splitTime: number;
+  renderX?: number;
+  renderY?: number;
+  renderRadius?: number;
+  phaseOffset?: number;
+  ignoreParentId?: string;
+  ignoreParentUntil?: number;
+  name: string;
+  skinId?: string;
+  skinImg?: HTMLImageElement;
+  jelly?: SoftBodyJelly;
+};
+export type BotPlayer = Circle & {
+  botIndex: number;
+  name: string;
+  color: string;
+  skinId?: string;
+  skinImg?: HTMLImageElement;
+  personality: BotPersonality;
+  skill: number;
   targetX: number;
   targetY: number;
   speed: number;
-  name: string;
   vx: number;
   vy: number;
+  lastDecisionTime: number;
+  decisionInterval: number;
+  aimErrorAngle: number;
+  nextMistakeTime: number;
+  mistakeActiveUntil: number;
+  lastSplitTime: number;
+  lastEjectTime: number;
+  fleeing: boolean;
+  chasing: boolean;
+  cells: BotCell[];
   renderX?: number;
   renderY?: number;
   renderRadius?: number;
@@ -94,6 +299,129 @@ type Virus = Circle & {
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 const randomColor = () => `hsl(${Math.random() * 360}, 80%, 60%)`;
+
+// Persistent life-cycle identity drawer avoiding arena duplicates:
+// ~40% have a preset animal skin (max 2 of any skin across active bots)
+// ~30% have NO name at all ("")
+// ~70% have a unique gamer tag from BOT_NAME_POOL
+function drawBotIdentity(
+  existingBots: BotPlayer[],
+  slotIndex: number
+): {
+  name: string;
+  color: string;
+  personality: BotPersonality;
+  skill: number;
+  skinId?: string;
+  skinImg?: HTMLImageElement;
+} {
+  const activeNames = new Set<string>();
+  const skinCounts = new Map<string, number>();
+
+  for (let i = 0; i < existingBots.length; i++) {
+    const b = existingBots[i];
+    if (b && b.cells && b.cells.length > 0) {
+      if (b.name) activeNames.add(b.name);
+      if (b.skinId) {
+        skinCounts.set(b.skinId, (skinCounts.get(b.skinId) || 0) + 1);
+      }
+    }
+  }
+
+  // 1. Name: 30% anonymous (""), 70% unique from pool
+  let name = '';
+  if (Math.random() >= 0.30) {
+    const available = BOT_NAME_POOL.filter(n => !activeNames.has(n));
+    if (available.length > 0) {
+      name = available[Math.floor(Math.random() * available.length)];
+    } else {
+      name = BOT_NAME_POOL[(slotIndex + Math.floor(Math.random() * BOT_NAME_POOL.length)) % BOT_NAME_POOL.length];
+    }
+  }
+
+  // 2. Skin: ~40% preset skin, max 2 of same skin in arena
+  let skinId: string | undefined;
+  let skinImg: HTMLImageElement | undefined;
+  if (Math.random() < 0.40) {
+    const eligibleSkins = BOT_SKIN_ITEMS.filter(s => (skinCounts.get(s.id) || 0) < 2);
+    if (eligibleSkins.length > 0) {
+      const chosen = eligibleSkins[Math.floor(Math.random() * eligibleSkins.length)];
+      skinId = chosen.id;
+      skinImg = getSharedSkinImage(chosen.id, chosen.svg);
+    }
+  }
+
+  // 3. Color: from BOT_COLOR_POOL
+  const color = BOT_COLOR_POOL[(slotIndex * 3 + Math.floor(Math.random() * BOT_COLOR_POOL.length)) % BOT_COLOR_POOL.length];
+
+  // 4. Personality & skill
+  const roll = Math.random();
+  const personality: BotPersonality = roll < 0.42 ? 'aggressive' : roll < 0.72 ? 'cautious' : 'farmer';
+  const skill = 0.68 + Math.random() * 0.28; // 0.68 - 0.96
+
+  return { name, color, personality, skill, skinId, skinImg };
+}
+
+function createBotInstance(botIndex: number, now: number, existingBots: BotPlayer[] = []): BotPlayer {
+  const identity = drawBotIdentity(existingBots, botIndex);
+  const bx = Math.random() * (MAP_SIZE - 400) + 200;
+  const by = Math.random() * (MAP_SIZE - 400) + 200;
+  const br = INITIAL_RADIUS + Math.random() * 12;
+  const phaseOffset = Math.random() * Math.PI * 2;
+
+  const cell: BotCell = {
+    id: generateId(),
+    x: bx,
+    y: by,
+    renderX: bx,
+    renderY: by,
+    renderRadius: br,
+    radius: br,
+    vx: 0,
+    vy: 0,
+    splitTime: now,
+    phaseOffset,
+    color: identity.color,
+    name: identity.name,
+    skinId: identity.skinId,
+    skinImg: identity.skinImg,
+    jelly: createCellJelly()
+  };
+
+  return {
+    id: generateId(),
+    botIndex,
+    name: identity.name,
+    color: identity.color,
+    skinId: identity.skinId,
+    skinImg: identity.skinImg,
+    personality: identity.personality,
+    skill: identity.skill,
+    targetX: Math.random() * (MAP_SIZE - 400) + 200,
+    targetY: Math.random() * (MAP_SIZE - 400) + 200,
+    speed: 1.4,
+    vx: 0,
+    vy: 0,
+    lastDecisionTime: now - Math.random() * 80,
+    decisionInterval: Math.round(180 - identity.skill * 100),
+    aimErrorAngle: (Math.random() - 0.5) * (1 - identity.skill) * 0.4,
+    nextMistakeTime: now + 4000 + Math.random() * 8000,
+    mistakeActiveUntil: 0,
+    lastSplitTime: now - 3000,
+    lastEjectTime: now - 1000,
+    fleeing: false,
+    chasing: false,
+    cells: [cell],
+    x: bx,
+    y: by,
+    radius: br,
+    renderX: bx,
+    renderY: by,
+    renderRadius: br,
+    phaseOffset
+  };
+}
+
 
 export interface QuickEmojiItem {
   id: string;
@@ -139,7 +467,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       vy: 0,
       radius: PLAYER_START_RADIUS,
       splitTime: 0,
-      phaseOffset: Math.random() * Math.PI * 2
+      phaseOffset: Math.random() * Math.PI * 2,
+      jelly: createCellJelly()
     }
   ]);
 
@@ -427,30 +756,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       pulsePhase: Math.random() * Math.PI * 2
     }));
 
-    const BOT_NAMES = ['Apex', 'Vortex', 'Nova', 'Echo', 'Blaze', 'Savage', 'Pixel', 'Titan', 'Ghost', 'Orbit', 'Frost', 'Spark', 'Shadow', 'Cosmo', 'Neon'];
-
-    botsRef.current = Array.from({ length: BOT_COUNT }).map((_, i) => {
-      const x = Math.random() * (MAP_SIZE - 200) + 100;
-      const y = Math.random() * (MAP_SIZE - 200) + 100;
-      const radius = INITIAL_RADIUS + Math.random() * 15;
-      return {
-        id: generateId(),
-        x,
-        y,
-        renderX: x,
-        renderY: y,
-        renderRadius: radius,
-        radius,
-        color: randomColor(),
-        targetX: Math.random() * (MAP_SIZE - 200) + 100,
-        targetY: Math.random() * (MAP_SIZE - 200) + 100,
-        speed: 1.6 + Math.random() * 0.4,
-        name: BOT_NAMES[i % BOT_NAMES.length] || `Bot ${i + 1}`,
-        vx: 0,
-        vy: 0,
-        phaseOffset: Math.random() * Math.PI * 2
-      };
-    });
+    const now = performance.now();
+    botsRef.current = Array.from({ length: BOT_COUNT }).map((_, i) =>
+      createBotInstance(i, now)
+    );
 
     virusesRef.current = Array.from({ length: VIRUS_COUNT }).map(() => ({
       id: generateId(),
@@ -1544,70 +1853,772 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
       }
 
-      // Bot movement (classic Agar.io bots: casual wandering, eating food, not hyper-active)
-      const currentBots = botsRef.current;
-      for (let i = 0; i < currentBots.length; i++) {
-        const bot = currentBots[i];
-        const dx = bot.targetX - bot.x;
-        const dy = bot.targetY - bot.y;
-        const dist = Math.hypot(dx, dy);
+      // -------------------------------------------------------------------------
+      // ZERO-ALLOCATION SPATIAL HASHING FOR FOOD PELLETS (Requirement 7)
+      // -------------------------------------------------------------------------
+      foodGridHead.fill(-1);
+      foodGridCount.fill(0);
+      foodGridSumX.fill(0);
+      foodGridSumY.fill(0);
 
-        if (dist < 35) {
-          bot.targetX = Math.random() * (MAP_SIZE - 200) + 100;
-          bot.targetY = Math.random() * (MAP_SIZE - 200) + 100;
-        } else {
-          const botSpeed = 1.38 / Math.pow(Math.max(12, bot.radius) / INITIAL_RADIUS, 0.44);
+      const numAllFoods = allFoods.length;
+      for (let i = 0; i < numAllFoods; i++) {
+        const f = allFoods[i];
+        if (f.eaten) continue;
+        let cCol = Math.floor(f.x / GRID_CELL_SIZE);
+        let cRow = Math.floor(f.y / GRID_CELL_SIZE);
+        if (cCol < 0) cCol = 0; else if (cCol >= GRID_COLS) cCol = GRID_COLS - 1;
+        if (cRow < 0) cRow = 0; else if (cRow >= GRID_ROWS) cRow = GRID_ROWS - 1;
+        const cIdx = cCol + cRow * GRID_COLS;
+
+        foodGridNext[i] = foodGridHead[cIdx];
+        foodGridHead[cIdx] = i;
+        foodGridCount[cIdx]++;
+        foodGridSumX[cIdx] += f.x;
+        foodGridSumY[cIdx] += f.y;
+      }
+
+      // -------------------------------------------------------------------------
+      // BOT AI HELPERS & DECISION LOGIC (Requirements 1 - 6)
+      // -------------------------------------------------------------------------
+      const botEjectMass = (bot: BotPlayer, cell: BotCell, aimDirX: number, aimDirY: number) => {
+        if (cell.radius < 26) return;
+        const currentMass = cell.radius * cell.radius;
+        const remainingMass = currentMass - EJECTED_MASS_VALUE;
+        if (remainingMass <= INITIAL_RADIUS * INITIAL_RADIUS * 0.8) return;
+
+        cell.radius = Math.sqrt(remainingMass);
+        const spawnDist = cell.radius + EJECTED_MASS_RADIUS + 3;
+        const spawnX = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, cell.x + aimDirX * spawnDist));
+        const spawnY = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, cell.y + aimDirY * spawnDist));
+
+        const feedSpeed = 19 * (0.95 + Math.random() * 0.1);
+        allFoods.push({
+          id: generateId(),
+          x: spawnX,
+          y: spawnY,
+          renderX: spawnX,
+          renderY: spawnY,
+          radius: EJECTED_MASS_RADIUS,
+          color: bot.color,
+          vx: aimDirX * feedSpeed,
+          vy: aimDirY * feedSpeed,
+          decay: 0.93,
+          mass: EJECTED_MASS_VALUE,
+          canBeEatenAfter: now + 350,
+          ownerCellId: cell.id
+        });
+      };
+
+      const botSplitTowards = (bot: BotPlayer, cell: BotCell, dirX: number, dirY: number) => {
+        if (cell.radius < 35 || bot.cells.length >= 8) return;
+        const newRadius = Math.sqrt((cell.radius * cell.radius) / 2);
+        cell.radius = newRadius;
+        cell.splitTime = now;
+
+        const burstSpeed = 17.5;
+        const spawnX = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.x + dirX * (cell.radius * 0.85)));
+        const spawnY = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.y + dirY * (cell.radius * 0.85)));
+
+        cell.vx = -dirX * 1.6;
+        cell.vy = -dirY * 1.6;
+        cell.moveVx = 0;
+        cell.moveVy = 0;
+
+        const newCell: BotCell = {
+          id: generateId(),
+          x: spawnX,
+          y: spawnY,
+          renderX: cell.renderX ?? cell.x,
+          renderY: cell.renderY ?? cell.y,
+          renderRadius: newRadius,
+          vx: dirX * burstSpeed,
+          vy: dirY * burstSpeed,
+          moveVx: dirX * 2.0,
+          moveVy: dirY * 2.0,
+          radius: newRadius,
+          splitTime: now,
+          phaseOffset: Math.random() * Math.PI * 2,
+          ignoreParentId: cell.id,
+          ignoreParentUntil: now + 140,
+          color: bot.color,
+          name: bot.name,
+          skinId: bot.skinId,
+          skinImg: bot.skinImg,
+          jelly: createCellJelly()
+        };
+        bot.cells.push(newCell);
+        bot.lastSplitTime = now;
+      };
+
+      const updateBotAI = (bot: BotPlayer) => {
+        // Run AI decision roughly every ~100ms (tailored per bot skill)
+        if (now - bot.lastDecisionTime < bot.decisionInterval) return;
+        bot.lastDecisionTime = now;
+
+        // Human-like mistake timing: brief distraction or overshoot
+        if (now > bot.nextMistakeTime) {
+          bot.mistakeActiveUntil = now + 160 + (1 - bot.skill) * 240;
+          bot.nextMistakeTime = now + 4000 + bot.skill * 6000;
+        }
+        const isDistracted = now < bot.mistakeActiveUntil;
+
+        // Aim wobble / drift (lower skill has slightly more variance)
+        bot.aimErrorAngle += (Math.random() - 0.5) * 0.07 * (1 - bot.skill);
+        const maxJitter = (1 - bot.skill) * 0.32;
+        bot.aimErrorAngle = Math.max(-maxJitter, Math.min(maxJitter, bot.aimErrorAngle));
+
+        // Find bot center of mass and largest cell
+        let sumX = 0, sumY = 0, totalM = 0, maxR = 0;
+        let largestCell = bot.cells[0];
+        for (let k = 0; k < bot.cells.length; k++) {
+          const c = bot.cells[k];
+          const m = c.radius * c.radius;
+          sumX += c.x * m;
+          sumY += c.y * m;
+          totalM += m;
+          if (c.radius > maxR) {
+            maxR = c.radius;
+            largestCell = c;
+          }
+        }
+        if (!largestCell) return;
+
+        const botCenterX = totalM > 0 ? sumX / totalM : bot.x;
+        const botCenterY = totalM > 0 ? sumY / totalM : bot.y;
+
+        // Vision radius scales dynamically with bot size
+        const visionRadius = Math.max(500, maxR * 7.5 + 320);
+        const visionRadiusSq = visionRadius * visionRadius;
+
+        const currentViruses = virusesRef.current;
+        const currentPlayers = playerCellsRef.current;
+        const allBots = botsRef.current;
+
+        // -------------------------------------------------------------
+        // PRIORITY 1: FLEE FROM BIGGER CELLS (>1.15x radius & close)
+        // -------------------------------------------------------------
+        let threatCount = 0;
+        let escapeForceX = 0;
+        let escapeForceY = 0;
+        let closestThreatDist = Infinity;
+        let closestThreatCell: { x: number; y: number; radius: number } | null = null;
+
+        const personalityMargin = bot.personality === 'cautious' ? 360 : bot.personality === 'aggressive' ? 220 : 280;
+
+        const checkThreat = (opp: { x: number; y: number; radius: number }) => {
+          if (opp.radius > maxR * 1.15) {
+            const dx = opp.x - botCenterX;
+            const dy = opp.y - botCenterY;
+            const dSq = dx * dx + dy * dy;
+            if (dSq > visionRadiusSq) return;
+            const d = Math.sqrt(dSq) || 0.001;
+
+            const canSplitKill = opp.radius > maxR * 1.55;
+            const dangerDist = maxR + opp.radius + personalityMargin + (canSplitKill ? 140 : 0);
+
+            if (d < dangerDist) {
+              threatCount++;
+              const urgency = (dangerDist - d) / dangerDist;
+              escapeForceX -= (dx / d) * urgency * 2.5;
+              escapeForceY -= (dy / d) * urgency * 2.5;
+              if (d < closestThreatDist) {
+                closestThreatDist = d;
+                closestThreatCell = opp;
+              }
+            }
+          }
+        };
+
+        for (let p = 0; p < currentPlayers.length; p++) {
+          checkThreat(currentPlayers[p]);
+        }
+        for (let b = 0; b < allBots.length; b++) {
+          const other = allBots[b];
+          if (other.id === bot.id) continue;
+          for (let c = 0; c < other.cells.length; c++) {
+            checkThreat(other.cells[c]);
+          }
+        }
+
+        const isVirusSafe = maxR < VIRUS_RADIUS * 0.90;
+
+        if (threatCount > 0) {
+          bot.fleeing = true;
+          bot.chasing = false;
+
+          // Smaller bots use viruses as shields: position virus directly between self and chaser
+          if (isVirusSafe && closestThreatCell) {
+            let bestShieldVirus: Virus | null = null;
+            let bestShieldScore = -Infinity;
+            for (let v = 0; v < currentViruses.length; v++) {
+              const virus = currentViruses[v];
+              const vd = Math.hypot(virus.x - botCenterX, virus.y - botCenterY);
+              if (vd < visionRadius * 0.85) {
+                // Vector from threat to virus
+                const tvX = virus.x - closestThreatCell.x;
+                const tvY = virus.y - closestThreatCell.y;
+                const tvDist = Math.hypot(tvX, tvY) || 1;
+                // Safe pocket behind the virus relative to threat
+                const pocketX = virus.x + (tvX / tvDist) * (VIRUS_RADIUS + maxR + 24);
+                const pocketY = virus.y + (tvY / tvDist) * (VIRUS_RADIUS + maxR + 24);
+                const score = 1000 - vd;
+                if (score > bestShieldScore) {
+                  bestShieldScore = score;
+                  bestShieldVirus = virus;
+                  escapeForceX = escapeForceX * 0.25 + (pocketX - botCenterX) * 1.8;
+                  escapeForceY = escapeForceY * 0.25 + (pocketY - botCenterY) * 1.8;
+                }
+              }
+            }
+          } else if (!isVirusSafe) {
+            // Big bots avoid virus splits with wide margin
+            for (let v = 0; v < currentViruses.length; v++) {
+              const virus = currentViruses[v];
+              const vdx = botCenterX - virus.x;
+              const vdy = botCenterY - virus.y;
+              const vd = Math.hypot(vdx, vdy) || 0.001;
+              const dangerVDist = maxR + VIRUS_RADIUS + 95;
+              if (vd < dangerVDist) {
+                const vPush = ((dangerVDist - vd) / dangerVDist) * 2.4;
+                escapeForceX += (vdx / vd) * vPush;
+                escapeForceY += (vdy / vd) * vPush;
+              }
+            }
+          }
+
+          // Wall and corner repulsion: never get stuck in corners!
+          const wallMargin = 280;
+          if (botCenterX < wallMargin) escapeForceX += ((wallMargin - botCenterX) / wallMargin) * 2.5;
+          if (botCenterX > MAP_SIZE - wallMargin) escapeForceX -= ((botCenterX - (MAP_SIZE - wallMargin)) / wallMargin) * 2.5;
+          if (botCenterY < wallMargin) escapeForceY += ((wallMargin - botCenterY) / wallMargin) * 2.5;
+          if (botCenterY > MAP_SIZE - wallMargin) escapeForceY -= ((botCenterY - (MAP_SIZE - wallMargin)) / wallMargin) * 2.5;
+
+          const cornerDist = 420;
+          const dTL = Math.hypot(botCenterX, botCenterY);
+          const dTR = Math.hypot(MAP_SIZE - botCenterX, botCenterY);
+          const dBL = Math.hypot(botCenterX, MAP_SIZE - botCenterY);
+          const dBR = Math.hypot(MAP_SIZE - botCenterX, MAP_SIZE - botCenterY);
+          if (dTL < cornerDist) {
+            const p = (cornerDist - dTL) / cornerDist;
+            escapeForceX += p * p * 3.5;
+            escapeForceY += p * p * 3.5;
+          }
+          if (dTR < cornerDist) {
+            const p = (cornerDist - dTR) / cornerDist;
+            escapeForceX -= p * p * 3.5;
+            escapeForceY -= p * p * 3.5;
+          }
+          if (dBL < cornerDist) {
+            const p = (cornerDist - dBL) / cornerDist;
+            escapeForceX += p * p * 3.5;
+            escapeForceY += p * p * 3.5;
+          }
+          if (dBR < cornerDist) {
+            const p = (cornerDist - dBR) / cornerDist;
+            escapeForceX -= p * p * 3.5;
+            escapeForceY -= p * p * 3.5;
+          }
+
+          const escapeMag = Math.hypot(escapeForceX, escapeForceY);
+          if (escapeMag > 0.001) {
+            let finalDirX = escapeForceX / escapeMag;
+            let finalDirY = escapeForceY / escapeMag;
+
+            if (Math.abs(bot.aimErrorAngle) > 0.01) {
+              const cos = Math.cos(bot.aimErrorAngle);
+              const sin = Math.sin(bot.aimErrorAngle);
+              finalDirX = finalDirX * cos - finalDirY * sin;
+              finalDirY = (escapeForceX / escapeMag) * sin + finalDirY * cos;
+            }
+
+            bot.targetX = Math.max(100, Math.min(MAP_SIZE - 100, botCenterX + finalDirX * 600));
+            bot.targetY = Math.max(100, Math.min(MAP_SIZE - 100, botCenterY + finalDirY * 600));
+
+            // Occasionally eject mass to escape threats when cornered
+            if (closestThreatDist < maxR + (closestThreatCell?.radius || 50) + 110 && maxR >= 35 && now - bot.lastEjectTime > 320) {
+              if (bot.personality === 'cautious' || Math.random() < 0.4) {
+                botEjectMass(bot, largestCell, -finalDirX, -finalDirY);
+                bot.lastEjectTime = now;
+              }
+            }
+          }
+          return;
+        }
+
+        bot.fleeing = false;
+
+        // -------------------------------------------------------------
+        // VIRUS FEEDING TACTIC
+        // If near a virus and an enemy is on the other side, shoot virus at enemy!
+        // -------------------------------------------------------------
+        if (maxR >= 35 && now - bot.lastEjectTime > 220 && (bot.personality === 'aggressive' || bot.skill > 0.8)) {
+          for (let v = 0; v < currentViruses.length; v++) {
+            const virus = currentViruses[v];
+            const vdx = virus.x - botCenterX;
+            const vdy = virus.y - botCenterY;
+            const distToVirus = Math.hypot(vdx, vdy);
+            if (distToVirus > maxR + VIRUS_RADIUS + 20 && distToVirus < 340) {
+              let enemyTarget: { x: number; y: number; radius: number } | null = null;
+              for (let p = 0; p < currentPlayers.length; p++) {
+                const pl = currentPlayers[p];
+                const edx = pl.x - virus.x;
+                const edy = pl.y - virus.y;
+                const eDist = Math.hypot(edx, edy);
+                if (eDist > VIRUS_RADIUS && eDist < 400 && pl.radius > VIRUS_RADIUS * 0.9) {
+                  const dot = (vdx * edx + vdy * edy) / (distToVirus * eDist);
+                  if (dot > 0.72) {
+                    enemyTarget = pl;
+                    break;
+                  }
+                }
+              }
+              if (enemyTarget) {
+                const shootX = vdx / distToVirus;
+                const shootY = vdy / distToVirus;
+                botEjectMass(bot, largestCell, shootX, shootY);
+                bot.lastEjectTime = now;
+                bot.targetX = virus.x;
+                bot.targetY = virus.y;
+                return;
+              }
+            }
+          }
+        }
+
+        // -------------------------------------------------------------
+        // PRIORITY 2: CHASE REACHABLE PREY (<0.87x radius)
+        // With Movement Prediction, Flanking Pincers, and Hunt-Player Bias
+        // -------------------------------------------------------------
+        let bestPrey: { x: number; y: number; vx?: number; vy?: number; moveVx?: number; moveVy?: number; radius: number; isPlayer?: boolean } | null = null;
+        let bestPreyScore = -1;
+        let bestPreyDist = Infinity;
+
+        const evaluatePrey = (
+          prey: { x: number; y: number; vx?: number; vy?: number; moveVx?: number; moveVy?: number; radius: number },
+          isPlayer = false
+        ) => {
+          if (prey.radius < maxR * 0.87) {
+            if (bot.personality === 'farmer' && bot.skill < 0.85) {
+              const d = Math.hypot(prey.x - botCenterX, prey.y - botCenterY);
+              if (d > 280) return;
+            }
+            const dx = prey.x - botCenterX;
+            const dy = prey.y - botCenterY;
+            const dSq = dx * dx + dy * dy;
+            if (dSq > visionRadiusSq) return;
+            const d = Math.sqrt(dSq) || 0.001;
+
+            if (!isVirusSafe) {
+              for (let v = 0; v < currentViruses.length; v++) {
+                const virus = currentViruses[v];
+                const vDist = distToSegment(virus.x, virus.y, botCenterX, botCenterY, prey.x, prey.y);
+                if (vDist < VIRUS_RADIUS + maxR * 0.85) {
+                  return;
+                }
+              }
+            }
+
+            let score = (prey.radius * prey.radius) / (d + 80);
+
+            // Hunt-the-player bias scaled gently by player score
+            if (isPlayer) {
+              const pScore = scoreRef.current;
+              let playerBias = 1.0;
+              if (pScore < 160) {
+                playerBias = 0.65; // fair early game
+              } else if (pScore < 750) {
+                playerBias = 0.85 + ((pScore - 160) / 590) * 0.40;
+              } else {
+                playerBias = 1.35; // tense late game
+              }
+              if (currentPlayers.length > 1) {
+                playerBias *= 1.30; // split player is appetizing!
+              }
+              if (bot.personality === 'aggressive') {
+                playerBias *= 1.25;
+              }
+              score *= playerBias;
+            }
+
+            if (score > bestPreyScore) {
+              bestPreyScore = score;
+              bestPrey = { ...prey, isPlayer };
+              bestPreyDist = d;
+            }
+          }
+        };
+
+        for (let p = 0; p < currentPlayers.length; p++) {
+          evaluatePrey(currentPlayers[p], true);
+        }
+        for (let b = 0; b < allBots.length; b++) {
+          const other = allBots[b];
+          if (other.id === bot.id) continue;
+          for (let c = 0; c < other.cells.length; c++) {
+            evaluatePrey(other.cells[c], false);
+          }
+        }
+
+        if (bestPrey && !isDistracted) {
+          bot.chasing = true;
+          const prey = bestPrey;
+
+          // Split to catch fleeing smaller target when in range
+          const splitCooldown = bot.personality === 'aggressive' ? 3200 : bot.personality === 'cautious' ? 6000 : 4500;
+          const canSplit = maxR >= 35 && bot.cells.length < 4 && (now - bot.lastSplitTime > splitCooldown);
+          const splitRadius = maxR / 1.414;
+          const isSplitKillable = splitRadius > prey.radius * 1.12;
+          const inSplitRange = bestPreyDist > maxR + 45 && bestPreyDist < maxR + 265;
+
+          if (canSplit && isSplitKillable && inSplitRange && (bot.personality !== 'farmer' || Math.random() < 0.25)) {
+            let virusInPath = false;
+            for (let v = 0; v < currentViruses.length; v++) {
+              const virus = currentViruses[v];
+              if (distToSegment(virus.x, virus.y, largestCell.x, largestCell.y, prey.x, prey.y) < VIRUS_RADIUS + splitRadius * 0.8) {
+                virusInPath = true;
+                break;
+              }
+            }
+
+            if (!virusInPath) {
+              let threatNearby = false;
+              if (bot.personality === 'cautious' || bot.skill > 0.82) {
+                for (let p = 0; p < currentPlayers.length; p++) {
+                  if (currentPlayers[p].radius > splitRadius * 1.15 && Math.hypot(currentPlayers[p].x - botCenterX, currentPlayers[p].y - botCenterY) < 450) {
+                    threatNearby = true;
+                    break;
+                  }
+                }
+              }
+
+              if (!threatNearby) {
+                const sDx = prey.x - largestCell.x;
+                const sDy = prey.y - largestCell.y;
+                const sMag = Math.hypot(sDx, sDy) || 1;
+                botSplitTowards(bot, largestCell, sDx / sMag, sDy / sMag);
+                bot.targetX = prey.x;
+                bot.targetY = prey.y;
+                return;
+              }
+            }
+          }
+
+          // 1. Movement Prediction: aim at target position + velocity * time-to-reach
+          const pVx = (prey.moveVx || 0) + (prey.vx || 0);
+          const pVy = (prey.moveVy || 0) + (prey.vy || 0);
+          const botSpeed = 1.38 / Math.pow(Math.max(12, maxR) / INITIAL_RADIUS, 0.44);
+          const timeToReach = bestPreyDist / Math.max(0.6, botSpeed * 60);
+          const leadMult = Math.min(1.3, timeToReach * (0.55 + 0.45 * bot.skill));
+          let leadX = prey.x + pVx * leadMult;
+          let leadY = prey.y + pVy * leadMult;
+
+          // 2. Pincer Tactic: if another aggressive bot is also hunting near the same target, approach from flanking angles
+          if (bot.personality === 'aggressive') {
+            for (let ob = 0; ob < allBots.length; ob++) {
+              const other = allBots[ob];
+              if (other.id !== bot.id && other.personality === 'aggressive' && other.chasing) {
+                const dToOther = Math.hypot(other.x - botCenterX, other.y - botCenterY);
+                if (dToOther < 600) {
+                  const dOtherToPrey = Math.hypot(other.targetX - prey.x, other.targetY - prey.y);
+                  if (dOtherToPrey < 350) {
+                    const flankAngle = bot.id < other.id ? 0.45 : -0.45;
+                    const cdx = leadX - botCenterX;
+                    const cdy = leadY - botCenterY;
+                    const cosF = Math.cos(flankAngle);
+                    const sinF = Math.sin(flankAngle);
+                    leadX = botCenterX + (cdx * cosF - cdy * sinF);
+                    leadY = botCenterY + (cdx * sinF + cdy * cosF);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          // Small human aim wobble
+          if (Math.abs(bot.aimErrorAngle) > 0.02) {
+            const cdx = leadX - botCenterX;
+            const cdy = leadY - botCenterY;
+            const cos = Math.cos(bot.aimErrorAngle);
+            const sin = Math.sin(bot.aimErrorAngle);
+            leadX = botCenterX + (cdx * cos - cdy * sin);
+            leadY = botCenterY + (cdx * sin + cdy * cos);
+          }
+
+          bot.targetX = Math.max(100, Math.min(MAP_SIZE - 100, leadX));
+          bot.targetY = Math.max(100, Math.min(MAP_SIZE - 100, leadY));
+          return;
+        }
+
+        bot.chasing = false;
+
+        // -------------------------------------------------------------
+        // PRIORITY 3: EAT FLOATING EJECTED MASS (Mass 32 each!)
+        // -------------------------------------------------------------
+        let bestEjectedMass: Food | null = null;
+        let bestEjectedDist = Infinity;
+        for (let f = 0; f < allFoods.length; f++) {
+          const food = allFoods[f];
+          if (!food.eaten && (food.mass === EJECTED_MASS_VALUE || food.radius === EJECTED_MASS_RADIUS)) {
+            const fdx = food.x - botCenterX;
+            const fdy = food.y - botCenterY;
+            const fd = Math.hypot(fdx, fdy);
+            if (fd < visionRadius && fd < bestEjectedDist) {
+              bestEjectedDist = fd;
+              bestEjectedMass = food;
+            }
+          }
+        }
+        if (bestEjectedMass && bestEjectedDist < 480) {
+          bot.targetX = bestEjectedMass.x;
+          bot.targetY = bestEjectedMass.y;
+          return;
+        }
+
+        // -------------------------------------------------------------
+        // PRIORITY 4: DENSEST CLUSTER OF PELLETS (Spatial Grid)
+        // -------------------------------------------------------------
+        const minCol = Math.max(0, Math.floor((botCenterX - visionRadius) / GRID_CELL_SIZE));
+        const maxCol = Math.min(GRID_COLS - 1, Math.floor((botCenterX + visionRadius) / GRID_CELL_SIZE));
+        const minRow = Math.max(0, Math.floor((botCenterY - visionRadius) / GRID_CELL_SIZE));
+        const maxRow = Math.min(GRID_ROWS - 1, Math.floor((botCenterY + visionRadius) / GRID_CELL_SIZE));
+
+        let bestGridCount = 0;
+        let bestClusterX = 0;
+        let bestClusterY = 0;
+
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            const idx = c + r * GRID_COLS;
+            const count = foodGridCount[idx];
+            if (count > bestGridCount) {
+              bestGridCount = count;
+              bestClusterX = foodGridSumX[idx] / count;
+              bestClusterY = foodGridSumY[idx] / count;
+            }
+          }
+        }
+
+        const tokens = ghostTokensRef.current;
+        let nearestToken: GhostToken | null = null;
+        let nearestTokenDist = Infinity;
+        for (let t = 0; t < tokens.length; t++) {
+          const tk = tokens[t];
+          if (tk.eaten) continue;
+          const tdx = tk.x - botCenterX;
+          const tdy = tk.y - botCenterY;
+          const td = Math.hypot(tdx, tdy);
+          if (td < visionRadius && td < nearestTokenDist) {
+            nearestTokenDist = td;
+            nearestToken = tk;
+          }
+        }
+
+        if (nearestToken && nearestTokenDist < 450) {
+          bot.targetX = nearestToken.x;
+          bot.targetY = nearestToken.y;
+          return;
+        }
+
+        if (bestGridCount > 0) {
+          bot.targetX = bestClusterX;
+          bot.targetY = bestClusterY;
+          return;
+        }
+
+        // -------------------------------------------------------------
+        // PRIORITY 5: WANDER
+        // -------------------------------------------------------------
+        const distToTarget = Math.hypot(bot.targetX - botCenterX, bot.targetY - botCenterY);
+        if (distToTarget < 50 || Math.random() < 0.02) {
+          bot.targetX = Math.random() * (MAP_SIZE - 400) + 200;
+          bot.targetY = Math.random() * (MAP_SIZE - 400) + 200;
+        }
+      };
+
+      // -------------------------------------------------------------------------
+      // BOT MOVEMENT & MULTI-CELL PHYSICS (Separation & Merging)
+      // -------------------------------------------------------------------------
+      const currentBots = botsRef.current;
+      for (let bIdx = 0; bIdx < currentBots.length; bIdx++) {
+        const bot = currentBots[bIdx];
+        updateBotAI(bot);
+
+        // Move bot cells
+        for (let cIdx = 0; cIdx < bot.cells.length; cIdx++) {
+          const cell = bot.cells[cIdx];
+          const dx = bot.targetX - cell.x;
+          const dy = bot.targetY - cell.y;
+          const dist = Math.hypot(dx, dy) || 1;
+
+          const botSpeed = 1.38 / Math.pow(Math.max(12, cell.radius) / INITIAL_RADIUS, 0.44);
           const targetVx = (dx / dist) * botSpeed;
           const targetVy = (dy / dist) * botSpeed;
 
           const accel = 1 - Math.exp(-4.2 * (dt / 1000));
-          bot.vx = (bot.vx || 0) + (targetVx - (bot.vx || 0)) * accel;
-          bot.vy = (bot.vy || 0) + (targetVy - (bot.vy || 0)) * accel;
+          cell.moveVx = (cell.moveVx || 0) + (targetVx - (cell.moveVx || 0)) * accel;
+          cell.moveVy = (cell.moveVy || 0) + (targetVy - (cell.moveVy || 0)) * accel;
 
-          bot.x += bot.vx * dtRatio;
-          bot.y += bot.vy * dtRatio;
+          // Split burst decay
+          const burstDecay = Math.pow(0.88, dtRatio);
+          cell.vx = (cell.vx || 0) * burstDecay;
+          cell.vy = (cell.vy || 0) * burstDecay;
+          if (Math.hypot(cell.vx, cell.vy) < 0.05) {
+            cell.vx = 0;
+            cell.vy = 0;
+          }
+
+          cell.x += ((cell.moveVx || 0) + (cell.vx || 0)) * dtRatio;
+          cell.y += ((cell.moveVy || 0) + (cell.vy || 0)) * dtRatio;
+
+          cell.x = Math.max(cell.radius, Math.min(MAP_SIZE - cell.radius, cell.x));
+          cell.y = Math.max(cell.radius, Math.min(MAP_SIZE - cell.radius, cell.y));
         }
 
-        bot.x = Math.max(bot.radius, Math.min(MAP_SIZE - bot.radius, bot.x));
-        bot.y = Math.max(bot.radius, Math.min(MAP_SIZE - bot.radius, bot.y));
+        // Multi-cell separation & merging
+        if (bot.cells.length > 1) {
+          const mergedIndices = new Set<number>();
+          for (let pass = 0; pass < 2; pass++) {
+            for (let i = 0; i < bot.cells.length; i++) {
+              if (mergedIndices.has(i)) continue;
+              for (let j = i + 1; j < bot.cells.length; j++) {
+                if (mergedIndices.has(j)) continue;
+
+                const c1 = bot.cells[i];
+                const c2 = bot.cells[j];
+
+                if (c2.ignoreParentId === c1.id && now < (c2.ignoreParentUntil || 0)) continue;
+                if (c1.ignoreParentId === c2.id && now < (c1.ignoreParentUntil || 0)) continue;
+
+                const dx = c2.x - c1.x;
+                const dy = c2.y - c1.y;
+                const distSq = dx * dx + dy * dy;
+                const totalR = c1.radius + c2.radius;
+
+                if (distSq < totalR * totalR) {
+                  const dist = Math.sqrt(distSq) || 0.001;
+                  const nx = dx / dist;
+                  const ny = dy / dist;
+
+                  const m1 = c1.radius * c1.radius;
+                  const m2 = c2.radius * c2.radius;
+                  const totalM = m1 + m2;
+                  const w1 = m2 / totalM;
+                  const w2 = m1 / totalM;
+
+                  const mergeCooldownMs = (isInstantMergeMode || instantMergeRef.current)
+                    ? 250
+                    : Math.max(20000, 20000 + Math.max(c1.radius, c2.radius) * 12);
+                  const canMerge = (now - c1.splitTime >= mergeCooldownMs) && (now - c2.splitTime >= mergeCooldownMs);
+
+                  if (canMerge) {
+                    const pull = 0.18 * (totalR - dist) * dtRatio;
+                    c1.x += nx * pull * w1;
+                    c1.y += ny * pull * w1;
+                    c2.x -= nx * pull * w2;
+                    c2.y -= ny * pull * w2;
+
+                    if (dist < Math.max(c1.radius, c2.radius) * 0.72 || dist < totalR * 0.48) {
+                      c1.radius = Math.sqrt(totalM);
+                      c1.renderRadius = c1.radius;
+                      c1.x = (c1.x * m1 + c2.x * m2) / totalM;
+                      c1.y = (c1.y * m1 + c2.y * m2) / totalM;
+                      c1.vx = (c1.vx * m1 + c2.vx * m2) / totalM;
+                      c1.vy = (c1.vy * m1 + c2.vy * m2) / totalM;
+                      c1.moveVx = ((c1.moveVx || 0) * m1 + (c2.moveVx || 0) * m2) / totalM;
+                      c1.moveVy = ((c1.moveVy || 0) * m1 + (c2.moveVy || 0) * m2) / totalM;
+                      c1.splitTime = Math.min(c1.splitTime, c2.splitTime);
+                      mergedIndices.add(j);
+                    }
+                  } else {
+                    const overlap = totalR - dist;
+                    const stiffness = 0.42 * dtRatio;
+                    const push = overlap * stiffness;
+
+                    c1.x -= nx * push * w1;
+                    c1.y -= ny * push * w1;
+                    c2.x += nx * push * w2;
+                    c2.y += ny * push * w2;
+
+                    c1.x = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.x));
+                    c1.y = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.y));
+                    c2.x = Math.max(c2.radius, Math.min(MAP_SIZE - c2.radius, c2.x));
+                    c2.y = Math.max(c2.radius, Math.min(MAP_SIZE - c2.radius, c2.y));
+                  }
+                }
+              }
+            }
+          }
+
+          if (mergedIndices.size > 0) {
+            bot.cells = bot.cells.filter((_, idx) => !mergedIndices.has(idx));
+          }
+        }
+
+        // Synchronize bot center of mass & effective radius
+        let bSumX = 0, bSumY = 0, bTotalM = 0;
+        for (let k = 0; k < bot.cells.length; k++) {
+          const c = bot.cells[k];
+          const m = c.radius * c.radius;
+          bTotalM += m;
+          bSumX += c.x * m;
+          bSumY += c.y * m;
+        }
+        if (bTotalM > 0) {
+          bot.x = bSumX / bTotalM;
+          bot.y = bSumY / bTotalM;
+          bot.radius = Math.sqrt(bTotalM);
+        } else if (bot.cells[0]) {
+          bot.x = bot.cells[0].x;
+          bot.y = bot.cells[0].y;
+          bot.radius = bot.cells[0].radius;
+        }
       }
 
-      // Food consumption with zero-allocation in-place compaction
+      // -------------------------------------------------------------------------
+      // SPATIAL-GRID POWERED FOOD CONSUMPTION (Zero Allocation)
+      // -------------------------------------------------------------------------
       let anyFoodEaten = false;
-      for (let i = 0; i < currentCells.length; i++) {
-        const cell = currentCells[i];
+
+      const consumeFoodForCell = (cell: { x: number; y: number; radius: number; id?: string }) => {
+        const minC = Math.max(0, Math.floor((cell.x - cell.radius) / GRID_CELL_SIZE));
+        const maxC = Math.min(GRID_COLS - 1, Math.floor((cell.x + cell.radius) / GRID_CELL_SIZE));
+        const minR = Math.max(0, Math.floor((cell.y - cell.radius) / GRID_CELL_SIZE));
+        const maxR = Math.min(GRID_ROWS - 1, Math.floor((cell.y + cell.radius) / GRID_CELL_SIZE));
         const cellSqR = cell.radius * cell.radius;
-        for (let j = 0; j < allFoods.length; j++) {
-          const food = allFoods[j];
-          if (food.eaten) continue;
-          if (food.canBeEatenAfter && now < food.canBeEatenAfter && food.ownerCellId === cell.id) {
-            continue;
-          }
-          const fdx = cell.x - food.x;
-          const fdy = cell.y - food.y;
-          if (fdx * fdx + fdy * fdy < cellSqR) {
-            const massGain = food.mass !== undefined ? food.mass : 1.2;
-            cell.radius = Math.sqrt(cell.radius * cell.radius + massGain);
-            food.eaten = true;
-            anyFoodEaten = true;
+
+        for (let r = minR; r <= maxR; r++) {
+          for (let c = minC; c <= maxC; c++) {
+            let fIdx = foodGridHead[c + r * GRID_COLS];
+            while (fIdx !== -1) {
+              const food = allFoods[fIdx];
+              if (!food.eaten) {
+                if (!(food.canBeEatenAfter && now < food.canBeEatenAfter && food.ownerCellId === cell.id)) {
+                  const fdx = cell.x - food.x;
+                  const fdy = cell.y - food.y;
+                  if (fdx * fdx + fdy * fdy < cellSqR) {
+                    const massGain = food.mass !== undefined ? food.mass : 1.2;
+                    cell.radius = Math.sqrt(cell.radius * cell.radius + massGain);
+                    food.eaten = true;
+                    anyFoodEaten = true;
+                  }
+                }
+              }
+              fIdx = foodGridNext[fIdx];
+            }
           }
         }
+      };
+
+      for (let i = 0; i < currentCells.length; i++) {
+        consumeFoodForCell(currentCells[i]);
       }
 
       for (let i = 0; i < currentBots.length; i++) {
-        const bot = currentBots[i];
-        const botSqR = bot.radius * bot.radius;
-        for (let j = 0; j < allFoods.length; j++) {
-          const food = allFoods[j];
-          if (food.eaten) continue;
-          const fdx = bot.x - food.x;
-          const fdy = bot.y - food.y;
-          if (fdx * fdx + fdy * fdy < botSqR) {
-            const massGain = food.mass !== undefined ? food.mass : 1.2;
-            bot.radius = Math.sqrt(bot.radius * bot.radius + massGain);
-            food.eaten = true;
-            anyFoodEaten = true;
-          }
+        const b = currentBots[i];
+        for (let k = 0; k < b.cells.length; k++) {
+          consumeFoodForCell(b.cells[k]);
         }
       }
 
@@ -1641,7 +2652,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             food.eaten = true;
             anyFoodEaten = true;
             virus.fedCount = (virus.fedCount || 0) + 1;
-            // Virus stays at standard radius (removed swelling/expansion effect when pushing virus)
             virus.radius = VIRUS_RADIUS;
 
             // Once fed 7 times, virus shoots!
@@ -1728,16 +2738,19 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
       for (let i = 0; i < currentBots.length; i++) {
         const bot = currentBots[i];
-        const botSqR = bot.radius * bot.radius;
-        for (let j = 0; j < currentTokens.length; j++) {
-          const token = currentTokens[j];
-          if (token.eaten) continue;
-          const cdx = bot.x - token.x;
-          const cdy = bot.y - token.y;
-          if (cdx * cdx + cdy * cdy < botSqR) {
-            bot.radius = Math.sqrt(bot.radius * bot.radius + GHOST_TOKEN_MASS);
-            token.eaten = true;
-            anyTokenEaten = true;
+        for (let k = 0; k < bot.cells.length; k++) {
+          const c = bot.cells[k];
+          const cSqR = c.radius * c.radius;
+          for (let j = 0; j < currentTokens.length; j++) {
+            const token = currentTokens[j];
+            if (token.eaten) continue;
+            const cdx = c.x - token.x;
+            const cdy = c.y - token.y;
+            if (cdx * cdx + cdy * cdy < cSqR) {
+              c.radius = Math.sqrt(c.radius * c.radius + GHOST_TOKEN_MASS);
+              token.eaten = true;
+              anyTokenEaten = true;
+            }
           }
         }
       }
@@ -1779,7 +2792,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const nextPlayerCells: PlayerCell[] = [];
       let playerCellsChanged = false;
 
-      // Measure total player mass before virus collisions to strictly guarantee mass conservation
       const massBeforeVirus = currentCells.reduce((sum, c) => sum + c.radius * c.radius, 0);
 
       currentCells.forEach((cell, cellIdx) => {
@@ -1806,10 +2818,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
       });
 
-      // Mass must be 100% conserved no matter how many viruses get popped in one tick:
-      // If the combined count exceeds 16, MERGE the excess back into existing cells
-      // so total mass (sum of radius² across all cells) is provably identical before
-      // and after this collision-handling block (repeatedly merge the two smallest cells).
       while (nextPlayerCells.length > 16) {
         let minIdx1 = 0;
         let minIdx2 = 1;
@@ -1834,7 +2842,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const combinedMass = m1 + m2;
         const newRadius = Math.sqrt(combinedMass);
 
-        // Weighted center of position & velocity based on mass
         c1.x = (c1.x * m1 + c2.x * m2) / combinedMass;
         c1.y = (c1.y * m1 + c2.y * m2) / combinedMass;
         c1.vx = (c1.vx * m1 + c2.vx * m2) / combinedMass;
@@ -1847,15 +2854,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
         c1.splitTime = Math.max(c1.splitTime, c2.splitTime);
 
-        // Remove the second smallest cell
         nextPlayerCells.splice(minIdx2, 1);
         playerCellsChanged = true;
       }
 
       if (playerCellsChanged) {
         playerCellsRef.current = nextPlayerCells;
-
-        // Sanity-check: Mass after virus pop must never be lower than mass before it
         const massAfterVirus = nextPlayerCells.reduce((sum, c) => sum + c.radius * c.radius, 0);
         console.assert(
           massAfterVirus >= massBeforeVirus - 0.05,
@@ -1863,16 +2867,63 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         );
       }
 
+      // Bot cell virus collision & pop (fragments bot cell with authentic mass conservation)
       botsRef.current.forEach(bot => {
-        virusesRef.current.forEach(virus => {
-          if (poppedVirusIds.has(virus.id)) return;
-          const vdx = bot.x - virus.x;
-          const vdy = bot.y - virus.y;
-          if (vdx * vdx + vdy * vdy < bot.radius * bot.radius && bot.radius > virus.radius) {
-            bot.radius = Math.max(INITIAL_RADIUS, bot.radius * 0.65);
-            poppedVirusIds.add(virus.id);
+        const nextBotCells: BotCell[] = [];
+        let botCellsChanged = false;
+
+        bot.cells.forEach(cell => {
+          let cellPopped = false;
+          virusesRef.current.forEach(virus => {
+            if (cellPopped || poppedVirusIds.has(virus.id)) return;
+            const vdx = cell.x - virus.x;
+            const vdy = cell.y - virus.y;
+            if (vdx * vdx + vdy * vdy < cell.radius * cell.radius && cell.radius > virus.radius) {
+              poppedVirusIds.add(virus.id);
+              cellPopped = true;
+              botCellsChanged = true;
+
+              const originalMass = cell.radius * cell.radius;
+              const availableSlots = Math.max(1, 8 - (bot.cells.length + nextBotCells.length));
+              const numPieces = Math.min(5, Math.max(2, availableSlots));
+              const pieceMass = originalMass / numPieces;
+              const pieceRadius = Math.sqrt(pieceMass);
+
+              for (let p = 0; p < numPieces; p++) {
+                const angle = (p / numPieces) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+                const popSpeed = 15.5;
+                const spawnX = Math.max(pieceRadius, Math.min(MAP_SIZE - pieceRadius, virus.x + Math.cos(angle) * (pieceRadius + 12)));
+                const spawnY = Math.max(pieceRadius, Math.min(MAP_SIZE - pieceRadius, virus.y + Math.sin(angle) * (pieceRadius + 12)));
+
+                nextBotCells.push({
+                  id: generateId(),
+                  x: spawnX,
+                  y: spawnY,
+                  renderX: cell.renderX ?? cell.x,
+                  renderY: cell.renderY ?? cell.y,
+                  renderRadius: pieceRadius * 0.7,
+                  vx: Math.cos(angle) * popSpeed + (cell.vx || 0) * 0.2,
+                  vy: Math.sin(angle) * popSpeed + (cell.vy || 0) * 0.2,
+                  moveVx: 0,
+                  moveVy: 0,
+                  radius: pieceRadius,
+                  splitTime: now,
+                  phaseOffset: Math.random() * Math.PI * 2,
+                  color: bot.color,
+                  name: bot.name
+                });
+              }
+            }
+          });
+
+          if (!cellPopped) {
+            nextBotCells.push(cell);
           }
         });
+
+        if (botCellsChanged) {
+          bot.cells = nextBotCells;
+        }
       });
 
       if (poppedVirusIds.size > 0) {
@@ -1890,30 +2941,38 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         });
       }
 
-      // Player eats Bot
-      botsRef.current = botsRef.current.filter(bot => {
-        for (let i = 0; i < playerCellsRef.current.length; i++) {
-          const cell = playerCellsRef.current[i];
-          const bdx = cell.x - bot.x;
-          const bdy = cell.y - bot.y;
-          if (bdx * bdx + bdy * bdy < cell.radius * cell.radius && cell.radius > bot.radius * 1.1) {
-            cell.radius = Math.sqrt(cell.radius * cell.radius + bot.radius * bot.radius * 0.6);
-            return false;
+      // -------------------------------------------------------------
+      // CELL CONSUMPTION: PLAYER vs BOTS & BOT vs BOT
+      // -------------------------------------------------------------
+      // Player eats Bot cells
+      currentBots.forEach(bot => {
+        bot.cells = bot.cells.filter(bCell => {
+          for (let i = 0; i < playerCellsRef.current.length; i++) {
+            const pCell = playerCellsRef.current[i];
+            const dx = pCell.x - bCell.x;
+            const dy = pCell.y - bCell.y;
+            if (dx * dx + dy * dy < pCell.radius * pCell.radius && pCell.radius > bCell.radius * 1.10) {
+              pCell.radius = Math.sqrt(pCell.radius * pCell.radius + bCell.radius * bCell.radius * 0.75);
+              return false;
+            }
           }
-        }
-        return true;
+          return true;
+        });
       });
 
-      // Bot eats Player
+      // Bot cells eat Player cells
       const deadCellIds = new Set<string>();
-      playerCellsRef.current.forEach(cell => {
-        botsRef.current.forEach(bot => {
-          const bdx = bot.x - cell.x;
-          const bdy = bot.y - cell.y;
-          if (bdx * bdx + bdy * bdy < bot.radius * bot.radius && bot.radius > cell.radius * 1.1) {
-            bot.radius = Math.sqrt(bot.radius * bot.radius + cell.radius * cell.radius * 0.6);
-            deadCellIds.add(cell.id);
-          }
+      playerCellsRef.current.forEach(pCell => {
+        currentBots.forEach(bot => {
+          bot.cells.forEach(bCell => {
+            if (deadCellIds.has(pCell.id)) return;
+            const dx = bCell.x - pCell.x;
+            const dy = bCell.y - pCell.y;
+            if (dx * dx + dy * dy < bCell.radius * bCell.radius && bCell.radius > pCell.radius * 1.10) {
+              bCell.radius = Math.sqrt(bCell.radius * bCell.radius + pCell.radius * pCell.radius * 0.75);
+              deadCellIds.add(pCell.id);
+            }
+          });
         });
       });
 
@@ -1924,26 +2983,46 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
       }
 
-      while (botsRef.current.length < BOT_COUNT) {
-        const bx = Math.random() * MAP_SIZE;
-        const by = Math.random() * MAP_SIZE;
-        const br = INITIAL_RADIUS + Math.random() * 20;
-        botsRef.current.push({
-          id: generateId(),
-          x: bx,
-          y: by,
-          renderX: bx,
-          renderY: by,
-          renderRadius: br,
-          radius: br,
-          color: randomColor(),
-          targetX: Math.random() * MAP_SIZE,
-          targetY: Math.random() * MAP_SIZE,
-          speed: 1.8 + Math.random() * 0.5,
-          name: ['Apex', 'Vortex', 'Nova', 'Echo', 'Blaze', 'Savage', 'Pixel', 'Titan', 'Ghost', 'Orbit', 'Frost', 'Spark', 'Shadow', 'Cosmo', 'Neon'][Math.floor(Math.random() * 15)],
-          vx: 0,
-          vy: 0
-        });
+      // Bot cell eats other Bot cell
+      for (let i = 0; i < currentBots.length; i++) {
+        const botA = currentBots[i];
+        for (let j = i + 1; j < currentBots.length; j++) {
+          const botB = currentBots[j];
+
+          botA.cells.forEach(cellA => {
+            botB.cells = botB.cells.filter(cellB => {
+              const dx = cellA.x - cellB.x;
+              const dy = cellA.y - cellB.y;
+              if (dx * dx + dy * dy < cellA.radius * cellA.radius && cellA.radius > cellB.radius * 1.10) {
+                cellA.radius = Math.sqrt(cellA.radius * cellA.radius + cellB.radius * cellB.radius * 0.75);
+                return false;
+              }
+              return true;
+            });
+          });
+
+          botB.cells.forEach(cellB => {
+            botA.cells = botA.cells.filter(cellA => {
+              const dx = cellB.x - cellA.x;
+              const dy = cellB.y - cellA.y;
+              if (dx * dx + dy * dy < cellB.radius * cellB.radius && cellB.radius > cellA.radius * 1.10) {
+                cellB.radius = Math.sqrt(cellB.radius * cellB.radius + cellA.radius * cellA.radius * 0.75);
+                return false;
+              }
+              return true;
+            });
+          });
+        }
+      }
+
+      // -------------------------------------------------------------
+      // PERSISTENT BOT RESPAWNING (Names and colors strictly preserved)
+      // -------------------------------------------------------------
+      for (let i = 0; i < BOT_COUNT; i++) {
+        if (!currentBots[i] || currentBots[i].cells.length === 0) {
+          const slot = currentBots[i]?.botIndex ?? i;
+          currentBots[i] = createBotInstance(slot, now);
+        }
       }
 
       // Throttled UI score and leaderboard update (avoids React re-render lag every frame)
@@ -1958,10 +3037,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const botEntries = new Array(liveBots.length + 1);
         for (let i = 0; i < liveBots.length; i++) {
           const b = liveBots[i];
+          const totalBotMass = b.cells.reduce((sum, c) => sum + c.radius * c.radius, 0);
           botEntries[i] = {
             name: b.name,
-            score: Math.floor((b.radius * b.radius) / 10),
-            isPlayer: false
+            score: Math.floor(totalBotMass / 10),
+            isPlayer: false,
+            color: b.color
           };
         }
         botEntries[liveBots.length] = {
@@ -2013,6 +3094,18 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
         if (b.renderRadius === undefined) b.renderRadius = b.radius;
         else b.renderRadius += (b.radius - b.renderRadius) * radLerp;
+
+        for (let k = 0; k < b.cells.length; k++) {
+          const c = b.cells[k];
+          if (c.renderX === undefined) c.renderX = c.x;
+          else c.renderX += (c.x - c.renderX) * posLerp;
+
+          if (c.renderY === undefined) c.renderY = c.y;
+          else c.renderY += (c.y - c.renderY) * posLerp;
+
+          if (c.renderRadius === undefined) c.renderRadius = c.radius;
+          else c.renderRadius += (c.radius - c.renderRadius) * radLerp;
+        }
       }
 
       const foods = foodsRef.current;
@@ -2133,7 +3226,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       }
     };
 
-    const drawBot = (bot: BotPlayer, time: number) => {
+    const drawBot = (bot: BotPlayer | BotCell, time: number) => {
       const bx = bot.renderX ?? bot.x;
       const by = bot.renderY ?? bot.y;
       const br = bot.renderRadius ?? bot.radius;
@@ -2295,15 +3388,18 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const bots = botsRef.current;
       for (let i = 0; i < bots.length; i++) {
         const b = bots[i];
-        const r = b.renderRadius ?? b.radius;
-        if (count < pool.length) {
-          pool[count].type = 'bot';
-          pool[count].entity = b;
-          pool[count].radius = r;
-        } else {
-          pool.push({ type: 'bot', entity: b, radius: r });
+        for (let k = 0; k < b.cells.length; k++) {
+          const c = b.cells[k];
+          const r = c.renderRadius ?? c.radius;
+          if (count < pool.length) {
+            pool[count].type = 'bot';
+            pool[count].entity = c;
+            pool[count].radius = r;
+          } else {
+            pool.push({ type: 'bot', entity: c, radius: r });
+          }
+          count++;
         }
-        count++;
       }
 
       const viruses = virusesRef.current;

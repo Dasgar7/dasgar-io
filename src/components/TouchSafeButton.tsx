@@ -30,6 +30,7 @@ export const TouchSafeButton: React.FC<TouchSafeButtonProps> = ({
   const activeTouchId = useRef<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     setIsPressed(true);
     onTouchStart?.(e);
 
@@ -45,6 +46,7 @@ export const TouchSafeButton: React.FC<TouchSafeButtonProps> = ({
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     setIsPressed(false);
     onTouchEnd?.(e);
 
@@ -74,6 +76,7 @@ export const TouchSafeButton: React.FC<TouchSafeButtonProps> = ({
   };
 
   const handleTouchCancel = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     setIsPressed(false);
     onTouchCancel?.(e);
 

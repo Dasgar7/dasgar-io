@@ -92,3 +92,24 @@ export const PRESET_SKINS: Record<string, SkinItem[]> = {
   premium: [],
   own: []
 };
+
+// 6 Animal preset skins assigned to ~40% of bots
+export const BOT_SKIN_ITEMS: SkinItem[] = PRESET_SKINS.level.slice(0, 6);
+
+// Modern realistic player gamer tags pool (~60 names with short tags, dots, numbers, lowercase, emojis)
+export const BOT_NAME_POOL: string[] = [
+  'xKira', 'vibe.', 'mochi', 'n0va', 'sleepy', 'ratio', 'lowkey', 'zyn', 'mira7',
+  'k4rma', 'apex.', 'void9', 'blush', 'toxic_', 'ghosty', 'pluto', 'zenith', 'dr1ft',
+  'lunar', 'glitch', 'echo.', 'pulse', 'frosty', 'sh4dow', 'pixie', 'sn4ke', 'crying_',
+  'k1ng', 'aura', 'slump', 'yuki', 'zero2', 'boba', 'fizz', 'neon_', 'vortex',
+  'sp1ke', 'clover', 'phantom', 'cyber', 'dusk', 'orbit.', 'hype', 'flame', 'r1val',
+  'mist', 'krono', 'sparky', 'haz3', 'blade', 'cloud9', 's1lent', 'omen', 'toxic',
+  'demon', 'angel', '⚡strike', '👑boss', '💀reaper', '🔥blaze', '✨star'
+];
+
+// Vibrant cell color palette for bots
+export const BOT_COLOR_POOL: string[] = [
+  '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4',
+  '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e',
+  '#14b8a6', '#84cc16', '#e11d48', '#0284c7', '#7c3aed'
+];
