@@ -70,22 +70,114 @@
       document.addEventListener('dragstart', function(e){ e.preventDefault(); }, { passive: false, capture: true });
       document.addEventListener('drop', function(e){ e.preventDefault(); }, { passive: false, capture: true });
 
-      // Suppress Vite dev client WebSocket errors in preview/iframe environment
-      window.addEventListener('unhandledrejection', function(event) {
-        var reason = event && event.reason;
-        var msg = (reason && (reason.message || String(reason))) || '';
-        var stack = (reason && reason.stack) || '';
-        if (msg.includes('WebSocket') || msg.includes('vite:ws') || stack.includes('@vite/client')) {
-          event.preventDefault();
+      // Cleanly handle Vite HMR WebSocket connection in iframe preview environment
+      (function() {
+        var isViteHmr = function(str) {
+          if (!str) return false;
+          var s = String(str);
+          return (
+            s.indexOf('WebSocket') !== -1 ||
+            s.indexOf('vite:ws') !== -1 ||
+            s.indexOf('[vite]') !== -1 ||
+            s.indexOf('@vite/client') !== -1
+          );
+        };
+
+        // If Vite client attempts WebSocket connection in HMR-disabled preview, provide mock open socket
+        var NativeWebSocket = window.WebSocket;
+        if (NativeWebSocket) {
+          window.WebSocket = function(url, protocols) {
+            if (protocols === 'vite-hmr' || (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('vite-hmr') !== -1))) {
+              var target = new EventTarget();
+              var ws = {
+                url: url,
+                readyState: 1,
+                OPEN: 1,
+                CLOSED: 3,
+                CLOSING: 2,
+                CONNECTING: 0,
+                binaryType: 'blob',
+                bufferedAmount: 0,
+                extensions: '',
+                protocol: 'vite-hmr',
+                send: function() {},
+                close: function() { ws.readyState = 3; },
+                addEventListener: target.addEventListener.bind(target),
+                removeEventListener: target.removeEventListener.bind(target),
+                dispatchEvent: target.dispatchEvent.bind(target),
+                set onopen(fn) { target.addEventListener('open', fn); },
+                set onmessage(fn) { target.addEventListener('message', fn); },
+                set onclose(fn) { target.addEventListener('close', fn); },
+                set onerror(fn) { target.addEventListener('error', fn); }
+              };
+              setTimeout(function() {
+                var openEvt = new Event('open');
+                target.dispatchEvent(openEvt);
+              }, 10);
+              return ws;
+            }
+            return new NativeWebSocket(url, protocols);
+          };
+          window.WebSocket.prototype = NativeWebSocket.prototype;
+          window.WebSocket.OPEN = NativeWebSocket.OPEN;
+          window.WebSocket.CONNECTING = NativeWebSocket.CONNECTING;
+          window.WebSocket.CLOSING = NativeWebSocket.CLOSING;
+          window.WebSocket.CLOSED = NativeWebSocket.CLOSED;
         }
-      });
-      window.addEventListener('error', function(event) {
-        var msg = (event && (event.message || '')) || '';
-        var file = (event && (event.filename || '')) || '';
-        if (file.includes('@vite/client') || msg.includes('WebSocket')) {
-          event.preventDefault();
-        }
-      });
+
+        // Intercept console.error / warn for Vite client messages
+        var origConsoleError = console.error;
+        console.error = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            var arg = arguments[i];
+            if (arg) {
+              if (isViteHmr(arg) || isViteHmr(arg.message) || isViteHmr(arg.stack)) {
+                return;
+              }
+            }
+          }
+          return origConsoleError.apply(console, arguments);
+        };
+
+        var origConsoleWarn = console.warn;
+        console.warn = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            var arg = arguments[i];
+            if (arg) {
+              if (isViteHmr(arg) || isViteHmr(arg.message) || isViteHmr(arg.stack)) {
+                return;
+              }
+            }
+          }
+          return origConsoleWarn.apply(console, arguments);
+        };
+
+        // Capture-phase event suppressors
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event && event.reason;
+          var msg = (reason && (reason.message || String(reason))) || '';
+          var stack = (reason && reason.stack) || '';
+          if (isViteHmr(msg) || isViteHmr(stack)) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            if (event.stopPropagation) event.stopPropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('error', function(event) {
+          var msg = (event && (event.message || '')) || '';
+          var file = (event && (event.filename || '')) || '';
+          var error = event && event.error;
+          var stack = (error && error.stack) || '';
+          if (isViteHmr(msg) || isViteHmr(file) || isViteHmr(stack)) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            if (event.stopPropagation) event.stopPropagation();
+            return true;
+          }
+        }, true);
+      })();
     </script>
   </head>
   <body>
