@@ -4232,7 +4232,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             >
               <Smile 
                 className="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 transition-colors duration-75" 
-                style={{ color: showEmojiPicker || isEmojiPressed ? '#000000' : '#9E9E9E' }} 
+                style={{ color: isEmojiPressed ? '#FACC15' : showEmojiPicker ? '#FACC15' : '#9E9E9E' }} 
               />
             </TouchSafeButton>
 
@@ -4285,7 +4285,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             >
               <MessageCircle 
                 className="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 transition-colors duration-75" 
-                style={{ color: showChat || isChatPressed ? '#000000' : '#9E9E9E' }} 
+                style={{ color: isChatPressed ? '#38BDF8' : showChat ? '#38BDF8' : '#9E9E9E' }} 
               />
             </TouchSafeButton>
 
