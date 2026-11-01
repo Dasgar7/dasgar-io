@@ -1123,10 +1123,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           // Reuse only a pellet that has already been eaten. If all pool slots
           // are still active, skip this feed without charging player mass.
           let pellet: any = null;
-          if (pool.length < MAX_EJECTED_MASS_ON_FIELD) {
-            pellet = {};
-            pool.push(pellet);
-          } else {
+          // Reuse an eaten pellet when available; otherwise allocate a new
+          // one. Never stop feeding just because a pool-size limit was reached.
+          if (pool.length > 0) {
             for (let checked = 0; checked < pool.length; checked++) {
               const index = playerEjectedPoolCursorRef.current % pool.length;
               playerEjectedPoolCursorRef.current = (index + 1) % pool.length;
@@ -1136,7 +1135,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               }
             }
           }
-          if (!pellet) return;
+          if (!pellet) {
+            pellet = {};
+            pool.push(pellet);
+          }
 
           // Only deduct mass when a fresh/reusable eaten pellet is available.
           cell.radius = Math.sqrt(remainingMass);
@@ -1167,10 +1169,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           pellet.canBeEatenAfter = now + 350;
           pellet.ownerCellId = cell.id;
           pellet.eaten = false;
-          if (!pellet._inFoods) {
-            foods.push(pellet);
-            pellet._inFoods = true;
-          }
+          // Eaten pellets are removed from foodsRef during the cleanup pass,
+          // so every reused pellet must be inserted into the active food list again.
+          foods.push(pellet);
         }
       }
     });
