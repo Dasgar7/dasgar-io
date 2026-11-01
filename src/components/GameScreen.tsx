@@ -560,6 +560,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const splitTimersRef = useRef<number[]>([]);
   const macroActiveRef = useRef(false);
   const macroAccumulatorRef = useRef(0);
+  const playerEjectedPoolRef = useRef<any[]>([]);
+  const playerEjectedPoolCursorRef = useRef(0);
   const handleEjectRef = useRef<() => void>(() => {});
 
   const activeEmojiRef = useRef<{ emoji: string; timeLeft: number } | null>(null);
@@ -804,6 +806,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   };
 
   const initEntities = () => {
+    playerEjectedPoolRef.current = [];
+    playerEjectedPoolCursorRef.current = 0;
     foodsRef.current = Array.from({ length: FOOD_COUNT }).map(() => {
       const x = Math.random() * MAP_SIZE;
       const y = Math.random() * MAP_SIZE;
@@ -1113,50 +1117,57 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const currentMass = cell.radius * cell.radius;
         const remainingMass = currentMass - ejectedMass;
         if (remainingMass > INITIAL_RADIUS * INITIAL_RADIUS * 0.8) {
+          const foods = foodsRef.current;
+          const pool = playerEjectedPoolRef.current;
+
+          // Reuse only a pellet that has already been eaten. If all pool slots
+          // are still active, skip this feed without charging player mass.
+          let pellet: any = null;
+          if (pool.length < MAX_EJECTED_MASS_ON_FIELD) {
+            pellet = {};
+            pool.push(pellet);
+          } else {
+            for (let checked = 0; checked < pool.length; checked++) {
+              const index = playerEjectedPoolCursorRef.current % pool.length;
+              playerEjectedPoolCursorRef.current = (index + 1) % pool.length;
+              if (pool[index].eaten) {
+                pellet = pool[index];
+                break;
+              }
+            }
+          }
+          if (!pellet) continue;
+
+          // Only deduct mass when a fresh/reusable eaten pellet is available.
           cell.radius = Math.sqrt(remainingMass);
 
-          // Slight angular spray variance (+- 3.5 deg) for an organic fluid stream rather than rigid mechanical dots
           const spreadAngle = (Math.random() - 0.5) * 0.12;
           const cosA = Math.cos(spreadAngle);
           const sinA = Math.sin(spreadAngle);
           const sprayDirX = dirX * cosA - dirY * sinA;
           const sprayDirY = dirX * sinA + dirY * cosA;
-
           const spawnDist = cell.radius + EJECTED_MASS_RADIUS + 3;
           const rawSpawnX = cell.x + sprayDirX * spawnDist;
           const rawSpawnY = cell.y + sprayDirY * spawnDist;
           const spawnX = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, rawSpawnX));
           const spawnY = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, rawSpawnY));
-
-          // Launch speed variance (+- 6%)
           const feedSpeed = modFeedSpeedRef.current * (0.94 + Math.random() * 0.12);
 
-          // Recycle the oldest player-ejected mass at the cap instead of
-          // allowing high-speed Macro to grow the foods array without bound.
-          const foods = foodsRef.current;
-          let ejectedCount = 0;
-          for (let i = 0; i < foods.length; i++) {
-            if (foods[i].ownerCellId !== undefined) ejectedCount++;
-          }
-          if (ejectedCount >= MAX_EJECTED_MASS_ON_FIELD) {
-            const oldestEjectedIndex = foods.findIndex(food => food.ownerCellId !== undefined);
-            if (oldestEjectedIndex !== -1) foods.splice(oldestEjectedIndex, 1);
-          }
-          foods.push({
-            id: generateId(),
-            x: spawnX,
-            y: spawnY,
-            renderX: spawnX,
-            renderY: spawnY,
-            radius: EJECTED_MASS_RADIUS,
-            color: playerColorRef.current,
-            vx: sprayDirX * feedSpeed,
-            vy: sprayDirY * feedSpeed,
-            decay: 10,
-            mass: EJECTED_MASS_VALUE,
-            canBeEatenAfter: now + 350,
-            ownerCellId: cell.id
-          });
+          pellet.id = generateId();
+          pellet.x = spawnX;
+          pellet.y = spawnY;
+          pellet.renderX = spawnX;
+          pellet.renderY = spawnY;
+          pellet.radius = EJECTED_MASS_RADIUS;
+          pellet.color = playerColorRef.current;
+          pellet.vx = sprayDirX * feedSpeed;
+          pellet.vy = sprayDirY * feedSpeed;
+          pellet.decay = 10;
+          pellet.mass = EJECTED_MASS_VALUE;
+          pellet.canBeEatenAfter = now + 350;
+          pellet.ownerCellId = cell.id;
+          pellet.eaten = false;
+          if (!foods.includes(pellet)) foods.push(pellet);
         }
       }
     });
@@ -1907,9 +1918,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const dtRatio = dt / 16.667;
 
-      // High-speed Macro: bounded work per frame plus a capped/recycled
-      // ejected-mass pool in handleEject. This prevents both CPU spikes and
-      // unbounded growth of the foods array at extreme slider settings.
+      // Fast Macro: a small fixed per-frame budget avoids main-thread spikes.
+      // Ejected pellets are pooled and reused only after being eaten.
       if (macroActiveRef.current && !isPausedRef.current && !isGameOverRef.current) {
         macroAccumulatorRef.current += dt;
         const interval = Math.max(0.1, modMacroIntervalRef.current);
@@ -1920,7 +1930,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           macroAccumulatorRef.current -= interval;
           feedsThisFrame++;
         }
-        // Discard missed time instead of creating a catch-up burst.
         if (feedsThisFrame === maxFeedsPerFrame && macroAccumulatorRef.current >= interval) {
           macroAccumulatorRef.current = 0;
         }
