@@ -4175,11 +4175,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             onTouchStart={() => setIsPausePressed(true)}
             onTouchEnd={() => setIsPausePressed(false)}
             onTouchCancel={() => setIsPausePressed(false)}
-            className="w-11 h-11 sm:w-12 sm:h-12 md:w-13 md:h-13 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none group shrink-0"
+            className="w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none group shrink-0"
             title={isPaused ? "Resume Game (P)" : "Pause Game (P)"}
           >
             <Pause 
-              className="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 transition-colors duration-75" 
+              className="w-5.5 h-5.5 sm:w-6 sm:h-6 md:w-7 md:h-7 transition-colors duration-75" 
               style={{ 
                 color: isPausePressed ? '#000000' : '#9E9E9E',
                 fill: isPausePressed ? '#000000' : '#9E9E9E'
@@ -4225,13 +4225,13 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onTouchStart={() => setIsEmojiPressed(true)}
               onTouchEnd={() => setIsEmojiPressed(false)}
               onTouchCancel={() => setIsEmojiPressed(false)}
-              className={`w-11 h-11 sm:w-12 sm:h-12 md:w-13 md:h-13 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
+              className={`w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
                 showEmojiPicker ? 'rounded-l-xl sm:rounded-l-2xl border-r-0 bg-[rgba(140,140,140,0.28)]' : 'rounded-xl sm:rounded-2xl'
               }`}
               title="Emotes"
             >
               <Smile 
-                className="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 transition-colors duration-75" 
+                className="w-5.5 h-5.5 sm:w-6 sm:h-6 md:w-7 md:h-7 transition-colors duration-75" 
                 style={{ color: isEmojiPressed ? '#FACC15' : showEmojiPicker ? '#FACC15' : '#9E9E9E' }} 
               />
             </TouchSafeButton>
@@ -4278,13 +4278,13 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onTouchStart={() => setIsChatPressed(true)}
               onTouchEnd={() => setIsChatPressed(false)}
               onTouchCancel={() => setIsChatPressed(false)}
-              className={`w-11 h-11 sm:w-12 sm:h-12 md:w-13 md:h-13 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
+              className={`w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
                 showChat ? 'bg-[rgba(140,140,140,0.28)] rounded-xl sm:rounded-2xl' : 'rounded-xl sm:rounded-2xl'
               }`}
               title="Chat"
             >
               <MessageCircle 
-                className="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 transition-colors duration-75" 
+                className="w-5.5 h-5.5 sm:w-6 sm:h-6 md:w-7 md:h-7 transition-colors duration-75" 
                 style={{ color: isChatPressed ? '#38BDF8' : showChat ? '#38BDF8' : '#9E9E9E' }} 
               />
             </TouchSafeButton>
@@ -4379,7 +4379,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           onPointerMove={handleModPointerMove}
           onPointerUp={handleModPointerUp}
           onPointerCancel={handleModPointerCancel}
-          className={`pointer-events-auto fixed z-30 w-11 h-11 sm:w-12 sm:h-12 md:w-13 md:h-13 border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-md flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
+          className={`pointer-events-auto fixed z-30 w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14 border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-md flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
             isModDragging ? 'ring-2 ring-emerald-400 scale-105 shadow-xl' : ''
           }`}
           style={{
@@ -4391,7 +4391,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           }}
           title="Mod Menu (Hold to Reposition)"
         >
-          <Sliders className="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
+          <Sliders className="w-5.5 h-5.5 sm:w-6 sm:h-6 md:w-7 md:h-7" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
         </button>
       )}
 
@@ -4407,7 +4407,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onPointerMove={handleModPointerMove}
               onPointerUp={handleModPointerUp}
               onPointerCancel={handleModPointerCancel}
-              className={`pointer-events-auto w-11 h-11 sm:w-12 sm:h-12 md:w-13 md:h-13 border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
+              className={`pointer-events-auto w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14 border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none transition-colors duration-100 ${
                 isModDragging ? 'ring-2 ring-emerald-400 scale-105 shadow-xl' : ''
               }`}
               style={{
@@ -4417,16 +4417,16 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               }}
               title="Mod Menu (Hold to Reposition)"
             >
-              <Sliders className="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
+              <Sliders className="w-5.5 h-5.5 sm:w-6 sm:h-6 md:w-7 md:h-7" style={{ color: showModMenu ? '#10b981' : (isModPressed ? '#000000' : '#9E9E9E') }} />
             </button>
           )}
 
           <TouchSafeButton
             onClick={() => setShowLeaderboard(prev => !prev)}
-            className="pointer-events-auto w-11 h-11 sm:w-12 sm:h-12 md:w-13 md:h-13 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none"
+            className="pointer-events-auto w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 rounded-xl sm:rounded-2xl shadow-sm flex items-center justify-center cursor-pointer select-none"
             title="Leaderboard"
           >
-            <ListOrdered className="w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6" style={{ color: '#9E9E9E' }} />
+            <ListOrdered className="w-5.5 h-5.5 sm:w-6 sm:h-6 md:w-7 md:h-7" style={{ color: '#9E9E9E' }} />
           </TouchSafeButton>
         </div>
 
