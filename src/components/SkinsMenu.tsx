@@ -234,7 +234,7 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
         </div>
 
         {/* Native iOS-Style Search Bar with Spring Animation & Cancel Button */}
-        {activeCategory !== 'creators' && (
+        {activeCategory !== 'creators' && activeCategory !== 'custom' && (
           <div className="w-full px-4 sm:px-6 landscape:px-4 pt-1.5 pb-0 flex items-center justify-center shrink-0 z-10">
             <div className="w-full max-w-2xl flex items-center overflow-hidden">
               <motion.div 
@@ -316,7 +316,7 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
 
         {/* Custom Skin Builder Section (Only on Custom tab) */}
         {activeCategory === 'custom' && (
-          <div className="shrink-0 max-h-[48vh] landscape:max-h-[38vh] overflow-y-auto">
+          <div className="shrink-0 max-h-[54vh] landscape:max-h-[48vh] min-h-0 overflow-y-auto overscroll-contain">
             <CustomSkinBuilder onSaveSkin={handleSaveCustomSkin} />
           </div>
         )}
@@ -328,7 +328,7 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
           onPointerMove={handleCardsPointerMove}
           onPointerUp={handleCardsPointerUp}
           onPointerCancel={handleCardsPointerUp}
-          className="flex-1 overflow-x-auto overflow-y-hidden px-4 sm:px-6 landscape:px-4 bg-[#0b101e] flex items-center select-none cursor-grab active:cursor-grabbing"
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-6 landscape:px-4 bg-[#0b101e] flex items-center select-none cursor-grab active:cursor-grabbing"
           style={{
             WebkitOverflowScrolling: 'touch',
             overscrollBehaviorX: 'contain',
