@@ -3609,24 +3609,19 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       }
 
       if (activeEmojiRef.current) {
-        let largestCell = playerCellsRef.current[0];
-        for (let i = 1; i < playerCellsRef.current.length; i++) {
-          if (playerCellsRef.current[i].radius > largestCell.radius) {
-            largestCell = playerCellsRef.current[i];
-          }
-        }
-        if (cell.id === largestCell?.id) {
-          const { emoji, timeLeft } = activeEmojiRef.current;
-          const alpha = Math.min(1, timeLeft / 400);
-          const img = emojiImagesRef.current[emoji];
-          if (img && img.complete && img.naturalWidth > 0) {
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            // Draw uploaded custom emoji sticker centered on the player's cell
-            const emojiSize = Math.max(38, cr * 1.6);
-            ctx.drawImage(img, cx - emojiSize / 2, cy - emojiSize / 2, emojiSize, emojiSize);
-            ctx.restore();
-          }
+        const { emoji, timeLeft } = activeEmojiRef.current;
+        const alpha = Math.min(1, timeLeft / 400);
+        const img = emojiImagesRef.current[emoji];
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          // Fill every player cell with the selected emoji, clipped to its circular boundary.
+          const emojiSize = cr * 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(img, cx - emojiSize / 2, cy - emojiSize / 2, emojiSize, emojiSize);
+          ctx.restore();
         }
       }
     };
