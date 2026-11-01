@@ -1895,13 +1895,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const dtRatio = dt / 16.667;
 
-      // Update Macro continuous rapid feed
+      // Update Macro feed at a safe, frame-bounded rate.
+      // Never run a catch-up while-loop here: a tiny interval can spawn
+      // thousands of ejected-mass entities in one frame and freeze the game.
       if (macroActiveRef.current && !isPausedRef.current && !isGameOverRef.current) {
         macroAccumulatorRef.current += dt;
-        const interval = modMacroIntervalRef.current;
-        while (macroAccumulatorRef.current >= interval) {
+        const interval = Math.max(50, modMacroIntervalRef.current); // hard cap: 20 feeds/sec
+        if (macroAccumulatorRef.current >= interval) {
           handleEjectRef.current();
-          macroAccumulatorRef.current -= interval;
+          macroAccumulatorRef.current = 0; // drop backlog instead of burst-feeding
         }
       } else {
         macroAccumulatorRef.current = 0;
@@ -4500,15 +4502,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               />
             </div>
 
-            {/* MACRO SPEED — allows up to 10,000 feeds/second */}
+            {/* MACRO SPEED — safely capped at 20 feeds/second */}
             <div className="space-y-0.5">
               <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wide">
                 <span>Macro Speed</span>
-                <span className="text-emerald-600 font-mono">{Math.round(1000 / modMacroInterval)}/s</span>
+                <span className="text-emerald-600 font-mono">{Math.round(1000 / Math.max(50, modMacroInterval))}/s</span>
               </div>
               <input
                 type="range"
-                min={0.1}
+                min={150.1}
                 max={200}
                 step={0.1}
                 value={200.1 - modMacroInterval}
