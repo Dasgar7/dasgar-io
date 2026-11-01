@@ -14,7 +14,7 @@ const INITIAL_RADIUS = 20;
 // Agar-style per-cell score ceiling: score = radius² / 10.
 const MAX_CELL_SCORE = 22000;
 const MAX_CELL_AREA = MAX_CELL_SCORE * 10;
-const BASE_PLAYER_SPEED = 1.42;
+const BASE_PLAYER_SPEED = 1.18;
 const SPEED_SCALE = 0.439;
 const DEBUG_FORCE_PHONE_ZOOM = false;
 const DEBUG_PLAYER_SPAWN_SCORE: number | null = null;
@@ -906,6 +906,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     let totalScore = 0;
     const cells = playerCellsRef.current;
     for (let i = 0; i < cells.length; i++) {
+      // Hard invariant: no individual player cell may exceed 22,000 score.
+      if (cells[i].radius * cells[i].radius > MAX_CELL_AREA) {
+        cells[i].radius = Math.sqrt(MAX_CELL_AREA);
+        cells[i].renderRadius = cells[i].radius;
+      }
       totalScore += (cells[i].radius * cells[i].radius) / 10;
     }
     return Math.floor(totalScore);
@@ -1367,7 +1372,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const accelMag = Math.hypot(ax, ay);
       if (accelMag > 0.04) {
         const accelAngle = Math.atan2(ay, ax);
-        const impulse = Math.min(0.42, Math.max(0.09, cell.radius * 0.009), accelMag * 0.14);
+        const impulse = Math.min(0.30, Math.max(0.07, cell.radius * 0.006), accelMag * 0.11);
         const N = 48;
         const step = (Math.PI * 2) / N;
         for (let i = 0; i < N; i++) {
@@ -1384,9 +1389,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const dr = j.dr;
       const vr = j.vr;
 
-      const kRestore = 0.27;   // Firmer membrane for controlled mobile jelly
-      const kNeighbor = 0.20;  // Stronger surface tension prevents wobbly edges
-      const damping = 0.86;    // Settles faster while retaining a visible jelly follow-through
+      const kRestore = 0.31;   // Firm contour spring; body remains unchanged
+      const kNeighbor = 0.24;  // Smooth, connected perimeter without soft-body wobble
+      const damping = 0.84;    // Controlled mobile edge response with short follow-through
 
       const rippleAmp = j.rippleAmp;
       const ripplePhase = j.ripplePhase;
@@ -1396,7 +1401,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const nextIdx = (i + 1) % N;
         const neighborAvg = (dr[prevIdx] + dr[nextIdx]) * 0.5;
 
-        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * Math.min(0.075, rippleAmp * 0.026) : 0;
+        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * Math.min(0.065, rippleAmp * 0.022) : 0;
         const fRestore = -dr[i] * kRestore;
         const fNeighbor = (neighborAvg - dr[i]) * kNeighbor;
 
@@ -1404,7 +1409,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         dr[i] += vr[i] * dtRatio;
 
         // Strictly clamp deformation: max 5px or 7% of radius so large cells never distort
-        const maxDef = Math.min(3.0, Math.max(0.8, cell.radius * 0.026));
+        const maxDef = Math.min(2.2, Math.max(0.65, cell.radius * 0.018));
         if (dr[i] > maxDef) {
           dr[i] = maxDef;
           vr[i] *= 0.3;
@@ -1459,7 +1464,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     ) => {
       // Check if jelly actually has any noticeable deformation
       let hasDeform = false;
-      const pulse = jelly ? jelly.pulse : 1.0;
+      const pulse = 1.0; // Never scale the whole cell; deformation stays on the contour.
       if (Math.abs(pulse - 1.0) > 0.002 || (jelly && jelly.rippleAmp > 0.02)) {
         hasDeform = true;
       } else if (jelly) {
@@ -1480,7 +1485,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
       const stepIdx = 48 / pointCount;
       const N = 48;
-      const nominalR = cr * pulse;
+      // Jelly is strictly a perimeter effect: keep the cell body/radius perfectly stable.
+      const nominalR = cr;
 
       for (let k = 0; k < pointCount; k++) {
         const i = (k * stepIdx) % N;
@@ -2130,7 +2136,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   c2.y -= ny * pull * w2;
 
                   if (dist < Math.max(c1.radius, c2.radius) * 0.72 || dist < totalR * 0.48) {
-                    c1.radius = Math.sqrt(totalM);
+                    c1.radius = Math.sqrt(Math.min(MAX_CELL_AREA, totalM));
                     c1.renderRadius = c1.radius;
                     c1.x = (c1.x * m1 + c2.x * m2) / totalM;
                     c1.y = (c1.y * m1 + c2.y * m2) / totalM;
@@ -3367,8 +3373,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             const pCell = playerCellsRef.current[i];
             const dx = pCell.x - bCell.x;
             const dy = pCell.y - bCell.y;
-            if (dx * dx + dy * dy < pCell.radius * pCell.radius && pCell.radius > bCell.radius * 1.10) {
-              pCell.radius = Math.sqrt(pCell.radius * pCell.radius + bCell.radius * bCell.radius * 0.75);
+            if (dx * dx + dy * dy < pCell.radius * pCell.radius && pCell.radius > bCell.radius * 1.10 && pCell.radius * pCell.radius < MAX_CELL_AREA) {
+              pCell.radius = Math.sqrt(Math.min(MAX_CELL_AREA, pCell.radius * pCell.radius + bCell.radius * bCell.radius * 0.75));
               triggerEatAnimation(pCell, bCell.x, bCell.y, bCell.radius, bot.color, now);
               if (pCell.jelly) {
                 pCell.jelly.pulseTarget = 1.09;
@@ -4545,7 +4551,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   onClick={() => {
                     if (playerCellsRef.current.length > 0) {
                       const c = playerCellsRef.current[0];
-                      c.radius = Math.sqrt(c.radius * c.radius + 10000);
+                      c.radius = Math.sqrt(Math.min(MAX_CELL_AREA, c.radius * c.radius + 10000));
                       c.renderRadius = c.radius;
                       const newScore = calculateTotalScore();
                       scoreRef.current = newScore;
@@ -4561,7 +4567,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   onClick={() => {
                     if (playerCellsRef.current.length > 0) {
                       const c = playerCellsRef.current[0];
-                      c.radius = Math.sqrt(c.radius * c.radius + 100000);
+                      c.radius = Math.sqrt(Math.min(MAX_CELL_AREA, c.radius * c.radius + 100000));
                       c.renderRadius = c.radius;
                       const newScore = calculateTotalScore();
                       scoreRef.current = newScore;
