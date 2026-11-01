@@ -514,7 +514,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     }
   ]);
 
-  const playerNameRef = useRef('');
+  const playerNameRef = useRef(localStorage.getItem('dasgar_player_name')?.trim() || '');
   const playerColorRef = useRef('#0284c7');
   const lastAimDirRef = useRef<{ x: number; y: number }>({ x: 0, y: -1 });
 
