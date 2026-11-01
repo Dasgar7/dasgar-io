@@ -1895,21 +1895,23 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const dtRatio = dt / 16.667;
 
-      // Update Macro feed with a strict per-frame work budget.
-      // Keep the full speed slider range, but never let a fast setting create
-      // an unbounded catch-up loop that freezes the game.
+      // High-speed Macro with a generous but finite per-frame budget.
+      // This keeps very fast settings responsive without an unbounded catch-up
+      // loop that can lock the main thread and flood the entity list.
       if (macroActiveRef.current && !isPausedRef.current && !isGameOverRef.current) {
         macroAccumulatorRef.current += dt;
         const interval = Math.max(0.1, modMacroIntervalRef.current);
-        const maxFeedsPerFrame = 2;
+        const maxFeedsPerFrame = 16;
         let feedsThisFrame = 0;
         while (macroAccumulatorRef.current >= interval && feedsThisFrame < maxFeedsPerFrame) {
           handleEjectRef.current();
           macroAccumulatorRef.current -= interval;
           feedsThisFrame++;
         }
-        // Discard excessive backlog so it cannot trigger a burst next frame.
-        macroAccumulatorRef.current = Math.min(macroAccumulatorRef.current, interval * maxFeedsPerFrame);
+        // Drop excess backlog; never attempt to replay missed feeds in a burst.
+        if (feedsThisFrame === maxFeedsPerFrame && macroAccumulatorRef.current >= interval) {
+          macroAccumulatorRef.current = interval * 0.5;
+        }
       } else {
         macroAccumulatorRef.current = 0;
       }
