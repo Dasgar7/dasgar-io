@@ -3618,7 +3618,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           // Fill every player cell with the selected emoji, clipped to its circular boundary.
           // Overscan the source image so transparent padding in the PNG cannot make
           // the visible emoji look smaller than the cell. The clip keeps it inside the cell.
-          const emojiSize = cr * 2.5;
+          // Happy Cell has extra transparent padding in its source PNG, so give it
+          // a larger draw size to match the visible fill of the other two emojis.
+          const emojiScale = emoji === 'green_happy' ? 3.4 : 2.5;
+          const emojiSize = cr * emojiScale;
           ctx.beginPath();
           ctx.arc(cx, cy, cr, 0, Math.PI * 2);
           ctx.clip();
