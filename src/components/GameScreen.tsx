@@ -4236,27 +4236,33 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               />
             </TouchSafeButton>
 
-            {showEmojiPicker && (
-              <div className="max-w-[calc(100vw-5rem)] sm:max-w-[calc(100vw-6rem)] bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 border-l-0 rounded-r-xl sm:rounded-r-2xl shadow-lg flex flex-row items-center px-1 sm:px-1.5 gap-1 sm:gap-1.5 h-11 sm:h-12 md:h-13 overflow-x-auto overflow-y-hidden no-scrollbar panel-animate-in animate-in fade-in slide-in-from-left-1 duration-150">
-                {QUICK_EMOJIS.map(emojiItem => (
-                  <button
-                    key={emojiItem.id}
-                    onClick={() => {
-                      activeEmojiRef.current = { emoji: emojiItem.id, timeLeft: EMOJI_DISPLAY_DURATION };
-                      setShowEmojiPicker(false);
-                    }}
-                    className="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center p-0.5 hover:bg-white/20 active:scale-90 transition-transform cursor-pointer select-none shrink-0"
-                    title={emojiItem.name}
-                  >
-                    <img
-                      src={emojiItem.src}
-                      alt={emojiItem.name}
-                      className="w-full h-full object-contain pointer-events-none drop-shadow-xs"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+            <div
+              aria-hidden={!showEmojiPicker}
+              className={`w-max max-w-[calc(100vw-5rem)] sm:max-w-[calc(100vw-6rem)] bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 border-l-0 rounded-r-xl sm:rounded-r-2xl shadow-lg flex flex-row items-center px-1 sm:px-1.5 gap-1 sm:gap-1.5 h-11 sm:h-12 md:h-13 overflow-x-auto overflow-y-hidden no-scrollbar shrink-0 origin-left transition-[max-width,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                showEmojiPicker
+                  ? 'opacity-100 translate-x-0'
+                  : 'max-w-0 opacity-0 -translate-x-2 pointer-events-none !px-0 !border-l-0'
+              }`}
+            >
+              {QUICK_EMOJIS.map(emojiItem => (
+                <button
+                  key={emojiItem.id}
+                  tabIndex={showEmojiPicker ? 0 : -1}
+                  onClick={() => {
+                    activeEmojiRef.current = { emoji: emojiItem.id, timeLeft: EMOJI_DISPLAY_DURATION };
+                    setShowEmojiPicker(false);
+                  }}
+                  className="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center p-0.5 hover:bg-white/20 active:scale-90 transition-transform cursor-pointer select-none shrink-0"
+                  title={emojiItem.name}
+                >
+                  <img
+                    src={emojiItem.src}
+                    alt={emojiItem.name}
+                    className="w-full h-full object-contain pointer-events-none drop-shadow-xs"
+                  />
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Chat Button & Chat Panel */}
