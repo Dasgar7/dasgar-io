@@ -1364,7 +1364,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const accelMag = Math.hypot(ax, ay);
       if (accelMag > 0.04) {
         const accelAngle = Math.atan2(ay, ax);
-        const impulse = Math.min(0.22, Math.max(0.04, cell.radius * 0.004), accelMag * 0.08);
+        const impulse = Math.min(0.65, Math.max(0.12, cell.radius * 0.012), accelMag * 0.18);
         const N = 48;
         const step = (Math.PI * 2) / N;
         for (let i = 0; i < N; i++) {
@@ -1383,7 +1383,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
       const kRestore = 0.22;   // Firm restoring spring back to circle
       const kNeighbor = 0.16;  // Surface tension keeping membrane curvature smooth
-      const damping = 0.78;    // Critical damping to eliminate fluid sloshing
+      const damping = 0.90;    // Smooth, lingering fluid motion without uncontrolled wobble
 
       const rippleAmp = j.rippleAmp;
       const ripplePhase = j.ripplePhase;
@@ -1393,7 +1393,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const nextIdx = (i + 1) % N;
         const neighborAvg = (dr[prevIdx] + dr[nextIdx]) * 0.5;
 
-        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * Math.min(0.025, rippleAmp * 0.006) : 0;
+        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * Math.min(0.11, rippleAmp * 0.035) : 0;
         const fRestore = -dr[i] * kRestore;
         const fNeighbor = (neighborAvg - dr[i]) * kNeighbor;
 
@@ -1401,7 +1401,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         dr[i] += vr[i] * dtRatio;
 
         // Strictly clamp deformation: max 5px or 7% of radius so large cells never distort
-        const maxDef = Math.min(1.25, Math.max(0.35, cell.radius * 0.012));
+        const maxDef = Math.min(4.0, Math.max(1.0, cell.radius * 0.035));
         if (dr[i] > maxDef) {
           dr[i] = maxDef;
           vr[i] *= 0.3;
@@ -1427,7 +1427,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const N = 48;
       const step = (Math.PI * 2) / N;
       // Controlled, subtle impact compression (capped at 2.5px max)
-      const clampedForce = Math.min(0.35, cell.radius * 0.006, force * 0.035);
+      const clampedForce = Math.min(1.0, cell.radius * 0.018, force * 0.08);
       if (clampedForce < 0.05) return;
 
       for (let i = 0; i < N; i++) {
