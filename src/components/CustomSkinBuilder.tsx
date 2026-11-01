@@ -249,13 +249,13 @@ export const CustomSkinBuilder: React.FC<CustomSkinBuilderProps> = ({ onSaveSkin
   };
 
   return (
-    <div className="w-full bg-[#111728] border-b border-[#1c2438] p-3 sm:p-4 flex flex-col gap-3 shrink-0">
+    <div className="w-full bg-[#111728] border-b border-[#1c2438] p-2 sm:p-4 landscape:p-2 flex flex-col gap-2 sm:gap-3 landscape:gap-1.5 shrink-0">
       {/* Sub-Option Mode Toggle */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex bg-[#0b101e] p-1 rounded-xl border border-slate-800 gap-1 flex-1 max-w-md">
+      <div className="flex items-center justify-between gap-2 landscape:gap-1">
+        <div className="flex bg-[#0b101e] p-1 landscape:p-0.5 rounded-xl landscape:rounded-lg border border-slate-800 gap-1 flex-1 max-w-md">
           <TouchSafeButton
             onClick={() => setActiveMode('draw')}
-            className={`flex-1 py-1.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+            className={`flex-1 py-1.5 landscape:py-1 px-2 landscape:px-1 rounded-lg font-bold text-xs landscape:text-[10px] flex items-center justify-center gap-1 transition-all ${
               activeMode === 'draw'
                 ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md shadow-sky-500/20'
                 : 'text-slate-400 hover:text-white'
@@ -436,11 +436,11 @@ export const CustomSkinBuilder: React.FC<CustomSkinBuilderProps> = ({ onSaveSkin
       )}
 
       {activeMode === 'draw' && (
-        <div className="flex flex-col md:flex-row items-center gap-4 bg-[#0b101e] p-3 rounded-xl border border-slate-800/80">
+        <div className="flex flex-col md:flex-row landscape:flex-row items-center gap-2 md:gap-4 landscape:gap-2 bg-[#0b101e] p-2 md:p-3 landscape:p-2 rounded-xl landscape:rounded-lg border border-slate-800/80">
           {/* Drawing Canvas (Interactive) */}
           <div className="flex flex-col items-center gap-1 shrink-0">
             <div 
-              className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-full shadow-lg flex items-center justify-center overflow-hidden"
+              className="relative w-24 h-24 sm:w-36 sm:h-36 landscape:w-20 landscape:h-20 rounded-full shadow-lg flex items-center justify-center overflow-hidden"
               style={{
                 backgroundColor: bgColor,
                 border: `5px solid ${borderColor}`,
@@ -466,7 +466,7 @@ export const CustomSkinBuilder: React.FC<CustomSkinBuilderProps> = ({ onSaveSkin
           </div>
 
           {/* Drawing Tools & Palettes */}
-          <div className="flex-1 flex flex-col gap-2.5 w-full">
+          <div className="flex-1 flex flex-col gap-1.5 md:gap-2.5 landscape:gap-1 w-full min-w-0">
             {/* Top Toolbar: Brush, Eraser, Size, Undo, Clear */}
             <div className="flex flex-wrap items-center gap-2 justify-between">
               <div className="flex items-center gap-1.5">
@@ -526,7 +526,7 @@ export const CustomSkinBuilder: React.FC<CustomSkinBuilderProps> = ({ onSaveSkin
             </div>
 
             {/* Color Rows: Pen Color, Background Color, Border Color */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-[#161d2d] p-2 rounded-xl border border-slate-800">
+            <div className="grid grid-cols-3 gap-1.5 landscape:gap-1 bg-[#161d2d] p-1.5 landscape:p-1 rounded-xl landscape:rounded-lg border border-slate-800">
               {/* Pen Color */}
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between">
