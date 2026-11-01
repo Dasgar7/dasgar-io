@@ -4211,7 +4211,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         </div>
 
         {/* Social / Communication Row: Emoji + Chat */}
-        <div className="flex flex-col items-center gap-1.5 sm:gap-2 md:gap-2.5 pointer-events-auto">
+        <div className="flex flex-col items-center gap-1.5 sm:gap-2 md:gap-2.5 pointer-events-auto -translate-y-1.5">
           {/* Emoji Button & Agar.io-style Vertical Tray */}
           <div className="relative flex flex-col items-center">
             <TouchSafeButton
