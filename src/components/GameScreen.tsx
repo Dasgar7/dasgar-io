@@ -4212,8 +4212,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
         {/* Social / Communication Row: Emoji + Chat */}
         <div className="flex flex-col items-center gap-1.5 sm:gap-2 md:gap-2.5 pointer-events-auto -translate-y-1.5">
-          {/* Emoji Button & Agar.io-style Vertical Tray */}
-          <div className="relative flex flex-col items-center">
+          {/* Emoji Button & Horizontal Tray */}
+          <div className="relative flex items-center">
             <TouchSafeButton
               onClick={() => {
                 setShowEmojiPicker(prev => !prev);
@@ -4226,7 +4226,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               onTouchEnd={() => setIsEmojiPressed(false)}
               onTouchCancel={() => setIsEmojiPressed(false)}
               className={`w-11 h-11 sm:w-12 sm:h-12 md:w-13 md:h-13 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 shadow-sm flex items-center justify-center cursor-pointer select-none group transition-all ${
-                showEmojiPicker ? 'rounded-t-xl sm:rounded-t-2xl border-b-0 bg-[rgba(140,140,140,0.28)]' : 'rounded-xl sm:rounded-2xl'
+                showEmojiPicker ? 'rounded-l-xl sm:rounded-l-2xl border-r-0 bg-[rgba(140,140,140,0.28)]' : 'rounded-xl sm:rounded-2xl'
               }`}
               title="Emotes"
             >
@@ -4237,7 +4237,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             </TouchSafeButton>
 
             {showEmojiPicker && (
-              <div className="w-11 sm:w-12 md:w-13 bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 border-t-0 rounded-b-xl sm:rounded-b-2xl shadow-lg flex flex-col items-center py-1 sm:py-1.5 gap-1 sm:gap-1.5 max-h-[50vh] overflow-y-auto overflow-x-hidden no-scrollbar panel-animate-in animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="max-w-[calc(100vw-5rem)] sm:max-w-[calc(100vw-6rem)] bg-[rgba(140,140,140,0.18)] border border-[rgba(140,140,140,0.45)] sm:border-2 border-l-0 rounded-r-xl sm:rounded-r-2xl shadow-lg flex flex-row items-center px-1 sm:px-1.5 gap-1 sm:gap-1.5 h-11 sm:h-12 md:h-13 overflow-x-auto overflow-y-hidden no-scrollbar panel-animate-in animate-in fade-in slide-in-from-left-1 duration-150">
                 {QUICK_EMOJIS.map(emojiItem => (
                   <button
                     key={emojiItem.id}
