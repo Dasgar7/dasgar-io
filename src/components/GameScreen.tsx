@@ -441,7 +441,7 @@ function createBotInstance(botIndex: number, now: number, existingBots: BotPlaye
     skill: identity.skill,
     targetX: Math.random() * (MAP_SIZE - 400) + 200,
     targetY: Math.random() * (MAP_SIZE - 400) + 200,
-    speed: 0.90,
+    speed: 0.58,
     vx: 0,
     vy: 0,
     lastDecisionTime: now - Math.random() * 80,
@@ -2704,7 +2704,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           // 1. Movement Prediction: aim at target position + velocity * time-to-reach
           const pVx = (prey.moveVx || 0) + (prey.vx || 0);
           const pVy = (prey.moveVy || 0) + (prey.vy || 0);
-          const botSpeed = 0.90 / Math.pow(Math.max(12, maxR) / INITIAL_RADIUS, 0.439);
+          const botSpeed = 0.58 / Math.pow(Math.max(12, maxR) / INITIAL_RADIUS, 0.439);
           const timeToReach = bestPreyDist / Math.max(0.6, botSpeed * 60);
           const leadMult = Math.min(1.3, timeToReach * (0.55 + 0.45 * bot.skill));
           let leadX = prey.x + pVx * leadMult;
@@ -2849,7 +2849,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           const dy = bot.targetY - cell.y;
           const dist = Math.hypot(dx, dy) || 1;
 
-          const botSpeed = 0.90 / Math.pow(Math.max(12, cell.radius) / INITIAL_RADIUS, 0.439);
+          const botSpeed = 0.58 / Math.pow(Math.max(12, cell.radius) / INITIAL_RADIUS, 0.439);
           const targetVx = (dx / dist) * botSpeed;
           const targetVy = (dy / dist) * botSpeed;
 
