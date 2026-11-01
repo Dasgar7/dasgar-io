@@ -28,6 +28,7 @@ const FOOD_COUNT = 700;
 const NORMAL_FOOD_RADIUS = 4.5;
 const EJECTED_MASS_RADIUS = 12;
 const EJECTED_MASS_VALUE = 32;
+const MAX_EJECTED_MASS_ON_FIELD = 300; // Keep rapid Macro from flooding the simulation
 const GHOST_TOKEN_TARGET_COUNT = 35;
 const GHOST_TOKEN_RADIUS = 10;
 const GHOST_TOKEN_MASS = 3.5;
@@ -1130,7 +1131,18 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           // Launch speed variance (+- 6%)
           const feedSpeed = modFeedSpeedRef.current * (0.94 + Math.random() * 0.12);
 
-          foodsRef.current.push({
+          // Recycle the oldest player-ejected mass at the cap instead of
+          // allowing high-speed Macro to grow the foods array without bound.
+          const foods = foodsRef.current;
+          let ejectedCount = 0;
+          for (let i = 0; i < foods.length; i++) {
+            if (foods[i].ownerCellId !== undefined) ejectedCount++;
+          }
+          if (ejectedCount >= MAX_EJECTED_MASS_ON_FIELD) {
+            const oldestEjectedIndex = foods.findIndex(food => food.ownerCellId !== undefined);
+            if (oldestEjectedIndex !== -1) foods.splice(oldestEjectedIndex, 1);
+          }
+          foods.push({
             id: generateId(),
             x: spawnX,
             y: spawnY,
@@ -1895,22 +1907,22 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const dtRatio = dt / 16.667;
 
-      // High-speed Macro with a generous but finite per-frame budget.
-      // This keeps very fast settings responsive without an unbounded catch-up
-      // loop that can lock the main thread and flood the entity list.
+      // High-speed Macro: bounded work per frame plus a capped/recycled
+      // ejected-mass pool in handleEject. This prevents both CPU spikes and
+      // unbounded growth of the foods array at extreme slider settings.
       if (macroActiveRef.current && !isPausedRef.current && !isGameOverRef.current) {
         macroAccumulatorRef.current += dt;
         const interval = Math.max(0.1, modMacroIntervalRef.current);
-        const maxFeedsPerFrame = 16;
+        const maxFeedsPerFrame = 4;
         let feedsThisFrame = 0;
         while (macroAccumulatorRef.current >= interval && feedsThisFrame < maxFeedsPerFrame) {
           handleEjectRef.current();
           macroAccumulatorRef.current -= interval;
           feedsThisFrame++;
         }
-        // Drop excess backlog; never attempt to replay missed feeds in a burst.
+        // Discard missed time instead of creating a catch-up burst.
         if (feedsThisFrame === maxFeedsPerFrame && macroAccumulatorRef.current >= interval) {
-          macroAccumulatorRef.current = interval * 0.5;
+          macroAccumulatorRef.current = 0;
         }
       } else {
         macroAccumulatorRef.current = 0;
