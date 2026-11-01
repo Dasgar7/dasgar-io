@@ -1895,16 +1895,21 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const dtRatio = dt / 16.667;
 
-      // Update Macro feed at a safe, frame-bounded rate.
-      // Never run a catch-up while-loop here: a tiny interval can spawn
-      // thousands of ejected-mass entities in one frame and freeze the game.
+      // Update Macro feed with a strict per-frame work budget.
+      // Keep the full speed slider range, but never let a fast setting create
+      // an unbounded catch-up loop that freezes the game.
       if (macroActiveRef.current && !isPausedRef.current && !isGameOverRef.current) {
         macroAccumulatorRef.current += dt;
-        const interval = Math.max(50, modMacroIntervalRef.current); // hard cap: 20 feeds/sec
-        if (macroAccumulatorRef.current >= interval) {
+        const interval = Math.max(0.1, modMacroIntervalRef.current);
+        const maxFeedsPerFrame = 2;
+        let feedsThisFrame = 0;
+        while (macroAccumulatorRef.current >= interval && feedsThisFrame < maxFeedsPerFrame) {
           handleEjectRef.current();
-          macroAccumulatorRef.current = 0; // drop backlog instead of burst-feeding
+          macroAccumulatorRef.current -= interval;
+          feedsThisFrame++;
         }
+        // Discard excessive backlog so it cannot trigger a burst next frame.
+        macroAccumulatorRef.current = Math.min(macroAccumulatorRef.current, interval * maxFeedsPerFrame);
       } else {
         macroAccumulatorRef.current = 0;
       }
@@ -4502,15 +4507,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               />
             </div>
 
-            {/* MACRO SPEED — safely capped at 20 feeds/second */}
+            {/* MACRO SPEED — full slider range, frame-budgeted for stability */}
             <div className="space-y-0.5">
               <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wide">
                 <span>Macro Speed</span>
-                <span className="text-emerald-600 font-mono">{Math.round(1000 / Math.max(50, modMacroInterval))}/s</span>
+                <span className="text-emerald-600 font-mono">{Math.round(1000 / Math.max(0.1, modMacroInterval))}/s</span>
               </div>
               <input
                 type="range"
-                min={150.1}
+                min={0.1}
                 max={200}
                 step={0.1}
                 value={200.1 - modMacroInterval}
