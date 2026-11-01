@@ -14,7 +14,7 @@ const INITIAL_RADIUS = 20;
 // Agar-style per-cell score ceiling: score = radius² / 10.
 const MAX_CELL_SCORE = 22000;
 const MAX_CELL_AREA = MAX_CELL_SCORE * 10;
-const BASE_PLAYER_SPEED = 1.18;
+const BASE_PLAYER_SPEED = 0.92;
 const SPEED_SCALE = 0.439;
 const DEBUG_FORCE_PHONE_ZOOM = false;
 const DEBUG_PLAYER_SPAWN_SCORE: number | null = null;
@@ -441,7 +441,7 @@ function createBotInstance(botIndex: number, now: number, existingBots: BotPlaye
     skill: identity.skill,
     targetX: Math.random() * (MAP_SIZE - 400) + 200,
     targetY: Math.random() * (MAP_SIZE - 400) + 200,
-    speed: 1.4,
+    speed: 1.2,
     vx: 0,
     vy: 0,
     lastDecisionTime: now - Math.random() * 80,
@@ -494,6 +494,14 @@ const PBTN_EDGE_B = `max(10px, env(safe-area-inset-bottom))`;
 const MACRO_FEED_INTERVAL = 85; // ms between feeds when macro is held (default ~12/s)
 
 export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
+  // Ask for an optional player name once when entering a new game.
+  // Leaving it blank keeps the cell anonymous instead of labeling it "You".
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const enteredName = window.prompt('Enter your cell name (optional):', '');
+    playerNameRef.current = (enteredName ?? '').trim().slice(0, 18);
+  }, []);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Game State Refs
@@ -514,7 +522,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     }
   ]);
 
-  const playerNameRef = useRef('You');
+  const playerNameRef = useRef('');
   const playerColorRef = useRef('#0284c7');
   const lastAimDirRef = useRef<{ x: number; y: number }>({ x: 0, y: -1 });
 
@@ -3488,7 +3496,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           };
         }
         botEntries[liveBots.length] = {
-          name: playerNameRef.current || 'You',
+          name: playerNameRef.current || 'Unnamed cell',
           score: currentScore,
           isPlayer: true
         };
@@ -4314,7 +4322,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                       ...prev,
                       {
                         id: generateId(),
-                        sender: playerNameRef.current || 'You',
+                        sender: playerNameRef.current || 'Unnamed cell',
                         text: chatInput.trim(),
                         isPlayer: true
                       }
@@ -4441,7 +4449,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               <>
                 <div className="my-0.5 border-t border-black/10" />
                 <div className="flex items-center justify-between text-[10px] sm:text-[11px] md:text-xs font-bold py-0.5 text-emerald-600">
-                  <span className="truncate max-w-[70%]">{playerRank}. {playerNameRef.current || 'You'}</span>
+                  <span className="truncate max-w-[70%]">{playerRank}. {playerNameRef.current || 'Unnamed cell'}</span>
                   <span className="font-mono shrink-0 ml-1.5">{score}</span>
                 </div>
               </>
