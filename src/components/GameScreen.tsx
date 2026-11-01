@@ -28,7 +28,7 @@ const FOOD_COUNT = 700;
 const NORMAL_FOOD_RADIUS = 4.5;
 const EJECTED_MASS_RADIUS = 12;
 const EJECTED_MASS_VALUE = 32;
-const MAX_EJECTED_MASS_ON_FIELD = 1200; // Fixed-size ring buffer keeps rapid Macro from flooding the simulation
+const EJECTED_POOL_SIZE = 2500; // Pre-allocated object pool for ejected mass pellets
 const GHOST_TOKEN_TARGET_COUNT = 35;
 const GHOST_TOKEN_RADIUS = 10;
 const GHOST_TOKEN_MASS = 3.5;
@@ -232,10 +232,18 @@ const GRID_COLS = 12; // 3000 / 250
 const GRID_ROWS = 12;
 const GRID_TOTAL_CELLS = 144;
 const foodGridHead = new Int32Array(GRID_TOTAL_CELLS);
-const foodGridNext = new Int32Array(1600);
+let foodGridNext = new Int32Array(4096);
 const foodGridCount = new Int32Array(GRID_TOTAL_CELLS);
 const foodGridSumX = new Float32Array(GRID_TOTAL_CELLS);
 const foodGridSumY = new Float32Array(GRID_TOTAL_CELLS);
+
+function ensureFoodGridCapacity(capacity: number) {
+  if (foodGridNext.length < capacity) {
+    let newCap = foodGridNext.length;
+    while (newCap < capacity) newCap *= 2;
+    foodGridNext = new Int32Array(newCap);
+  }
+}
 
 // Zero-allocation distance from point (px, py) to line segment (x1, y1)-(x2, y2)
 function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
@@ -333,6 +341,7 @@ type Food = Circle & {
   eaten?: boolean;
   canBeEatenAfter?: number;
   ownerCellId?: string;
+  _poolIndex?: number;
 };
 type Virus = Circle & {
   fedCount?: number;
@@ -560,9 +569,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const splitTimersRef = useRef<number[]>([]);
   const macroActiveRef = useRef(false);
   const macroAccumulatorRef = useRef(0);
-  const playerEjectedPoolRef = useRef<any[]>([]);
-  const playerEjectedPoolCursorRef = useRef(0);
-  const handleEjectRef = useRef<() => void>(() => {});
+  const ejectedPoolRef = useRef<Food[]>([]);
+  const freePelletIndicesRef = useRef<number[]>([]);
+  const handleEjectRef = useRef<(ticks?: number) => void>(() => {});
 
   const activeEmojiRef = useRef<{ emoji: string; timeLeft: number } | null>(null);
   const emojiImagesRef = useRef<{ [key: string]: HTMLImageElement }>({});
@@ -806,8 +815,33 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   };
 
   const initEntities = () => {
-    playerEjectedPoolRef.current = [];
-    playerEjectedPoolCursorRef.current = 0;
+    // Initialize or reset the pre-allocated ejected pellet pool
+    if (ejectedPoolRef.current.length === 0) {
+      ejectedPoolRef.current = Array.from({ length: EJECTED_POOL_SIZE }, (_, i) => ({
+        id: '',
+        x: 0,
+        y: 0,
+        renderX: 0,
+        renderY: 0,
+        radius: EJECTED_MASS_RADIUS,
+        color: '#0284c7',
+        vx: 0,
+        vy: 0,
+        decay: 10,
+        mass: EJECTED_MASS_VALUE,
+        canBeEatenAfter: 0,
+        ownerCellId: '',
+        eaten: true,
+        _poolIndex: i
+      }));
+    } else {
+      for (let i = 0; i < EJECTED_POOL_SIZE; i++) {
+        ejectedPoolRef.current[i].eaten = true;
+      }
+    }
+    freePelletIndicesRef.current = Array.from({ length: EJECTED_POOL_SIZE }, (_, i) => i);
+    macroAccumulatorRef.current = 0;
+    macroActiveRef.current = false;
     foodsRef.current = Array.from({ length: FOOD_COUNT }).map(() => {
       const x = Math.random() * MAP_SIZE;
       const y = Math.random() * MAP_SIZE;
@@ -1061,10 +1095,47 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     });
   };
 
-  const handleEject = () => {
+  const spawnEjectedPellet = (
+    spawnX: number,
+    spawnY: number,
+    vx: number,
+    vy: number,
+    radius: number,
+    color: string,
+    mass: number,
+    ownerCellId: string,
+    canBeEatenAfter: number
+  ): boolean => {
+    const freeSlots = freePelletIndicesRef.current;
+    if (freeSlots.length === 0) return false;
+    const poolIdx = freeSlots.pop()!;
+    const pellet = ejectedPoolRef.current[poolIdx];
+
+    pellet.id = generateId();
+    pellet.x = spawnX;
+    pellet.y = spawnY;
+    pellet.renderX = spawnX;
+    pellet.renderY = spawnY;
+    pellet.radius = radius;
+    pellet.color = color;
+    pellet.vx = vx;
+    pellet.vy = vy;
+    pellet.decay = 10;
+    pellet.mass = mass;
+    pellet.canBeEatenAfter = canBeEatenAfter;
+    pellet.ownerCellId = ownerCellId;
+    pellet.eaten = false;
+    pellet._poolIndex = poolIdx;
+
+    foodsRef.current.push(pellet);
+    return true;
+  };
+
+  const handleEject = (ticks: number = 1) => {
     if (isGameOverRef.current || isPausedRef.current) return;
     const now = performance.now();
     const cells = playerCellsRef.current;
+    if (cells.length === 0) return;
 
     const inputMag = Math.hypot(inputRef.current.dirX, inputRef.current.dirY);
     const centeredAim = (inputRef.current.active && inputRef.current.dragDist <= 6) || autoGatherRef.current;
@@ -1098,77 +1169,77 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       lastAimDirRef.current = { x: defaultAimX, y: defaultAimY };
     }
 
-    const ejectedMass = EJECTED_MASS_VALUE;
+    const minAllowedMass = INITIAL_RADIUS * INITIAL_RADIUS * 0.8; // 320 mass
 
-    cells.forEach(cell => {
-      if (cell.radius >= 25) {
-        let dirX = defaultAimX;
-        let dirY = defaultAimY;
-        if (centeredAim && cells.length > 1) {
-          const toX = centerX - cell.x;
-          const toY = centerY - cell.y;
-          const d = Math.hypot(toX, toY);
-          if (d > 1) {
-            dirX = toX / d;
-            dirY = toY / d;
-          }
-        }
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      if (cell.radius < 25) continue;
+      const currentMass = cell.radius * cell.radius;
+      if (currentMass <= minAllowedMass) continue;
 
-        const currentMass = cell.radius * cell.radius;
-        const remainingMass = currentMass - ejectedMass;
-        if (remainingMass > INITIAL_RADIUS * INITIAL_RADIUS * 0.8) {
-          const foods = foodsRef.current;
-          const pool = playerEjectedPoolRef.current;
+      const maxPossibleEjections = Math.floor((currentMass - minAllowedMass) / EJECTED_MASS_VALUE);
+      if (maxPossibleEjections <= 0) continue;
 
-          // Fixed-size O(1) ring pool. At extreme Macro speeds, recycle the
-          // oldest visual pellet instead of growing arrays or scanning the pool.
-          let pellet: any;
-          if (pool.length < MAX_EJECTED_MASS_ON_FIELD) {
-            pellet = {};
-            pool.push(pellet);
-          } else {
-            const index = playerEjectedPoolCursorRef.current;
-            pellet = pool[index];
-            playerEjectedPoolCursorRef.current = (index + 1) % MAX_EJECTED_MASS_ON_FIELD;
-          }
+      const actualEjections = Math.min(ticks, maxPossibleEjections);
+      if (actualEjections <= 0) continue;
 
-          // Only deduct mass when a fresh/reusable eaten pellet is available.
-          cell.radius = Math.sqrt(remainingMass);
+      const freeCount = freePelletIndicesRef.current.length;
+      if (freeCount === 0) continue;
 
-          const spreadAngle = (Math.random() - 0.5) * 0.12;
-          const cosA = Math.cos(spreadAngle);
-          const sinA = Math.sin(spreadAngle);
-          const sprayDirX = dirX * cosA - dirY * sinA;
-          const sprayDirY = dirX * sinA + dirY * cosA;
-          const spawnDist = cell.radius + EJECTED_MASS_RADIUS + 3;
-          const rawSpawnX = cell.x + sprayDirX * spawnDist;
-          const rawSpawnY = cell.y + sprayDirY * spawnDist;
-          const spawnX = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, rawSpawnX));
-          const spawnY = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, rawSpawnY));
-          const feedSpeed = modFeedSpeedRef.current * (0.94 + Math.random() * 0.12);
+      // Stream consolidation for extreme rates: 1 pellet for single tap, up to 3 pellets per cell per frame for stream burst
+      const maxPellets = actualEjections === 1 ? 1 : Math.min(actualEjections, 3);
+      const pelletCount = Math.min(maxPellets, freeCount);
+      if (pelletCount <= 0) continue;
 
-          pellet.id = generateId();
-          pellet.x = spawnX;
-          pellet.y = spawnY;
-          pellet.renderX = spawnX;
-          pellet.renderY = spawnY;
-          pellet.radius = EJECTED_MASS_RADIUS;
-          pellet.color = playerColorRef.current;
-          pellet.vx = sprayDirX * feedSpeed;
-          pellet.vy = sprayDirY * feedSpeed;
-          pellet.decay = 10;
-          pellet.mass = EJECTED_MASS_VALUE;
-          pellet.canBeEatenAfter = now + 350;
-          pellet.ownerCellId = cell.id;
-          pellet.eaten = false;
-          // Keep active pellets in-place; reinsert only if eaten cleanup removed it.
-          if (!pellet._inFoods) {
-            foods.push(pellet);
-            pellet._inFoods = true;
-          }
+      const totalMassToEject = actualEjections * EJECTED_MASS_VALUE;
+      const massPerPellet = totalMassToEject / pelletCount;
+
+      // Deduct mass strictly when pellets are ready to be created
+      const remainingMass = currentMass - totalMassToEject;
+      cell.radius = Math.sqrt(Math.max(minAllowedMass, remainingMass));
+      cell.renderRadius = cell.radius;
+
+      let dirX = defaultAimX;
+      let dirY = defaultAimY;
+      if (centeredAim && cells.length > 1) {
+        const toX = centerX - cell.x;
+        const toY = centerY - cell.y;
+        const d = Math.hypot(toX, toY);
+        if (d > 1) {
+          dirX = toX / d;
+          dirY = toY / d;
         }
       }
-    });
+
+      for (let p = 0; p < pelletCount; p++) {
+        const spreadAngle = (Math.random() - 0.5) * 0.10;
+        const cosA = Math.cos(spreadAngle);
+        const sinA = Math.sin(spreadAngle);
+        const sprayDirX = dirX * cosA - dirY * sinA;
+        const sprayDirY = dirX * sinA + dirY * cosA;
+
+        const spawnDist = cell.radius + EJECTED_MASS_RADIUS + 3 + p * 3.5;
+        const rawSpawnX = cell.x + sprayDirX * spawnDist;
+        const rawSpawnY = cell.y + sprayDirY * spawnDist;
+        const spawnX = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, rawSpawnX));
+        const spawnY = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, rawSpawnY));
+        const feedSpeed = modFeedSpeedRef.current * (0.94 + Math.random() * 0.12);
+
+        const pelletRadius = Math.min(22, EJECTED_MASS_RADIUS * Math.pow(massPerPellet / EJECTED_MASS_VALUE, 0.20));
+
+        spawnEjectedPellet(
+          spawnX,
+          spawnY,
+          sprayDirX * feedSpeed,
+          sprayDirY * feedSpeed,
+          pelletRadius,
+          playerColorRef.current,
+          massPerPellet,
+          cell.id,
+          now + 300
+        );
+      }
+    }
   };
 
   handleEjectRef.current = handleEject;
@@ -1176,12 +1247,14 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const startMacro = () => {
     if (isGameOverRef.current || isPausedRef.current) return;
     macroActiveRef.current = true;
+    macroAccumulatorRef.current = 0;
     setIsMacroPressed(true);
-    handleEject();
+    handleEject(1);
   };
 
   const stopMacro = () => {
     macroActiveRef.current = false;
+    macroAccumulatorRef.current = 0;
     setIsMacroPressed(false);
   };
 
@@ -1916,20 +1989,17 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const dtRatio = dt / 16.667;
 
-      // Fast Macro: larger bounded frame budget keeps feeding responsive without runaway catch-up.
-      // Ejected pellets are pooled and reused only after being eaten.
+      // Titan / Macro continuous rapid feed: high-rate mass ejection with exact mass accounting
       if (macroActiveRef.current && !isPausedRef.current && !isGameOverRef.current) {
         macroAccumulatorRef.current += dt;
         const interval = Math.max(0.1, modMacroIntervalRef.current);
-        const maxFeedsPerFrame = 12;
-        let feedsThisFrame = 0;
-        while (macroAccumulatorRef.current >= interval && feedsThisFrame < maxFeedsPerFrame) {
-          handleEjectRef.current();
-          macroAccumulatorRef.current -= interval;
-          feedsThisFrame++;
-        }
-        if (feedsThisFrame === maxFeedsPerFrame && macroAccumulatorRef.current >= interval) {
-          macroAccumulatorRef.current = 0;
+        const requestedTicks = Math.floor(macroAccumulatorRef.current / interval);
+        if (requestedTicks > 0) {
+          macroAccumulatorRef.current -= requestedTicks * interval;
+          if (macroAccumulatorRef.current > interval) {
+            macroAccumulatorRef.current = 0;
+          }
+          handleEjectRef.current(requestedTicks);
         }
       } else {
         macroAccumulatorRef.current = 0;
@@ -2283,6 +2353,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       foodGridSumY.fill(0);
 
       const numAllFoods = allFoods.length;
+      ensureFoodGridCapacity(numAllFoods);
       for (let i = 0; i < numAllFoods; i++) {
         const f = allFoods[i];
         if (f.eaten) continue;
@@ -2305,30 +2376,30 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const botEjectMass = (bot: BotPlayer, cell: BotCell, aimDirX: number, aimDirY: number) => {
         if (cell.radius < 26) return;
         const currentMass = cell.radius * cell.radius;
+        const minAllowedMass = INITIAL_RADIUS * INITIAL_RADIUS * 0.8;
         const remainingMass = currentMass - EJECTED_MASS_VALUE;
-        if (remainingMass <= INITIAL_RADIUS * INITIAL_RADIUS * 0.8) return;
+        if (remainingMass <= minAllowedMass) return;
 
-        cell.radius = Math.sqrt(remainingMass);
         const spawnDist = cell.radius + EJECTED_MASS_RADIUS + 3;
         const spawnX = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, cell.x + aimDirX * spawnDist));
         const spawnY = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, cell.y + aimDirY * spawnDist));
 
         const feedSpeed = 19 * (0.95 + Math.random() * 0.1);
-        allFoods.push({
-          id: generateId(),
-          x: spawnX,
-          y: spawnY,
-          renderX: spawnX,
-          renderY: spawnY,
-          radius: EJECTED_MASS_RADIUS,
-          color: bot.color,
-          vx: aimDirX * feedSpeed,
-          vy: aimDirY * feedSpeed,
-          decay: 0.93,
-          mass: EJECTED_MASS_VALUE,
-          canBeEatenAfter: now + 350,
-          ownerCellId: cell.id
-        });
+        const spawned = spawnEjectedPellet(
+          spawnX,
+          spawnY,
+          aimDirX * feedSpeed,
+          aimDirY * feedSpeed,
+          EJECTED_MASS_RADIUS,
+          bot.color,
+          EJECTED_MASS_VALUE,
+          cell.id,
+          now + 350
+        );
+        if (spawned) {
+          cell.radius = Math.sqrt(remainingMass);
+          cell.renderRadius = cell.radius;
+        }
       };
 
       const botSplitTowards = (bot: BotPlayer, cell: BotCell, dirX: number, dirY: number) => {
@@ -3030,9 +3101,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         for (let r = minR; r <= maxR; r++) {
           for (let c = minC; c <= maxC; c++) {
             let fIdx = foodGridHead[c + r * GRID_COLS];
-            while (fIdx !== -1) {
+            while (fIdx !== -1 && fIdx >= 0 && fIdx < numAllFoods) {
               const food = allFoods[fIdx];
-              if (!food.eaten) {
+              if (food && !food.eaten) {
                 if (!(food.canBeEatenAfter && now < food.canBeEatenAfter && food.ownerCellId === cell.id)) {
                   const fdx = cell.x - food.x;
                   const fdy = cell.y - food.y;
@@ -3072,7 +3143,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
       }
 
-      // Virus eating ejected mass and shooting mechanic (authentic Agar.io)
+      // Virus eating ejected mass and shooting mechanic (authentic Agar.io via spatial grid)
       const currentViruses = virusesRef.current;
       for (let i = 0; i < currentViruses.length; i++) {
         const virus = currentViruses[i];
@@ -3090,51 +3161,65 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           virus.y = Math.max(virus.radius, Math.min(MAP_SIZE - virus.radius, virus.y));
         }
 
-        const vTotalR = virus.radius + EJECTED_MASS_RADIUS;
+        const vTotalR = virus.radius + EJECTED_MASS_RADIUS + 4;
         const vSqR = vTotalR * vTotalR;
-        for (let j = 0; j < allFoods.length; j++) {
-          const food = allFoods[j];
-          if (food.eaten) continue;
-          if (food.mass !== EJECTED_MASS_VALUE && food.radius !== EJECTED_MASS_RADIUS) continue;
-          const vdx = virus.x - food.x;
-          const vdy = virus.y - food.y;
-          if (vdx * vdx + vdy * vdy < vSqR) {
-            food.eaten = true;
-            anyFoodEaten = true;
-            virus.fedCount = (virus.fedCount || 0) + 1;
-            virus.radius = VIRUS_RADIUS;
+        const vMinC = Math.max(0, Math.floor((virus.x - vTotalR) / GRID_CELL_SIZE));
+        const vMaxC = Math.min(GRID_COLS - 1, Math.floor((virus.x + vTotalR) / GRID_CELL_SIZE));
+        const vMinR = Math.max(0, Math.floor((virus.y - vTotalR) / GRID_CELL_SIZE));
+        const vMaxR = Math.min(GRID_ROWS - 1, Math.floor((virus.y + vTotalR) / GRID_CELL_SIZE));
 
-            // Once fed 7 times, virus shoots!
-            if (virus.fedCount >= 7) {
-              virus.fedCount = 0;
-              virus.radius = VIRUS_RADIUS;
+        let virusShotThisFrame = false;
+        for (let r = vMinR; r <= vMaxR && !virusShotThisFrame; r++) {
+          for (let c = vMinC; c <= vMaxC && !virusShotThisFrame; c++) {
+            let fIdx = foodGridHead[c + r * GRID_COLS];
+            while (fIdx !== -1 && fIdx >= 0 && fIdx < numAllFoods) {
+              const food = allFoods[fIdx];
+              if (food && !food.eaten && (food.ownerCellId !== undefined || (food.mass !== undefined && food.mass >= EJECTED_MASS_VALUE))) {
+                const vdx = virus.x - food.x;
+                const vdy = virus.y - food.y;
+                if (vdx * vdx + vdy * vdy < vSqR) {
+                  food.eaten = true;
+                  anyFoodEaten = true;
+                  const feedUnits = Math.max(1, Math.round((food.mass || EJECTED_MASS_VALUE) / EJECTED_MASS_VALUE));
+                  virus.fedCount = (virus.fedCount || 0) + feedUnits;
+                  virus.radius = VIRUS_RADIUS;
 
-              let shootDirX = food.vx || 0;
-              let shootDirY = food.vy || 0;
-              const sMag = Math.hypot(shootDirX, shootDirY);
-              if (sMag > 0.1) {
-                shootDirX /= sMag;
-                shootDirY /= sMag;
-              } else {
-                shootDirX = 0;
-                shootDirY = -1;
+                  // Once fed 7 times, virus shoots!
+                  if (virus.fedCount >= 7) {
+                    virus.fedCount = 0;
+                    virus.radius = VIRUS_RADIUS;
+
+                    let shootDirX = food.vx || 0;
+                    let shootDirY = food.vy || 0;
+                    const sMag = Math.hypot(shootDirX, shootDirY);
+                    if (sMag > 0.1) {
+                      shootDirX /= sMag;
+                      shootDirY /= sMag;
+                    } else {
+                      shootDirX = 0;
+                      shootDirY = -1;
+                    }
+
+                    const shootSpeed = 26;
+                    const spawnX = Math.max(VIRUS_RADIUS, Math.min(MAP_SIZE - VIRUS_RADIUS, virus.x + shootDirX * (VIRUS_RADIUS + 15)));
+                    const spawnY = Math.max(VIRUS_RADIUS, Math.min(MAP_SIZE - VIRUS_RADIUS, virus.y + shootDirY * (VIRUS_RADIUS + 15)));
+
+                    currentViruses.push({
+                      id: generateId(),
+                      x: spawnX,
+                      y: spawnY,
+                      radius: VIRUS_RADIUS,
+                      color: '#33ff33',
+                      vx: shootDirX * shootSpeed,
+                      vy: shootDirY * shootSpeed,
+                      fedCount: 0
+                    });
+                    virusShotThisFrame = true;
+                    break;
+                  }
+                }
               }
-
-              const shootSpeed = 26;
-              const spawnX = Math.max(VIRUS_RADIUS, Math.min(MAP_SIZE - VIRUS_RADIUS, virus.x + shootDirX * (VIRUS_RADIUS + 15)));
-              const spawnY = Math.max(VIRUS_RADIUS, Math.min(MAP_SIZE - VIRUS_RADIUS, virus.y + shootDirY * (VIRUS_RADIUS + 15)));
-
-              currentViruses.push({
-                id: generateId(),
-                x: spawnX,
-                y: spawnY,
-                radius: VIRUS_RADIUS,
-                color: '#33ff33',
-                vx: shootDirX * shootSpeed,
-                vy: shootDirY * shootSpeed,
-                fedCount: 0
-              });
-              break;
+              fIdx = foodGridNext[fIdx];
             }
           }
         }
@@ -3143,10 +3228,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       if (anyFoodEaten) {
         let writeIdx = 0;
         for (let i = 0; i < allFoods.length; i++) {
-          if (!allFoods[i].eaten) {
-            allFoods[writeIdx++] = allFoods[i];
-          } else if (allFoods[i].ownerCellId !== undefined) {
-            allFoods[i]._inFoods = false;
+          const f = allFoods[i];
+          if (!f.eaten) {
+            allFoods[writeIdx++] = f;
+          } else if (f._poolIndex !== undefined) {
+            freePelletIndicesRef.current.push(f._poolIndex);
           }
         }
         allFoods.length = writeIdx;
@@ -3791,14 +3877,21 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       ctx.lineWidth = 8;
       ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-      // Render Pellets: slight floating motion, tiny soft glow
+      // Render Pellets with camera viewport culling (vital for iPhone 60 FPS performance)
       const foods = foodsRef.current;
       const isLowQuality = qualityRef.current === 'low';
+      const cullingMargin = 60;
+      const viewLeft = cam.x - halfW - cullingMargin;
+      const viewRight = cam.x + halfW + cullingMargin;
+      const viewTop = cam.y - halfH - cullingMargin;
+      const viewBottom = cam.y + halfH + cullingMargin;
+
       for (let i = 0; i < foods.length; i++) {
         const food = foods[i];
         if (food.eaten) continue;
         const fx = food.renderX ?? food.x;
         const fy = food.renderY ?? food.y;
+        if (fx < viewLeft || fx > viewRight || fy < viewTop || fy > viewBottom) continue;
         if (food.radius >= EJECTED_MASS_RADIUS) {
           ctx.beginPath();
           ctx.arc(fx, fy, food.radius, 0, Math.PI * 2);
