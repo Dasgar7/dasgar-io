@@ -1180,19 +1180,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const maxPossibleEjections = Math.floor((currentMass - minAllowedMass) / EJECTED_MASS_VALUE);
       if (maxPossibleEjections <= 0) continue;
 
-      const actualEjections = Math.min(ticks, maxPossibleEjections);
+      // Every ejection creates exactly one standard-sized Agar-style pellet.
+      // Limit ejections to available pool slots so mass is never deducted for
+      // pellets that cannot be created.
+      const freeCount = freePelletIndicesRef.current.length;
+      const actualEjections = Math.min(ticks, maxPossibleEjections, freeCount);
       if (actualEjections <= 0) continue;
 
-      const freeCount = freePelletIndicesRef.current.length;
-      if (freeCount === 0) continue;
-
-      // Stream consolidation for extreme rates: 1 pellet for single tap, up to 3 pellets per cell per frame for stream burst
-      const maxPellets = actualEjections === 1 ? 1 : Math.min(actualEjections, 3);
-      const pelletCount = Math.min(maxPellets, freeCount);
-      if (pelletCount <= 0) continue;
-
+      const pelletCount = actualEjections;
       const totalMassToEject = actualEjections * EJECTED_MASS_VALUE;
-      const massPerPellet = totalMassToEject / pelletCount;
 
       // Deduct mass strictly when pellets are ready to be created
       const remainingMass = currentMass - totalMassToEject;
@@ -1225,16 +1221,14 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const spawnY = Math.max(EJECTED_MASS_RADIUS, Math.min(MAP_SIZE - EJECTED_MASS_RADIUS, rawSpawnY));
         const feedSpeed = modFeedSpeedRef.current * (0.94 + Math.random() * 0.12);
 
-        const pelletRadius = Math.min(22, EJECTED_MASS_RADIUS * Math.pow(massPerPellet / EJECTED_MASS_VALUE, 0.20));
-
         spawnEjectedPellet(
           spawnX,
           spawnY,
           sprayDirX * feedSpeed,
           sprayDirY * feedSpeed,
-          pelletRadius,
+          EJECTED_MASS_RADIUS,
           playerColorRef.current,
-          massPerPellet,
+          EJECTED_MASS_VALUE,
           cell.id,
           now + 300
         );
