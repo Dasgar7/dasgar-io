@@ -28,7 +28,7 @@ const FOOD_COUNT = 700;
 const NORMAL_FOOD_RADIUS = 4.5;
 const EJECTED_MASS_RADIUS = 12;
 const EJECTED_MASS_VALUE = 32;
-const MAX_EJECTED_MASS_ON_FIELD = 300; // Keep rapid Macro from flooding the simulation
+const MAX_EJECTED_MASS_ON_FIELD = 1200; // Fixed-size ring buffer keeps rapid Macro from flooding the simulation
 const GHOST_TOKEN_TARGET_COUNT = 35;
 const GHOST_TOKEN_RADIUS = 10;
 const GHOST_TOKEN_MASS = 3.5;
@@ -1120,24 +1120,16 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           const foods = foodsRef.current;
           const pool = playerEjectedPoolRef.current;
 
-          // Reuse only a pellet that has already been eaten. If all pool slots
-          // are still active, skip this feed without charging player mass.
-          let pellet: any = null;
-          // Reuse an eaten pellet when available; otherwise allocate a new
-          // one. Never stop feeding just because a pool-size limit was reached.
-          if (pool.length > 0) {
-            for (let checked = 0; checked < pool.length; checked++) {
-              const index = playerEjectedPoolCursorRef.current % pool.length;
-              playerEjectedPoolCursorRef.current = (index + 1) % pool.length;
-              if (pool[index].eaten) {
-                pellet = pool[index];
-                break;
-              }
-            }
-          }
-          if (!pellet) {
+          // Fixed-size O(1) ring pool. At extreme Macro speeds, recycle the
+          // oldest visual pellet instead of growing arrays or scanning the pool.
+          let pellet: any;
+          if (pool.length < MAX_EJECTED_MASS_ON_FIELD) {
             pellet = {};
             pool.push(pellet);
+          } else {
+            const index = playerEjectedPoolCursorRef.current;
+            pellet = pool[index];
+            playerEjectedPoolCursorRef.current = (index + 1) % MAX_EJECTED_MASS_ON_FIELD;
           }
 
           // Only deduct mass when a fresh/reusable eaten pellet is available.
@@ -1169,9 +1161,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           pellet.canBeEatenAfter = now + 350;
           pellet.ownerCellId = cell.id;
           pellet.eaten = false;
-          // Eaten pellets are removed from foodsRef during the cleanup pass,
-          // so every reused pellet must be inserted into the active food list again.
-          foods.push(pellet);
+          // Keep active pellets in-place; reinsert only if eaten cleanup removed it.
+          if (!pellet._inFoods) {
+            foods.push(pellet);
+            pellet._inFoods = true;
+          }
         }
       }
     });
@@ -1927,7 +1921,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       if (macroActiveRef.current && !isPausedRef.current && !isGameOverRef.current) {
         macroAccumulatorRef.current += dt;
         const interval = Math.max(0.1, modMacroIntervalRef.current);
-        const maxFeedsPerFrame = 24;
+        const maxFeedsPerFrame = 12;
         let feedsThisFrame = 0;
         while (macroAccumulatorRef.current >= interval && feedsThisFrame < maxFeedsPerFrame) {
           handleEjectRef.current();
@@ -3151,6 +3145,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         for (let i = 0; i < allFoods.length; i++) {
           if (!allFoods[i].eaten) {
             allFoods[writeIdx++] = allFoods[i];
+          } else if (allFoods[i].ownerCellId !== undefined) {
+            allFoods[i]._inFoods = false;
           }
         }
         allFoods.length = writeIdx;
