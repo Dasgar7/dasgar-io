@@ -494,14 +494,6 @@ const PBTN_EDGE_B = `max(10px, env(safe-area-inset-bottom))`;
 const MACRO_FEED_INTERVAL = 85; // ms between feeds when macro is held (default ~12/s)
 
 export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
-  // Ask for an optional player name once when entering a new game.
-  // Leaving it blank keeps the cell anonymous instead of labeling it "You".
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const enteredName = window.prompt('Enter your cell name (optional):', '');
-    playerNameRef.current = (enteredName ?? '').trim().slice(0, 18);
-  }, []);
-
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Game State Refs
