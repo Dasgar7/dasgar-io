@@ -4551,7 +4551,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             {/* Test Mass Controls */}
             <div className="space-y-1 pt-1 border-t border-slate-300/60">
               <span className="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-wide block">Test Mass</span>
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-cols-4 gap-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -4583,6 +4583,46 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   className="px-1 py-0.5 sm:py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold rounded shadow-xs cursor-pointer active:scale-95 text-center"
                 >
                   +10k
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cells = playerCellsRef.current;
+                    if (cells.length === 0) return;
+                    let remainingScore = 300000;
+                    for (const cell of cells) {
+                      const capacity = Math.max(0, MAX_CELL_AREA - cell.radius * cell.radius) / 10;
+                      const added = Math.min(remainingScore, capacity);
+                      if (added > 0) {
+                        cell.radius = Math.sqrt(cell.radius * cell.radius + added * 10);
+                        cell.renderRadius = cell.radius;
+                        remainingScore -= added;
+                      }
+                      if (remainingScore <= 0) break;
+                    }
+                    while (remainingScore > 0 && cells.length < 16) {
+                      const added = Math.min(remainingScore, MAX_CELL_SCORE);
+                      const base = cells[0];
+                      const angle = (cells.length / 16) * Math.PI * 2;
+                      const offset = base.radius + Math.sqrt(added * 10) + 24;
+                      const x = Math.max(40, Math.min(MAP_SIZE - 40, base.x + Math.cos(angle) * offset));
+                      const y = Math.max(40, Math.min(MAP_SIZE - 40, base.y + Math.sin(angle) * offset));
+                      const radius = Math.sqrt(added * 10);
+                      cells.push({
+                        id: generateId(),
+                        x, y, renderX: x, renderY: y,
+                        renderRadius: radius, radius,
+                        vx: 0, vy: 0, splitTime: 0, phaseOffset: Math.random() * Math.PI * 2
+                      });
+                      remainingScore -= added;
+                    }
+                    const newScore = calculateTotalScore();
+                    scoreRef.current = newScore;
+                    setScore(newScore);
+                  }}
+                  className="px-1 py-0.5 sm:py-1 bg-sky-600 hover:bg-sky-700 text-white text-[9px] sm:text-[10px] font-bold rounded shadow-xs cursor-pointer active:scale-95 text-center"
+                >
+                  +300k
                 </button>
                 <button
                   type="button"
