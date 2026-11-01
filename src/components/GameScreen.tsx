@@ -3616,7 +3616,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           ctx.save();
           ctx.globalAlpha = alpha;
           // Fill every player cell with the selected emoji, clipped to its circular boundary.
-          const emojiSize = cr * 2;
+          // Overscan the source image so transparent padding in the PNG cannot make
+          // the visible emoji look smaller than the cell. The clip keeps it inside the cell.
+          const emojiSize = cr * 2.5;
           ctx.beginPath();
           ctx.arc(cx, cy, cr, 0, Math.PI * 2);
           ctx.clip();
