@@ -3672,11 +3672,14 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const measuredFps = (fpsFramesCountRef.current * 1000) / (now - fpsWindowStartRef.current);
         fpsFramesCountRef.current = 0;
         fpsWindowStartRef.current = now;
-        if (measuredFps < 45) {
+        // Step quality down quickly when sustained performance drops, but recover
+        // one level at a time with headroom to avoid oscillating between settings.
+        if (measuredFps < 42) {
           if (qualityRef.current === 'high') qualityRef.current = 'medium';
           else if (qualityRef.current === 'medium') qualityRef.current = 'low';
-        } else if (measuredFps > 56 && qualityRef.current === 'medium') {
-          qualityRef.current = 'high';
+        } else if (measuredFps > 58) {
+          if (qualityRef.current === 'low') qualityRef.current = 'medium';
+          else if (qualityRef.current === 'medium') qualityRef.current = 'high';
         }
       }
 
@@ -3983,19 +3986,19 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       lastTime = time;
       const dt = Math.min(64, Math.max(1, rawDt));
 
-      // Fixed 60Hz physics sub-stepping with accumulator for buttery smooth, consistent physics
+      // Fixed 60Hz physics sub-stepping. The frame delta is capped above, so
+      // four steps cover the maximum accumulated frame time without throwing
+      // away simulation time (which previously caused visible hitching).
       physicsAccumulatorRef.current += dt;
       const fixedStep = 1000 / 60; // 16.667ms
-      const maxSubSteps = 3;
+      const maxSubSteps = 4;
       let steps = 0;
       while (physicsAccumulatorRef.current >= fixedStep && steps < maxSubSteps) {
         update(fixedStep);
         physicsAccumulatorRef.current -= fixedStep;
         steps++;
       }
-      if (steps >= maxSubSteps) {
-        physicsAccumulatorRef.current = 0;
-      }
+      // Keep any fractional remainder for interpolation on the next frame.
 
       interpolate(dt);
       draw();
