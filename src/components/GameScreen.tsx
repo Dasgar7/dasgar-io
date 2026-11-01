@@ -132,13 +132,15 @@ export interface BotProfile {
 
 // Soft-Body Jelly Physics: 48-point spring-damper membrane vertices with spring pulse
 export type SoftBodyJelly = {
-  dr: Float32Array; // 48 radial offset deviations
+  dr: Float32Array; // 48 radial offset deviations from circle
   vr: Float32Array; // 48 radial velocities
-  pulse: number;    // spring scale pulse (1 -> 1.06 -> 1 on eat)
+  pulse: number;    // spring scale pulse (1 -> 1.05 -> 1 on eat)
   pulseVel: number;
   pulseTarget: number;
   ripplePhase: number;
   rippleAmp: number;
+  lastVx: number;   // velocity at previous physics step for acceleration detection
+  lastVy: number;
 };
 
 export function createCellJelly(): SoftBodyJelly {
@@ -149,8 +151,43 @@ export function createCellJelly(): SoftBodyJelly {
     pulseVel: 0,
     pulseTarget: 1.0,
     ripplePhase: 0,
-    rippleAmp: 0
+    rippleAmp: 0,
+    lastVx: 0,
+    lastVy: 0
   };
+}
+
+export function applySplitRecoil(jelly: SoftBodyJelly | undefined, dirX: number, dirY: number) {
+  if (!jelly) return;
+  const N = 48;
+  const step = (Math.PI * 2) / N;
+  const recoilAngle = Math.atan2(-dirY, -dirX);
+  for (let i = 0; i < N; i++) {
+    const angle = i * step;
+    const cos = Math.cos(angle - recoilAngle);
+    if (cos > 0) {
+      jelly.vr[i] += cos * cos * 1.5;
+    }
+  }
+  jelly.pulseTarget = 1.04;
+}
+
+export function applySplitLaunch(jelly: SoftBodyJelly | undefined, dirX: number, dirY: number) {
+  if (!jelly) return;
+  const N = 48;
+  const step = (Math.PI * 2) / N;
+  const launchAngle = Math.atan2(dirY, dirX);
+  for (let i = 0; i < N; i++) {
+    const angle = i * step;
+    const cos = Math.cos(angle - launchAngle);
+    if (cos > 0) {
+      jelly.vr[i] += cos * cos * 2.0;
+    } else {
+      const sin = Math.sin(angle - launchAngle);
+      jelly.vr[i] -= sin * sin * 0.8;
+    }
+  }
+  jelly.pulseTarget = 1.04;
 }
 
 // Scratch buffers for Catmull-Rom bezier curve computation (zero allocation during render loop)
@@ -475,7 +512,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   ]);
 
   const playerNameRef = useRef('You');
-  const playerColorRef = useRef('#ff4444');
+  const playerColorRef = useRef('#0284c7');
   const lastAimDirRef = useRef<{ x: number; y: number }>({ x: 0, y: -1 });
 
   const cameraRef = useRef<{ x: number; y: number }>({
@@ -939,6 +976,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         cell.vy = -dirY * 1.6;
         cell.moveVx = 0;
         cell.moveVy = 0;
+        applySplitRecoil(cell.jelly, dirX, dirY);
+
+        const childJelly = createCellJelly();
+        applySplitLaunch(childJelly, dirX, dirY);
 
         newCells.push({
           id: generateId(),
@@ -956,7 +997,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           phaseOffset: Math.random() * Math.PI * 2,
           ignoreParentId: cell.id,
           ignoreParentUntil: now + 140,
-          jelly: createCellJelly()
+          jelly: childJelly
         });
       }
     });
@@ -1290,10 +1331,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         cell.jelly = j;
       }
 
-      // Spring pulse for eating animation: 1.0 -> 1.06 -> 1.0
+      // 1. Critically damped spring pulse for eating / merging / splitting (1.0 -> 1.05 -> 1.0)
       const targetPulse = j.pulseTarget || 1.0;
       const pulseDiff = targetPulse - j.pulse;
-      j.pulseVel += (pulseDiff * 0.28 - j.pulseVel * 0.22) * dtRatio;
+      j.pulseVel += (pulseDiff * 0.32 - j.pulseVel * 0.28) * dtRatio;
       j.pulse += j.pulseVel * dtRatio;
       if (j.pulseTarget > 1.0) {
         j.pulseTarget = 1.0;
@@ -1303,53 +1344,76 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         j.pulseVel = 0;
       }
 
-      // Ripple decay
+      // 2. Ripple decay
       if (j.rippleAmp > 0.001) {
-        j.ripplePhase += 0.32 * dtRatio;
-        j.rippleAmp *= Math.pow(0.88, dtRatio);
+        j.ripplePhase += 0.26 * dtRatio;
+        j.rippleAmp *= Math.pow(0.82, dtRatio);
       } else {
         j.rippleAmp = 0;
       }
 
-      // Velocity stretch in movement direction
-      const vx = (cell.moveVx || 0) + (cell.vx || 0);
-      const vy = (cell.moveVy || 0) + (cell.vy || 0);
-      const speed = Math.hypot(vx, vy);
-      const moveAngle = speed > 0.08 ? Math.atan2(vy, vx) : 0;
-      const stretchAmp = speed > 0.08 ? Math.min(cell.radius * 0.08, speed * 1.3) : 0;
+      // 3. Acceleration-based soft-body inertia (NO PERMANENT OR CONTINUOUS OVALS!)
+      // Steady-state velocity does NOT distort the cell. Only acceleration / bursts produce a temporary subtle trail.
+      const currentVx = (cell.moveVx || 0) + (cell.vx || 0);
+      const currentVy = (cell.moveVy || 0) + (cell.vy || 0);
+      const ax = currentVx - j.lastVx;
+      const ay = currentVy - j.lastVy;
+      j.lastVx = currentVx;
+      j.lastVy = currentVy;
 
+      const accelMag = Math.hypot(ax, ay);
+      if (accelMag > 0.04) {
+        const accelAngle = Math.atan2(ay, ax);
+        const impulse = Math.min(1.8, Math.max(0.2, cell.radius * 0.035), accelMag * 0.5);
+        const N = 48;
+        const step = (Math.PI * 2) / N;
+        for (let i = 0; i < N; i++) {
+          const angle = i * step;
+          // Points facing opposite to acceleration lag slightly
+          const cosDiff = Math.cos(angle - accelAngle);
+          j.vr[i] -= cosDiff * impulse * 0.5;
+        }
+      }
+
+      // 4. Stable spring-damper integration for the 48 membrane vertices
       const N = 48;
       const step = (Math.PI * 2) / N;
       const dr = j.dr;
       const vr = j.vr;
 
-      const kSpring = 0.085;
-      const kNeighbor = 0.095;
-      const damping = 0.88;
+      const kRestore = 0.22;   // Firm restoring spring back to circle
+      const kNeighbor = 0.16;  // Surface tension keeping membrane curvature smooth
+      const damping = 0.78;    // Critical damping to eliminate fluid sloshing
+
+      const rippleAmp = j.rippleAmp;
+      const ripplePhase = j.ripplePhase;
 
       for (let i = 0; i < N; i++) {
-        const angle = i * step;
-        const targetStretch = stretchAmp * Math.cos(2 * (angle - moveAngle));
-        const ripple = j.rippleAmp > 0 ? Math.sin(j.ripplePhase - i * step * 3) * j.rippleAmp : 0;
-        const targetDr = targetStretch + ripple;
-
         const prevIdx = (i - 1 + N) % N;
         const nextIdx = (i + 1) % N;
         const neighborAvg = (dr[prevIdx] + dr[nextIdx]) * 0.5;
 
-        const fSpring = (targetDr - dr[i]) * kSpring;
+        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * rippleAmp * 0.2 : 0;
+        const fRestore = -dr[i] * kRestore;
         const fNeighbor = (neighborAvg - dr[i]) * kNeighbor;
 
-        vr[i] = (vr[i] + (fSpring + fNeighbor) * dtRatio) * Math.pow(damping, dtRatio);
+        vr[i] = (vr[i] + (fRestore + fNeighbor + rippleForce) * dtRatio) * Math.pow(damping, dtRatio);
         dr[i] += vr[i] * dtRatio;
 
-        const maxDef = cell.radius * 0.20;
+        // Strictly clamp deformation: max 5px or 7% of radius so large cells never distort
+        const maxDef = Math.min(5.0, Math.max(1.2, cell.radius * 0.07));
         if (dr[i] > maxDef) {
           dr[i] = maxDef;
-          vr[i] *= 0.5;
+          vr[i] *= 0.3;
         } else if (dr[i] < -maxDef) {
           dr[i] = -maxDef;
-          vr[i] *= 0.5;
+          vr[i] *= 0.3;
+        }
+
+        // Numerical deadband: settle to absolute mathematical 0
+        if (Math.abs(dr[i]) < 0.02 && Math.abs(vr[i]) < 0.02) {
+          dr[i] = 0;
+          vr[i] = 0;
         }
       }
     };
@@ -1362,13 +1426,23 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       if (!cell.jelly) return;
       const N = 48;
       const step = (Math.PI * 2) / N;
-      const clampedForce = Math.min(cell.radius * 0.16, force);
+      // Controlled, subtle impact compression (capped at 2.5px max)
+      const clampedForce = Math.min(2.5, cell.radius * 0.04, force * 0.2);
+      if (clampedForce < 0.05) return;
+
       for (let i = 0; i < N; i++) {
         const angle = i * step;
-        const cosDiff = Math.cos(angle - impactAngle);
-        if (cosDiff > 0.2) {
-          cell.jelly.dr[i] -= clampedForce * cosDiff;
-          cell.jelly.vr[i] -= clampedForce * cosDiff * 0.5;
+        const cos = Math.cos(angle - impactAngle);
+        if (cos > 0) {
+          // Smooth bell-curve compression at contact point
+          const comp = cos * cos * clampedForce;
+          cell.jelly.vr[i] -= comp * 0.7;
+          cell.jelly.dr[i] -= comp * 0.35;
+        } else {
+          // Slight volume-preserving expansion on flanks
+          const sin = Math.sin(angle - impactAngle);
+          const exp = sin * sin * clampedForce * 0.25;
+          cell.jelly.vr[i] += exp * 0.35;
         }
       }
     };
@@ -1380,9 +1454,29 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       jelly: SoftBodyJelly | undefined,
       pointCount: number
     ) => {
+      // Check if jelly actually has any noticeable deformation
+      let hasDeform = false;
+      const pulse = jelly ? Math.max(0.97, Math.min(1.08, jelly.pulse)) : 1.0;
+      if (Math.abs(pulse - 1.0) > 0.002 || (jelly && jelly.rippleAmp > 0.02)) {
+        hasDeform = true;
+      } else if (jelly) {
+        for (let i = 0; i < 48; i++) {
+          if (Math.abs(jelly.dr[i]) > 0.12) {
+            hasDeform = true;
+            break;
+          }
+        }
+      }
+
+      ctx.beginPath();
+      if (!hasDeform) {
+        // 100% mathematically exact circular base
+        ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+        return;
+      }
+
       const stepIdx = 48 / pointCount;
       const N = 48;
-      const pulse = jelly ? Math.max(0.96, Math.min(1.10, jelly.pulse)) : 1.0;
       const nominalR = cr * pulse;
 
       for (let k = 0; k < pointCount; k++) {
@@ -1394,7 +1488,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         scratchCurveY[k] = cy + Math.sin(angle) * r;
       }
 
-      ctx.beginPath();
       ctx.moveTo(scratchCurveX[0], scratchCurveY[0]);
       for (let k = 0; k < pointCount; k++) {
         const p0 = (k - 1 + pointCount) % pointCount;
@@ -1433,47 +1526,37 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const sx = (iw - minDim) / 2;
         const sy = (ih - minDim) / 2;
         ctx.drawImage(skinImg, sx, sy, minDim, minDim, cx - cr, cy - cr, cr * 2, cr * 2);
-
-        if (quality !== 'low') {
-          ctx.beginPath();
-          ctx.ellipse(cx - cr * 0.32, cy - cr * 0.32, cr * 0.28, cr * 0.14, -Math.PI / 4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
-          ctx.fill();
-        }
         ctx.restore();
 
-        ctx.lineWidth = Math.max(2.5, Math.min(8, cr * 0.045));
-        ctx.strokeStyle = getDarkerColor(color, 0.38);
+        // Clean crisp border
+        ctx.lineWidth = Math.max(2.5, Math.min(7, cr * 0.04));
+        ctx.strokeStyle = getDarkerColor(color, 0.40);
         ctx.stroke();
       } else {
         if (quality === 'low') {
           ctx.fillStyle = color;
           ctx.fill();
         } else {
+          // Subtle, premium radial gradient with natural highlight and soft edge depth
           const grad = ctx.createRadialGradient(
-            cx - cr * 0.28, cy - cr * 0.28, cr * 0.05,
+            cx - cr * 0.20, cy - cr * 0.20, cr * 0.08,
             cx, cy, cr
           );
-          grad.addColorStop(0, getLighterColor(color, 0.32));
-          grad.addColorStop(0.70, color);
-          grad.addColorStop(1, getDarkerColor(color, 0.22));
+          grad.addColorStop(0, getLighterColor(color, 0.16));
+          grad.addColorStop(0.75, color);
+          grad.addColorStop(1, getDarkerColor(color, 0.18));
           ctx.fillStyle = grad;
           ctx.fill();
 
-          ctx.lineWidth = Math.max(1.5, cr * 0.022);
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+          // Subtle inner rim lighting
+          ctx.lineWidth = Math.max(1.2, cr * 0.018);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
           ctx.stroke();
-
-          ctx.save();
-          ctx.beginPath();
-          ctx.ellipse(cx - cr * 0.32, cy - cr * 0.32, cr * 0.28, cr * 0.14, -Math.PI / 4, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-          ctx.fill();
-          ctx.restore();
         }
 
-        ctx.lineWidth = Math.max(2.5, Math.min(8, cr * 0.045));
-        ctx.strokeStyle = getDarkerColor(color, 0.40);
+        // Crisp outer border
+        ctx.lineWidth = Math.max(2.5, Math.min(7, cr * 0.04));
+        ctx.strokeStyle = getDarkerColor(color, 0.38);
         ctx.stroke();
       }
     };
@@ -1970,6 +2053,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           cell.vy = 0;
         }
 
+        if (inputMag <= 0.02 && !gatherMode && Math.hypot(cell.moveVx || 0, cell.moveVy || 0) < 0.04) {
+          cell.moveVx = 0;
+          cell.moveVy = 0;
+        }
+
         // Frictionless border sliding
         if (cell.x <= cell.radius) {
           cell.x = cell.radius;
@@ -2049,8 +2137,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     c1.moveVy = ((c1.moveVy || 0) * m1 + (c2.moveVy || 0) * m2) / totalM;
                     c1.splitTime = Math.min(c1.splitTime, c2.splitTime);
                     if (c1.jelly) {
-                      c1.jelly.pulseTarget = 1.07;
-                      c1.jelly.rippleAmp = Math.min(3.5, c1.jelly.rippleAmp + 1.2);
+                      for (let k = 0; k < 48; k++) {
+                        c1.jelly.dr[k] = 0;
+                        c1.jelly.vr[k] = 0;
+                      }
+                      c1.jelly.pulseTarget = 1.05;
+                      c1.jelly.rippleAmp = 1.4;
                     }
                     mergedIndices.add(j);
                   }
@@ -2065,8 +2157,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   c2.x += nx * push * w2;
                   c2.y += ny * push * w2;
 
-                  applyCellSquash(c1, Math.atan2(ny, nx), push * 0.4);
-                  applyCellSquash(c2, Math.atan2(-ny, -nx), push * 0.4);
+                  if (pass === 0) {
+                    applyCellSquash(c1, Math.atan2(ny, nx), push * 0.4);
+                    applyCellSquash(c2, Math.atan2(-ny, -nx), push * 0.4);
+                  }
 
                   c1.x = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.x));
                   c1.y = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.y));
@@ -2214,6 +2308,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         cell.vy = -dirY * 1.6;
         cell.moveVx = 0;
         cell.moveVy = 0;
+        applySplitRecoil(cell.jelly, dirX, dirY);
+
+        const bChildJelly = createCellJelly();
+        applySplitLaunch(bChildJelly, dirX, dirY);
 
         const newCell: BotCell = {
           id: generateId(),
@@ -2235,7 +2333,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           name: bot.name,
           skinId: bot.skinId,
           skinImg: bot.skinImg,
-          jelly: createCellJelly()
+          jelly: bChildJelly
         };
         bot.cells.push(newCell);
         bot.lastSplitTime = now;
@@ -2821,8 +2919,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                       c1.moveVy = ((c1.moveVy || 0) * m1 + (c2.moveVy || 0) * m2) / totalM;
                       c1.splitTime = Math.min(c1.splitTime, c2.splitTime);
                       if (c1.jelly) {
-                        c1.jelly.pulseTarget = 1.07;
-                        c1.jelly.rippleAmp = Math.min(3.5, c1.jelly.rippleAmp + 1.2);
+                        for (let k = 0; k < 48; k++) {
+                          c1.jelly.dr[k] = 0;
+                          c1.jelly.vr[k] = 0;
+                        }
+                        c1.jelly.pulseTarget = 1.05;
+                        c1.jelly.rippleAmp = 1.4;
                       }
                       mergedIndices.add(j);
                     }
@@ -2836,8 +2938,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     c2.x += nx * push * w2;
                     c2.y -= ny * push * w2;
 
-                    applyCellSquash(c1, Math.atan2(ny, nx), push * 0.4);
-                    applyCellSquash(c2, Math.atan2(-ny, -nx), push * 0.4);
+                    if (pass === 0) {
+                      applyCellSquash(c1, Math.atan2(ny, nx), push * 0.4);
+                      applyCellSquash(c2, Math.atan2(-ny, -nx), push * 0.4);
+                    }
 
                     c1.x = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.x));
                     c1.y = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.y));
