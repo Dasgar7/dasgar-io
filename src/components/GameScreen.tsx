@@ -1136,7 +1136,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               }
             }
           }
-          if (!pellet) continue;
+          if (!pellet) return;
 
           // Only deduct mass when a fresh/reusable eaten pellet is available.
           cell.radius = Math.sqrt(remainingMass);
@@ -1167,7 +1167,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           pellet.canBeEatenAfter = now + 350;
           pellet.ownerCellId = cell.id;
           pellet.eaten = false;
-          if (!foods.includes(pellet)) foods.push(pellet);
+          if (!pellet._inFoods) {
+            foods.push(pellet);
+            pellet._inFoods = true;
+          }
         }
       }
     });
@@ -1918,12 +1921,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const dtRatio = dt / 16.667;
 
-      // Fast Macro: a small fixed per-frame budget avoids main-thread spikes.
+      // Fast Macro: larger bounded frame budget keeps feeding responsive without runaway catch-up.
       // Ejected pellets are pooled and reused only after being eaten.
       if (macroActiveRef.current && !isPausedRef.current && !isGameOverRef.current) {
         macroAccumulatorRef.current += dt;
         const interval = Math.max(0.1, modMacroIntervalRef.current);
-        const maxFeedsPerFrame = 4;
+        const maxFeedsPerFrame = 24;
         let feedsThisFrame = 0;
         while (macroAccumulatorRef.current >= interval && feedsThisFrame < maxFeedsPerFrame) {
           handleEjectRef.current();
