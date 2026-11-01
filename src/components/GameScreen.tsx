@@ -11,7 +11,10 @@ interface GameScreenProps {
 // Game Constants
 const MAP_SIZE = 3000;
 const INITIAL_RADIUS = 20;
-const BASE_PLAYER_SPEED = 1.6;
+// Agar-style per-cell score ceiling: score = radius² / 10.
+const MAX_CELL_SCORE = 22000;
+const MAX_CELL_AREA = MAX_CELL_SCORE * 10;
+const BASE_PLAYER_SPEED = 1.42;
 const SPEED_SCALE = 0.439;
 const DEBUG_FORCE_PHONE_ZOOM = false;
 const DEBUG_PLAYER_SPAWN_SCORE: number | null = null;
@@ -967,7 +970,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         cell.splitTime = now;
 
         // Authentic Agar.io / Sarok.io Mobile split launch burst & parent recoil
-        const burstSpeed = 17.5;
+        const burstSpeed = 15.5;
         const spawnX = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.x + dirX * (cell.radius * 0.85)));
         const spawnY = Math.max(newRadius, Math.min(MAP_SIZE - newRadius, cell.y + dirY * (cell.radius * 0.85)));
 
@@ -1364,7 +1367,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const accelMag = Math.hypot(ax, ay);
       if (accelMag > 0.04) {
         const accelAngle = Math.atan2(ay, ax);
-        const impulse = Math.min(0.65, Math.max(0.12, cell.radius * 0.012), accelMag * 0.18);
+        const impulse = Math.min(0.42, Math.max(0.09, cell.radius * 0.009), accelMag * 0.14);
         const N = 48;
         const step = (Math.PI * 2) / N;
         for (let i = 0; i < N; i++) {
@@ -1381,9 +1384,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const dr = j.dr;
       const vr = j.vr;
 
-      const kRestore = 0.22;   // Firm restoring spring back to circle
-      const kNeighbor = 0.16;  // Surface tension keeping membrane curvature smooth
-      const damping = 0.90;    // Smooth, lingering fluid motion without uncontrolled wobble
+      const kRestore = 0.27;   // Firmer membrane for controlled mobile jelly
+      const kNeighbor = 0.20;  // Stronger surface tension prevents wobbly edges
+      const damping = 0.86;    // Settles faster while retaining a visible jelly follow-through
 
       const rippleAmp = j.rippleAmp;
       const ripplePhase = j.ripplePhase;
@@ -1393,7 +1396,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const nextIdx = (i + 1) % N;
         const neighborAvg = (dr[prevIdx] + dr[nextIdx]) * 0.5;
 
-        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * Math.min(0.11, rippleAmp * 0.035) : 0;
+        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * Math.min(0.075, rippleAmp * 0.026) : 0;
         const fRestore = -dr[i] * kRestore;
         const fNeighbor = (neighborAvg - dr[i]) * kNeighbor;
 
@@ -1401,7 +1404,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         dr[i] += vr[i] * dtRatio;
 
         // Strictly clamp deformation: max 5px or 7% of radius so large cells never distort
-        const maxDef = Math.min(4.0, Math.max(1.0, cell.radius * 0.035));
+        const maxDef = Math.min(3.0, Math.max(0.8, cell.radius * 0.026));
         if (dr[i] > maxDef) {
           dr[i] = maxDef;
           vr[i] *= 0.3;
@@ -1456,7 +1459,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     ) => {
       // Check if jelly actually has any noticeable deformation
       let hasDeform = false;
-      const pulse = 1.0;
+      const pulse = jelly ? jelly.pulse : 1.0;
       if (Math.abs(pulse - 1.0) > 0.002 || (jelly && jelly.rippleAmp > 0.02)) {
         hasDeform = true;
       } else if (jelly) {
@@ -2908,7 +2911,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     c2.x -= nx * pull * w2;
                     c2.y -= ny * pull * w2;
 
-                    if (dist < Math.max(c1.radius, c2.radius) * 0.72 || dist < totalR * 0.48) {
+                    if (totalM <= MAX_CELL_AREA && (dist < Math.max(c1.radius, c2.radius) * 0.72 || dist < totalR * 0.48)) {
                       c1.radius = Math.sqrt(totalM);
                       c1.renderRadius = c1.radius;
                       c1.x = (c1.x * m1 + c2.x * m2) / totalM;
@@ -3000,8 +3003,13 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   const fdx = cell.x - food.x;
                   const fdy = cell.y - food.y;
                   if (fdx * fdx + fdy * fdy < cellSqR) {
+                    const currentArea = cell.radius * cell.radius;
+                    if (currentArea >= MAX_CELL_AREA) {
+                      fIdx = foodGridNext[fIdx];
+                      continue;
+                    }
                     const massGain = food.mass !== undefined ? food.mass : 1.2;
-                    cell.radius = Math.sqrt(cell.radius * cell.radius + massGain);
+                    cell.radius = Math.sqrt(Math.min(MAX_CELL_AREA, currentArea + massGain));
                     food.eaten = true;
                     anyFoodEaten = true;
                     triggerEatAnimation(cell, food.x, food.y, food.radius, food.color, now);
@@ -3135,8 +3143,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           if (token.eaten) continue;
           const cdx = cell.x - token.x;
           const cdy = cell.y - token.y;
-          if (cdx * cdx + cdy * cdy < cellSqR) {
-            cell.radius = Math.sqrt(cell.radius * cell.radius + GHOST_TOKEN_MASS);
+          if (cdx * cdx + cdy * cdy < cellSqR && cell.radius * cell.radius < MAX_CELL_AREA) {
+            cell.radius = Math.sqrt(Math.min(MAX_CELL_AREA, cell.radius * cell.radius + GHOST_TOKEN_MASS));
             token.eaten = true;
             anyTokenEaten = true;
             tokensEatenByPlayer++;
