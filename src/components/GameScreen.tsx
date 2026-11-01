@@ -136,6 +136,7 @@ export type SoftBodyJelly = {
   vr: Float32Array; // 48 radial velocities
   pulse: number;    // spring scale pulse (1 -> 1.06 -> 1 on eat)
   pulseVel: number;
+  pulseTarget: number;
   ripplePhase: number;
   rippleAmp: number;
 };
@@ -146,6 +147,7 @@ export function createCellJelly(): SoftBodyJelly {
     vr: new Float32Array(48),
     pulse: 1.0,
     pulseVel: 0,
+    pulseTarget: 1.0,
     ripplePhase: 0,
     rippleAmp: 0
   };
@@ -533,6 +535,33 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
   const isGameOverRef = useRef(false);
   const isPausedRef = useRef(false);
 
+  // Soft-Body animation pools and adaptive quality refs
+  const eatingPoolRef = useRef<EatingAnim[]>(Array.from({ length: EATING_POOL_SIZE }, () => ({
+    active: false,
+    startX: 0,
+    startY: 0,
+    predatorCell: null,
+    radius: 0,
+    initialRadius: 0,
+    color: '#fff',
+    timeStart: 0,
+    duration: 180
+  })));
+  const popPoolRef = useRef<PelletPopAnim[]>(Array.from({ length: POP_POOL_SIZE }, () => ({
+    active: false,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    radius: 2,
+    color: '#fff',
+    timeStart: 0,
+    duration: 140
+  })));
+  const qualityRef = useRef<'high' | 'medium' | 'low'>('high');
+  const fpsFramesCountRef = useRef(0);
+  const fpsWindowStartRef = useRef(performance.now());
+
   const getInitialGhostTokenCount = (): number => {
     try {
       const val = localStorage.getItem(STORAGE_KEY_GHOST_TOKEN) ?? localStorage.getItem(STORAGE_KEY_GREEN_CANDY);
@@ -757,9 +786,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     }));
 
     const now = performance.now();
-    botsRef.current = Array.from({ length: BOT_COUNT }).map((_, i) =>
-      createBotInstance(i, now)
-    );
+    const createdBots: BotPlayer[] = [];
+    for (let i = 0; i < BOT_COUNT; i++) {
+      createdBots.push(createBotInstance(i, now, createdBots));
+    }
+    botsRef.current = createdBots;
 
     virusesRef.current = Array.from({ length: VIRUS_COUNT }).map(() => ({
       id: generateId(),
@@ -808,7 +839,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         vy: 0,
         radius: PLAYER_START_RADIUS,
         splitTime: 0,
-        phaseOffset: Math.random() * Math.PI * 2
+        phaseOffset: Math.random() * Math.PI * 2,
+        jelly: createCellJelly()
       }
     ];
     lastAimDirRef.current = { x: 0, y: -1 };
@@ -923,7 +955,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           splitTime: now,
           phaseOffset: Math.random() * Math.PI * 2,
           ignoreParentId: cell.id,
-          ignoreParentUntil: now + 140
+          ignoreParentUntil: now + 140,
+          jelly: createCellJelly()
         });
       }
     });
@@ -1246,59 +1279,305 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     };
     window.addEventListener('touchstart', handleWindowTouchStart, { passive: true });
 
-    const drawCircle = (circle: Circle, outline = false) => {
-      ctx.beginPath();
-      ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-      ctx.fillStyle = circle.color;
-      ctx.fill();
-      if (outline) {
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-        ctx.stroke();
+    const updateCellJelly = (
+      cell: { vx?: number; vy?: number; moveVx?: number; moveVy?: number; radius: number; jelly?: SoftBodyJelly },
+      dtRatio: number,
+      quality: 'high' | 'medium' | 'low' = qualityRef.current || 'high'
+    ) => {
+      let j = cell.jelly;
+      if (!j) {
+        j = createCellJelly();
+        cell.jelly = j;
+      }
+
+      // Spring pulse for eating animation: 1.0 -> 1.06 -> 1.0
+      const targetPulse = j.pulseTarget || 1.0;
+      const pulseDiff = targetPulse - j.pulse;
+      j.pulseVel += (pulseDiff * 0.28 - j.pulseVel * 0.22) * dtRatio;
+      j.pulse += j.pulseVel * dtRatio;
+      if (j.pulseTarget > 1.0) {
+        j.pulseTarget = 1.0;
+      }
+      if (Math.abs(j.pulse - 1.0) < 0.0005 && Math.abs(j.pulseVel) < 0.0005) {
+        j.pulse = 1.0;
+        j.pulseVel = 0;
+      }
+
+      // Ripple decay
+      if (j.rippleAmp > 0.001) {
+        j.ripplePhase += 0.32 * dtRatio;
+        j.rippleAmp *= Math.pow(0.88, dtRatio);
+      } else {
+        j.rippleAmp = 0;
+      }
+
+      // Velocity stretch in movement direction
+      const vx = (cell.moveVx || 0) + (cell.vx || 0);
+      const vy = (cell.moveVy || 0) + (cell.vy || 0);
+      const speed = Math.hypot(vx, vy);
+      const moveAngle = speed > 0.08 ? Math.atan2(vy, vx) : 0;
+      const stretchAmp = speed > 0.08 ? Math.min(cell.radius * 0.08, speed * 1.3) : 0;
+
+      const N = 48;
+      const step = (Math.PI * 2) / N;
+      const dr = j.dr;
+      const vr = j.vr;
+
+      const kSpring = 0.085;
+      const kNeighbor = 0.095;
+      const damping = 0.88;
+
+      for (let i = 0; i < N; i++) {
+        const angle = i * step;
+        const targetStretch = stretchAmp * Math.cos(2 * (angle - moveAngle));
+        const ripple = j.rippleAmp > 0 ? Math.sin(j.ripplePhase - i * step * 3) * j.rippleAmp : 0;
+        const targetDr = targetStretch + ripple;
+
+        const prevIdx = (i - 1 + N) % N;
+        const nextIdx = (i + 1) % N;
+        const neighborAvg = (dr[prevIdx] + dr[nextIdx]) * 0.5;
+
+        const fSpring = (targetDr - dr[i]) * kSpring;
+        const fNeighbor = (neighborAvg - dr[i]) * kNeighbor;
+
+        vr[i] = (vr[i] + (fSpring + fNeighbor) * dtRatio) * Math.pow(damping, dtRatio);
+        dr[i] += vr[i] * dtRatio;
+
+        const maxDef = cell.radius * 0.20;
+        if (dr[i] > maxDef) {
+          dr[i] = maxDef;
+          vr[i] *= 0.5;
+        } else if (dr[i] < -maxDef) {
+          dr[i] = -maxDef;
+          vr[i] *= 0.5;
+        }
       }
     };
 
-    const traceJellyCellPath = (cx: number, cy: number, radius: number, phaseOffset: number, time: number) => {
-      const points = 52;
-      // 1.5 - 2.5% subtle organic membrane shimmer, strictly bound
-      const amplitude = Math.max(0.6, Math.min(radius * 0.02, 3.0));
-      const lobes = 6;
-      const speed = 0.0032;
-      const angleStep = (Math.PI * 2) / points;
+    const applyCellSquash = (
+      cell: { radius: number; jelly?: SoftBodyJelly },
+      impactAngle: number,
+      force: number
+    ) => {
+      if (!cell.jelly) return;
+      const N = 48;
+      const step = (Math.PI * 2) / N;
+      const clampedForce = Math.min(cell.radius * 0.16, force);
+      for (let i = 0; i < N; i++) {
+        const angle = i * step;
+        const cosDiff = Math.cos(angle - impactAngle);
+        if (cosDiff > 0.2) {
+          cell.jelly.dr[i] -= clampedForce * cosDiff;
+          cell.jelly.vr[i] -= clampedForce * cosDiff * 0.5;
+        }
+      }
+    };
+
+    const traceCatmullRomCell = (
+      cx: number,
+      cy: number,
+      cr: number,
+      jelly: SoftBodyJelly | undefined,
+      pointCount: number
+    ) => {
+      const stepIdx = 48 / pointCount;
+      const N = 48;
+      const pulse = jelly ? Math.max(0.96, Math.min(1.10, jelly.pulse)) : 1.0;
+      const nominalR = cr * pulse;
+
+      for (let k = 0; k < pointCount; k++) {
+        const i = (k * stepIdx) % N;
+        const angle = (i * Math.PI * 2) / N;
+        const offset = jelly ? jelly.dr[i] : 0;
+        const r = Math.max(3, nominalR + offset);
+        scratchCurveX[k] = cx + Math.cos(angle) * r;
+        scratchCurveY[k] = cy + Math.sin(angle) * r;
+      }
 
       ctx.beginPath();
-      for (let i = 0; i <= points; i++) {
-        const angle = i * angleStep;
-        const rOffset = amplitude * Math.sin(angle * lobes + time * speed + phaseOffset);
-        const r = radius + rOffset;
-        const px = cx + Math.cos(angle) * r;
-        const py = cy + Math.sin(angle) * r;
-        if (i === 0) {
-          ctx.moveTo(px, py);
-        } else {
-          ctx.lineTo(px, py);
-        }
+      ctx.moveTo(scratchCurveX[0], scratchCurveY[0]);
+      for (let k = 0; k < pointCount; k++) {
+        const p0 = (k - 1 + pointCount) % pointCount;
+        const p1 = k;
+        const p2 = (k + 1) % pointCount;
+        const p3 = (k + 2) % pointCount;
+
+        const cp1x = scratchCurveX[p1] + (scratchCurveX[p2] - scratchCurveX[p0]) / 6;
+        const cp1y = scratchCurveY[p1] + (scratchCurveY[p2] - scratchCurveY[p0]) / 6;
+        const cp2x = scratchCurveX[p2] - (scratchCurveX[p3] - scratchCurveX[p1]) / 6;
+        const cp2y = scratchCurveY[p2] - (scratchCurveY[p3] - scratchCurveY[p1]) / 6;
+
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, scratchCurveX[p2], scratchCurveY[p2]);
       }
       ctx.closePath();
     };
 
-    const drawJellyCell = (
+    const renderSoftBodyCell = (
       cx: number,
       cy: number,
-      radius: number,
+      cr: number,
       color: string,
-      phaseOffset: number,
-      time: number,
-      outline = false,
-      outlineColor = 'rgba(0,0,0,0.3)'
+      skinImg: HTMLImageElement | undefined | null,
+      jelly: SoftBodyJelly | undefined,
+      quality: 'high' | 'medium' | 'low'
     ) => {
-      traceJellyCellPath(cx, cy, radius, phaseOffset, time);
+      const points = quality === 'high' ? 48 : quality === 'medium' ? 24 : 16;
+      traceCatmullRomCell(cx, cy, cr, jelly, points);
+
+      if (skinImg && skinImg.complete && skinImg.naturalWidth > 0) {
+        ctx.save();
+        ctx.clip();
+        const iw = skinImg.naturalWidth || skinImg.width || 1;
+        const ih = skinImg.naturalHeight || skinImg.height || 1;
+        const minDim = Math.min(iw, ih);
+        const sx = (iw - minDim) / 2;
+        const sy = (ih - minDim) / 2;
+        ctx.drawImage(skinImg, sx, sy, minDim, minDim, cx - cr, cy - cr, cr * 2, cr * 2);
+
+        if (quality !== 'low') {
+          ctx.beginPath();
+          ctx.ellipse(cx - cr * 0.32, cy - cr * 0.32, cr * 0.28, cr * 0.14, -Math.PI / 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+          ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.lineWidth = Math.max(2.5, Math.min(8, cr * 0.045));
+        ctx.strokeStyle = getDarkerColor(color, 0.38);
+        ctx.stroke();
+      } else {
+        if (quality === 'low') {
+          ctx.fillStyle = color;
+          ctx.fill();
+        } else {
+          const grad = ctx.createRadialGradient(
+            cx - cr * 0.28, cy - cr * 0.28, cr * 0.05,
+            cx, cy, cr
+          );
+          grad.addColorStop(0, getLighterColor(color, 0.32));
+          grad.addColorStop(0.70, color);
+          grad.addColorStop(1, getDarkerColor(color, 0.22));
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          ctx.lineWidth = Math.max(1.5, cr * 0.022);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.24)';
+          ctx.stroke();
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.ellipse(cx - cr * 0.32, cy - cr * 0.32, cr * 0.28, cr * 0.14, -Math.PI / 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.lineWidth = Math.max(2.5, Math.min(8, cr * 0.045));
+        ctx.strokeStyle = getDarkerColor(color, 0.40);
+        ctx.stroke();
+      }
+    };
+
+    const drawMetaballBridge = (
+      x1: number,
+      y1: number,
+      r1: number,
+      x2: number,
+      y2: number,
+      r2: number,
+      color: string
+    ) => {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.hypot(dx, dy);
+      const totalR = r1 + r2;
+      if (dist >= totalR || dist < 2) return;
+
+      const overlap = 1.0 - (dist / totalR);
+      const angle = Math.atan2(dy, dx);
+      const spread = Math.PI * 0.28 * overlap;
+
+      const p1aX = x1 + Math.cos(angle + spread) * r1;
+      const p1aY = y1 + Math.sin(angle + spread) * r1;
+      const p1bX = x1 + Math.cos(angle - spread) * r1;
+      const p1bY = y1 + Math.sin(angle - spread) * r1;
+
+      const p2aX = x2 + Math.cos(angle + Math.PI - spread) * r2;
+      const p2aY = y2 + Math.sin(angle + Math.PI - spread) * r2;
+      const p2bX = x2 + Math.cos(angle + Math.PI + spread) * r2;
+      const p2bY = y2 + Math.sin(angle + Math.PI + spread) * r2;
+
+      const midX = (x1 + x2) * 0.5;
+      const midY = (y1 + y2) * 0.5;
+      const pinch = (1.0 - overlap) * 0.2 * totalR;
+
+      const cp1X = midX + Math.cos(angle + Math.PI * 0.5) * pinch;
+      const cp1Y = midY + Math.sin(angle + Math.PI * 0.5) * pinch;
+      const cp2X = midX + Math.cos(angle - Math.PI * 0.5) * pinch;
+      const cp2Y = midY + Math.sin(angle - Math.PI * 0.5) * pinch;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(p1aX, p1aY);
+      ctx.quadraticCurveTo(cp1X, cp1Y, p2aX, p2aY);
+      ctx.lineTo(p2bX, p2bY);
+      ctx.quadraticCurveTo(cp2X, cp2Y, p1bX, p1bY);
+      ctx.closePath();
       ctx.fillStyle = color;
       ctx.fill();
-      if (outline) {
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = outlineColor;
-        ctx.stroke();
+      ctx.restore();
+    };
+
+    const triggerEatAnimation = (
+      predator: { x: number; y: number; renderX?: number; renderY?: number; radius: number },
+      preyX: number,
+      preyY: number,
+      preyR: number,
+      preyColor: string,
+      now: number
+    ) => {
+      const pool = eatingPoolRef.current;
+      let slot: EatingAnim | null = null;
+      for (let i = 0; i < pool.length; i++) {
+        if (!pool[i].active) {
+          slot = pool[i];
+          break;
+        }
+      }
+      if (!slot) slot = pool[0];
+      slot.active = true;
+      slot.startX = preyX;
+      slot.startY = preyY;
+      slot.predatorCell = predator;
+      slot.radius = preyR;
+      slot.initialRadius = preyR;
+      slot.color = preyColor;
+      slot.timeStart = now;
+      slot.duration = preyR > 14 ? 240 : 180;
+    };
+
+    const triggerPelletPop = (x: number, y: number, color: string, now: number) => {
+      const pool = popPoolRef.current;
+      for (let p = 0; p < 3; p++) {
+        let slot: PelletPopAnim | null = null;
+        for (let i = 0; i < pool.length; i++) {
+          if (!pool[i].active) {
+            slot = pool[i];
+            break;
+          }
+        }
+        if (!slot) slot = pool[p % pool.length];
+        const angle = (p * Math.PI * 2) / 3 + (Math.random() - 0.5) * 0.4;
+        const speed = 1.2 + Math.random() * 1.5;
+        slot.active = true;
+        slot.x = x;
+        slot.y = y;
+        slot.vx = Math.cos(angle) * speed;
+        slot.vy = Math.sin(angle) * speed;
+        slot.radius = 2.2;
+        slot.color = color;
+        slot.timeStart = now;
+        slot.duration = 140;
       }
     };
 
@@ -1316,7 +1595,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const effectiveR = r * pulse;
 
       ctx.save();
-      // Spectral cyan & purple eerie aura glow behind ghost token
       ctx.beginPath();
       ctx.arc(drawX, drawY, effectiveR + 6, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(56, 189, 248, 0.26)';
@@ -1337,7 +1615,6 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           size
         );
       } else {
-        // Fallback glowing ghost shape
         const grad = ctx.createRadialGradient(
           drawX - r * 0.2, drawY - r * 0.2, r * 0.2,
           drawX, drawY, r * 1.2
@@ -1359,14 +1636,17 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       ctx.restore();
     };
 
-    const drawVirus = (virus: Virus) => {
+    const drawVirus = (virus: Virus, time: number) => {
       const spikes = 16;
-      const outerRadius = virus.radius;
-      const innerRadius = virus.radius * 0.88;
+      const breath = Math.sin(time * 0.0032);
+      const outerRadius = virus.radius * (1.0 + 0.035 * breath);
+      const innerRadius = virus.radius * (0.86 + 0.025 * Math.cos(time * 0.0032));
       ctx.save();
       ctx.beginPath();
-      for (let i = 0; i < spikes * 2; i++) {
-        const angle = (i * Math.PI) / spikes;
+      const total = spikes * 2;
+      const angleStep = (Math.PI * 2) / total;
+      for (let i = 0; i < total; i++) {
+        const angle = i * angleStep;
         const r = i % 2 === 0 ? outerRadius : innerRadius;
         const px = virus.x + Math.cos(angle) * r;
         const py = virus.y + Math.sin(angle) * r;
@@ -1374,13 +1654,14 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         else ctx.lineTo(px, py);
       }
       ctx.closePath();
-      ctx.fillStyle = '#33ff33';
+      ctx.fillStyle = '#22c55e';
       ctx.fill();
       ctx.lineWidth = 4;
       ctx.strokeStyle = '#15803d';
       ctx.stroke();
       ctx.restore();
     };
+
 
     const drawAimArrow = () => {
       const cells = playerCellsRef.current;
@@ -1497,7 +1778,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           moveVy: 0,
           radius: fragmentRadius,
           splitTime: now,
-          phaseOffset: Math.random() * Math.PI * 2
+          phaseOffset: Math.random() * Math.PI * 2,
+          jelly: createCellJelly()
         });
       }
 
@@ -1677,6 +1959,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         // Apply movement velocity and burst split velocity
         cell.x += (cell.moveVx + cell.vx) * dtRatio;
         cell.y += (cell.moveVy + cell.vy) * dtRatio;
+        updateCellJelly(cell, dtRatio);
 
         // Smooth Agar.io split launch decay curve
         const burstDecay = Math.pow(0.88, dtRatio);
@@ -1765,6 +2048,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     c1.moveVx = ((c1.moveVx || 0) * m1 + (c2.moveVx || 0) * m2) / totalM;
                     c1.moveVy = ((c1.moveVy || 0) * m1 + (c2.moveVy || 0) * m2) / totalM;
                     c1.splitTime = Math.min(c1.splitTime, c2.splitTime);
+                    if (c1.jelly) {
+                      c1.jelly.pulseTarget = 1.07;
+                      c1.jelly.rippleAmp = Math.min(3.5, c1.jelly.rippleAmp + 1.2);
+                    }
                     mergedIndices.add(j);
                   }
                 } else if (!gatherMode) {
@@ -1777,6 +2064,9 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                   c1.y -= ny * push * w1;
                   c2.x += nx * push * w2;
                   c2.y += ny * push * w2;
+
+                  applyCellSquash(c1, Math.atan2(ny, nx), push * 0.4);
+                  applyCellSquash(c2, Math.atan2(-ny, -nx), push * 0.4);
 
                   c1.x = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.x));
                   c1.y = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.y));
@@ -2471,6 +2761,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
 
           cell.x += ((cell.moveVx || 0) + (cell.vx || 0)) * dtRatio;
           cell.y += ((cell.moveVy || 0) + (cell.vy || 0)) * dtRatio;
+          updateCellJelly(cell, dtRatio);
 
           cell.x = Math.max(cell.radius, Math.min(MAP_SIZE - cell.radius, cell.x));
           cell.y = Math.max(cell.radius, Math.min(MAP_SIZE - cell.radius, cell.y));
@@ -2529,6 +2820,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                       c1.moveVx = ((c1.moveVx || 0) * m1 + (c2.moveVx || 0) * m2) / totalM;
                       c1.moveVy = ((c1.moveVy || 0) * m1 + (c2.moveVy || 0) * m2) / totalM;
                       c1.splitTime = Math.min(c1.splitTime, c2.splitTime);
+                      if (c1.jelly) {
+                        c1.jelly.pulseTarget = 1.07;
+                        c1.jelly.rippleAmp = Math.min(3.5, c1.jelly.rippleAmp + 1.2);
+                      }
                       mergedIndices.add(j);
                     }
                   } else {
@@ -2539,7 +2834,10 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     c1.x -= nx * push * w1;
                     c1.y -= ny * push * w1;
                     c2.x += nx * push * w2;
-                    c2.y += ny * push * w2;
+                    c2.y -= ny * push * w2;
+
+                    applyCellSquash(c1, Math.atan2(ny, nx), push * 0.4);
+                    applyCellSquash(c2, Math.atan2(-ny, -nx), push * 0.4);
 
                     c1.x = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.x));
                     c1.y = Math.max(c1.radius, Math.min(MAP_SIZE - c1.radius, c1.y));
@@ -2581,7 +2879,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       // -------------------------------------------------------------------------
       let anyFoodEaten = false;
 
-      const consumeFoodForCell = (cell: { x: number; y: number; radius: number; id?: string }) => {
+      const consumeFoodForCell = (cell: { x: number; y: number; radius: number; renderX?: number; renderY?: number; id?: string; jelly?: SoftBodyJelly }) => {
         const minC = Math.max(0, Math.floor((cell.x - cell.radius) / GRID_CELL_SIZE));
         const maxC = Math.min(GRID_COLS - 1, Math.floor((cell.x + cell.radius) / GRID_CELL_SIZE));
         const minR = Math.max(0, Math.floor((cell.y - cell.radius) / GRID_CELL_SIZE));
@@ -2602,6 +2900,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
                     cell.radius = Math.sqrt(cell.radius * cell.radius + massGain);
                     food.eaten = true;
                     anyFoodEaten = true;
+                    triggerEatAnimation(cell, food.x, food.y, food.radius, food.color, now);
+                    triggerPelletPop(food.x, food.y, food.color, now);
+                    if (cell.jelly) {
+                      cell.jelly.pulseTarget = 1.05;
+                      cell.jelly.rippleAmp = Math.min(2.0, cell.jelly.rippleAmp + 0.35);
+                    }
                   }
                 }
               }
@@ -2953,6 +3257,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             const dy = pCell.y - bCell.y;
             if (dx * dx + dy * dy < pCell.radius * pCell.radius && pCell.radius > bCell.radius * 1.10) {
               pCell.radius = Math.sqrt(pCell.radius * pCell.radius + bCell.radius * bCell.radius * 0.75);
+              triggerEatAnimation(pCell, bCell.x, bCell.y, bCell.radius, bot.color, now);
+              if (pCell.jelly) {
+                pCell.jelly.pulseTarget = 1.09;
+                pCell.jelly.rippleAmp = Math.min(4.5, pCell.jelly.rippleAmp + 1.8);
+              }
               return false;
             }
           }
@@ -2971,6 +3280,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             if (dx * dx + dy * dy < bCell.radius * bCell.radius && bCell.radius > pCell.radius * 1.10) {
               bCell.radius = Math.sqrt(bCell.radius * bCell.radius + pCell.radius * pCell.radius * 0.75);
               deadCellIds.add(pCell.id);
+              triggerEatAnimation(bCell, pCell.x, pCell.y, pCell.radius, playerColorRef.current || '#0284c7', now);
+              if (bCell.jelly) {
+                bCell.jelly.pulseTarget = 1.09;
+                bCell.jelly.rippleAmp = Math.min(4.5, bCell.jelly.rippleAmp + 1.8);
+              }
             }
           });
         });
@@ -2995,6 +3309,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               const dy = cellA.y - cellB.y;
               if (dx * dx + dy * dy < cellA.radius * cellA.radius && cellA.radius > cellB.radius * 1.10) {
                 cellA.radius = Math.sqrt(cellA.radius * cellA.radius + cellB.radius * cellB.radius * 0.75);
+                triggerEatAnimation(cellA, cellB.x, cellB.y, cellB.radius, botB.color, now);
+                if (cellA.jelly) {
+                  cellA.jelly.pulseTarget = 1.08;
+                  cellA.jelly.rippleAmp = Math.min(4.0, cellA.jelly.rippleAmp + 1.5);
+                }
                 return false;
               }
               return true;
@@ -3007,6 +3326,11 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
               const dy = cellB.y - cellA.y;
               if (dx * dx + dy * dy < cellB.radius * cellB.radius && cellB.radius > cellA.radius * 1.10) {
                 cellB.radius = Math.sqrt(cellB.radius * cellB.radius + cellA.radius * cellA.radius * 0.75);
+                triggerEatAnimation(cellB, cellA.x, cellA.y, cellA.radius, botA.color, now);
+                if (cellB.jelly) {
+                  cellB.jelly.pulseTarget = 1.08;
+                  cellB.jelly.rippleAmp = Math.min(4.0, cellB.jelly.rippleAmp + 1.5);
+                }
                 return false;
               }
               return true;
@@ -3021,7 +3345,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       for (let i = 0; i < BOT_COUNT; i++) {
         if (!currentBots[i] || currentBots[i].cells.length === 0) {
           const slot = currentBots[i]?.botIndex ?? i;
-          currentBots[i] = createBotInstance(slot, now);
+          currentBots[i] = createBotInstance(slot, now, currentBots);
         }
       }
 
@@ -3039,14 +3363,14 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           const b = liveBots[i];
           const totalBotMass = b.cells.reduce((sum, c) => sum + c.radius * c.radius, 0);
           botEntries[i] = {
-            name: b.name,
+            name: b.name || 'An unnamed cell',
             score: Math.floor(totalBotMass / 10),
             isPlayer: false,
             color: b.color
           };
         }
         botEntries[liveBots.length] = {
-          name: playerNameRef.current,
+          name: playerNameRef.current || 'You',
           score: currentScore,
           isPlayer: true
         };
@@ -3131,52 +3455,15 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const cr = cell.renderRadius ?? cell.radius;
       const cellScore = Math.floor((cell.radius * cell.radius) / 10);
 
-      ctx.save();
-      ctx.translate(cx, cy);
-
-      // In Sarok.io / Agar.io, cells are ALWAYS 100% round circles (never oval/stretched)
-      ctx.beginPath();
-      ctx.arc(0, 0, cr, 0, Math.PI * 2);
-
-      if (playerSkinImgRef.current && playerSkinImgRef.current.complete) {
-        ctx.save();
-        ctx.clip();
-        
-        const img = playerSkinImgRef.current;
-        const iw = img.naturalWidth || img.width || 1;
-        const ih = img.naturalHeight || img.height || 1;
-        const minDim = Math.min(iw, ih);
-        const sx = (iw - minDim) / 2;
-        const sy = (ih - minDim) / 2;
-
-        // Upright, static, centered skin image - never rotates or moves on the cell
-        ctx.drawImage(
-          img,
-          sx,
-          sy,
-          minDim,
-          minDim,
-          -cr,
-          -cr,
-          cr * 2,
-          cr * 2
-        );
-        ctx.restore();
-        
-        // Simple clean border
-        ctx.lineWidth = Math.max(3.5, Math.min(8, cr * 0.045));
-        ctx.strokeStyle = '#0284c7';
-        ctx.stroke();
-      } else {
-        // Simple solid color when no skin is equipped
-        ctx.fillStyle = playerColorRef.current || '#0284c7';
-        ctx.fill();
-
-        ctx.lineWidth = Math.max(3, Math.min(7, cr * 0.04));
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.stroke();
-      }
-      ctx.restore();
+      renderSoftBodyCell(
+        cx,
+        cy,
+        cr,
+        playerColorRef.current || '#0284c7',
+        playerSkinImgRef.current,
+        cell.jelly,
+        qualityRef.current
+      );
 
       // Bold cell typography (name + score)
       const nameFontSize = Math.max(13, Math.min(cr * 0.32, 44));
@@ -3226,47 +3513,47 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       }
     };
 
-    const drawBot = (bot: BotPlayer | BotCell, time: number) => {
+    const drawBot = (bot: BotCell, time: number) => {
       const bx = bot.renderX ?? bot.x;
       const by = bot.renderY ?? bot.y;
       const br = bot.renderRadius ?? bot.radius;
       const botScore = Math.floor((bot.radius * bot.radius) / 10);
 
-      ctx.save();
-      ctx.translate(bx, by);
+      renderSoftBodyCell(
+        bx,
+        by,
+        br,
+        bot.color,
+        bot.skinImg,
+        bot.jelly,
+        qualityRef.current
+      );
 
-      // In Sarok.io / Agar.io, cells are ALWAYS 100% round circles (never oval)
-      ctx.beginPath();
-      ctx.arc(0, 0, br, 0, Math.PI * 2);
-      ctx.fillStyle = bot.color;
-      ctx.fill();
-      ctx.lineWidth = Math.max(2.5, Math.min(6, br * 0.04));
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
-      ctx.stroke();
-      ctx.restore();
+      // Only draw name & score if bot has a name (30% are anonymous/unnamed)
+      if (bot.name) {
+        const nameFontSize = Math.max(12, Math.min(br * 0.32, 42));
+        const showScore = br >= 24;
+        const nameY = showScore ? by - br * 0.08 : by;
 
-      const nameFontSize = Math.max(12, Math.min(br * 0.32, 42));
-      const showScore = br >= 24;
-      const nameY = showScore ? by - br * 0.08 : by;
-
-      ctx.font = `800 ${nameFontSize}px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.lineWidth = Math.max(3, nameFontSize * 0.22);
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
-      ctx.strokeText(bot.name, bx, nameY);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(bot.name, bx, nameY);
-
-      if (showScore) {
-        const scoreFontSize = Math.max(10, Math.min(nameFontSize * 0.58, 24));
-        const scoreY = by + br * 0.22;
-        ctx.font = `700 ${scoreFontSize}px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-        ctx.lineWidth = Math.max(2.5, scoreFontSize * 0.2);
+        ctx.font = `800 ${nameFontSize}px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = Math.max(3, nameFontSize * 0.22);
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
-        ctx.strokeText(botScore.toString(), bx, scoreY);
+        ctx.strokeText(bot.name, bx, nameY);
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(botScore.toString(), bx, scoreY);
+        ctx.fillText(bot.name, bx, nameY);
+
+        if (showScore) {
+          const scoreFontSize = Math.max(10, Math.min(nameFontSize * 0.58, 24));
+          const scoreY = by + br * 0.22;
+          ctx.font = `700 ${scoreFontSize}px "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+          ctx.lineWidth = Math.max(2.5, scoreFontSize * 0.2);
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+          ctx.strokeText(botScore.toString(), bx, scoreY);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(botScore.toString(), bx, scoreY);
+        }
       }
     };
 
@@ -3274,6 +3561,20 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const now = performance.now();
       const logicalWidth = canvas.clientWidth;
       const logicalHeight = canvas.clientHeight;
+
+      // Dynamic quality setting automatically adapting if FPS drops below 45
+      fpsFramesCountRef.current++;
+      if (now - fpsWindowStartRef.current >= 1000) {
+        const measuredFps = (fpsFramesCountRef.current * 1000) / (now - fpsWindowStartRef.current);
+        fpsFramesCountRef.current = 0;
+        fpsWindowStartRef.current = now;
+        if (measuredFps < 45) {
+          if (qualityRef.current === 'high') qualityRef.current = 'medium';
+          else if (qualityRef.current === 'medium') qualityRef.current = 'low';
+        } else if (measuredFps > 56 && qualityRef.current === 'medium') {
+          qualityRef.current = 'high';
+        }
+      }
 
       // Sarok.io / Agar.io: Lock camera 100% dead-center on the player's visual center
       const currentCells = playerCellsRef.current;
@@ -3339,9 +3640,12 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       ctx.lineWidth = 8;
       ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
 
+      // Render Pellets: slight floating motion, tiny soft glow
       const foods = foodsRef.current;
+      const isLowQuality = qualityRef.current === 'low';
       for (let i = 0; i < foods.length; i++) {
         const food = foods[i];
+        if (food.eaten) continue;
         const fx = food.renderX ?? food.x;
         const fy = food.renderY ?? food.y;
         if (food.radius >= EJECTED_MASS_RADIUS) {
@@ -3353,11 +3657,45 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
           ctx.strokeStyle = 'rgba(0,0,0,0.35)';
           ctx.stroke();
         } else {
+          const floatY = Math.sin(now * 0.003 + (food.x * 0.04 + food.y * 0.04)) * 0.85;
+          const drawFoodY = fy + floatY;
+          if (!isLowQuality) {
+            ctx.beginPath();
+            ctx.arc(fx, drawFoodY, food.radius + 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = food.color;
+            ctx.globalAlpha = 0.22;
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+          }
           ctx.beginPath();
-          ctx.arc(fx, fy, food.radius, 0, Math.PI * 2);
+          ctx.arc(fx, drawFoodY, food.radius, 0, Math.PI * 2);
           ctx.fillStyle = food.color;
           ctx.fill();
         }
+      }
+
+      // Render pellet pops
+      const popPool = popPoolRef.current;
+      for (let p = 0; p < popPool.length; p++) {
+        const pop = popPool[p];
+        if (!pop.active) continue;
+        const elapsed = now - pop.timeStart;
+        if (elapsed >= pop.duration) {
+          pop.active = false;
+          continue;
+        }
+        const prog = elapsed / pop.duration;
+        pop.x += pop.vx;
+        pop.y += pop.vy;
+        const popAlpha = (1 - prog) * 0.8;
+        const popR = pop.radius * (1 + prog * 0.8);
+        ctx.save();
+        ctx.globalAlpha = popAlpha;
+        ctx.beginPath();
+        ctx.arc(pop.x, pop.y, popR, 0, Math.PI * 2);
+        ctx.fillStyle = pop.color;
+        ctx.fill();
+        ctx.restore();
       }
 
       const tokens = ghostTokensRef.current;
@@ -3365,12 +3703,49 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         drawGhostToken(tokens[i], now);
       }
 
+      // Liquid metaball bridges between merging cells
+      const pCells = playerCellsRef.current;
+      if (pCells.length > 1) {
+        for (let i = 0; i < pCells.length; i++) {
+          const c1 = pCells[i];
+          const r1 = c1.renderRadius ?? c1.radius;
+          const x1 = c1.renderX ?? c1.x;
+          const y1 = c1.renderY ?? c1.y;
+          for (let j = i + 1; j < pCells.length; j++) {
+            const c2 = pCells[j];
+            const r2 = c2.renderRadius ?? c2.radius;
+            const x2 = c2.renderX ?? c2.x;
+            const y2 = c2.renderY ?? c2.y;
+            drawMetaballBridge(x1, y1, r1, x2, y2, r2, playerColorRef.current || '#0284c7');
+          }
+        }
+      }
+
+      const liveBots = botsRef.current;
+      for (let b = 0; b < liveBots.length; b++) {
+        const botCells = liveBots[b].cells;
+        if (botCells.length > 1) {
+          for (let i = 0; i < botCells.length; i++) {
+            const c1 = botCells[i];
+            const r1 = c1.renderRadius ?? c1.radius;
+            const x1 = c1.renderX ?? c1.x;
+            const y1 = c1.renderY ?? c1.y;
+            for (let j = i + 1; j < botCells.length; j++) {
+              const c2 = botCells[j];
+              const r2 = c2.renderRadius ?? c2.radius;
+              const x2 = c2.renderX ?? c2.x;
+              const y2 = c2.renderY ?? c2.y;
+              drawMetaballBridge(x1, y1, r1, x2, y2, r2, liveBots[b].color);
+            }
+          }
+        }
+      }
+
       // Re-use preallocated drawable list to eliminate per-frame GC allocation
       const pool = drawablePoolRef.current;
       let count = 0;
 
       if (!isGameOverRef.current) {
-        const pCells = playerCellsRef.current;
         for (let i = 0; i < pCells.length; i++) {
           const c = pCells[i];
           const r = c.renderRadius ?? c.radius;
@@ -3385,9 +3760,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         }
       }
 
-      const bots = botsRef.current;
-      for (let i = 0; i < bots.length; i++) {
-        const b = bots[i];
+      for (let i = 0; i < liveBots.length; i++) {
+        const b = liveBots[i];
         for (let k = 0; k < b.cells.length; k++) {
           const c = b.cells[k];
           const r = c.renderRadius ?? c.radius;
@@ -3425,8 +3799,35 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         } else if (item.type === 'bot') {
           drawBot(item.entity, now);
         } else if (item.type === 'virus') {
-          drawVirus(item.entity);
+          drawVirus(item.entity, now);
         }
+      }
+
+      // Render Eating Animations: prey shrinking and pulling into predator center
+      const eatingPool = eatingPoolRef.current;
+      for (let e = 0; e < eatingPool.length; e++) {
+        const anim = eatingPool[e];
+        if (!anim.active) continue;
+        const elapsed = now - anim.timeStart;
+        if (elapsed >= anim.duration) {
+          anim.active = false;
+          continue;
+        }
+        const prog = elapsed / anim.duration;
+        const targetX = anim.predatorCell.renderX ?? anim.predatorCell.x;
+        const targetY = anim.predatorCell.renderY ?? anim.predatorCell.y;
+        const curX = anim.startX + (targetX - anim.startX) * (prog * prog);
+        const curY = anim.startY + (targetY - anim.startY) * (prog * prog);
+        const curR = Math.max(1, anim.initialRadius * (1 - prog * 0.9));
+        const alpha = Math.max(0, 1 - prog);
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(curX, curY, curR, 0, Math.PI * 2);
+        ctx.fillStyle = anim.color;
+        ctx.fill();
+        ctx.restore();
       }
 
       if (!isGameOverRef.current) {
@@ -3910,7 +4311,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
             {leaderboard.map((entry, idx) => (
               <div key={idx} className="flex items-center justify-between text-[10px] sm:text-[11px] md:text-xs font-bold py-0.5">
                 <span className={`truncate max-w-[70%] ${entry.isPlayer ? 'text-emerald-600' : 'text-slate-600'}`}>
-                  {idx + 1}. {entry.name}
+                  {idx + 1}. {entry.name || 'An unnamed cell'}
                 </span>
                 <span className={`font-mono shrink-0 ml-1.5 ${entry.isPlayer ? 'text-emerald-600' : 'text-slate-500'}`}>{entry.score}</span>
               </div>
