@@ -1364,7 +1364,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const accelMag = Math.hypot(ax, ay);
       if (accelMag > 0.04) {
         const accelAngle = Math.atan2(ay, ax);
-        const impulse = Math.min(1.8, Math.max(0.2, cell.radius * 0.035), accelMag * 0.5);
+        const impulse = Math.min(0.22, Math.max(0.04, cell.radius * 0.004), accelMag * 0.08);
         const N = 48;
         const step = (Math.PI * 2) / N;
         for (let i = 0; i < N; i++) {
@@ -1393,7 +1393,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         const nextIdx = (i + 1) % N;
         const neighborAvg = (dr[prevIdx] + dr[nextIdx]) * 0.5;
 
-        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * rippleAmp * 0.2 : 0;
+        const rippleForce = rippleAmp > 0.01 ? Math.sin(ripplePhase + i * step * 2) * Math.min(0.025, rippleAmp * 0.006) : 0;
         const fRestore = -dr[i] * kRestore;
         const fNeighbor = (neighborAvg - dr[i]) * kNeighbor;
 
@@ -1401,7 +1401,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
         dr[i] += vr[i] * dtRatio;
 
         // Strictly clamp deformation: max 5px or 7% of radius so large cells never distort
-        const maxDef = Math.min(5.0, Math.max(1.2, cell.radius * 0.07));
+        const maxDef = Math.min(1.25, Math.max(0.35, cell.radius * 0.012));
         if (dr[i] > maxDef) {
           dr[i] = maxDef;
           vr[i] *= 0.3;
@@ -1427,7 +1427,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       const N = 48;
       const step = (Math.PI * 2) / N;
       // Controlled, subtle impact compression (capped at 2.5px max)
-      const clampedForce = Math.min(2.5, cell.radius * 0.04, force * 0.2);
+      const clampedForce = Math.min(0.35, cell.radius * 0.006, force * 0.035);
       if (clampedForce < 0.05) return;
 
       for (let i = 0; i < N; i++) {
@@ -1456,7 +1456,7 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
     ) => {
       // Check if jelly actually has any noticeable deformation
       let hasDeform = false;
-      const pulse = jelly ? Math.max(0.97, Math.min(1.08, jelly.pulse)) : 1.0;
+      const pulse = 1.0;
       if (Math.abs(pulse - 1.0) > 0.002 || (jelly && jelly.rippleAmp > 0.02)) {
         hasDeform = true;
       } else if (jelly) {
