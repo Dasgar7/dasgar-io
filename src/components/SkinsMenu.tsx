@@ -315,15 +315,37 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
 
         {/* Custom Skin Builder Section (Only on Custom tab) */}
         {activeCategory === 'custom' && (
-          <div className="flex-1 min-h-0 w-full overflow-y-auto overscroll-contain">
+          <div className="flex-[0_0_62%] min-h-0 w-full overflow-y-auto overscroll-contain border-b border-[#303840]">
             <CustomSkinBuilder onSaveSkin={handleSaveCustomSkin} />
           </div>
         )}
 
-        {/* Preset skin grid is hidden while the full-screen custom editor is open */}
-        {activeCategory !== 'custom' && (
-        <>
-        {/* Skins Grid Container */}
+        {/* Skins Grid Container — also shows saved custom skins below the editor */}
+        {activeCategory === 'custom' && (
+          <div className="shrink-0 px-4 pt-2 pb-1 bg-[#111418] text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
+            My Saved Skins ({customSkins.length})
+          </div>
+        )}
+        <div className={activeCategory === 'custom' ? 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 bg-[#0b101e] flex items-center select-none' : 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-6 landscape:px-4 bg-[#0b101e] flex items-center select-none cursor-grab active:cursor-grabbing' } 
+          ref={scrollContainerRef}
+          onPointerDown={handleCardsPointerDown}
+          onPointerMove={handleCardsPointerMove}
+          onPointerUp={handleCardsPointerUp}
+          onPointerCancel={handleCardsPointerUp}
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehaviorX: 'contain',
+            touchAction: 'pan-x',
+            scrollBehavior: 'auto',
+            paddingTop: activeCategory === 'custom' ? '4px' : '20px',
+            paddingBottom: activeCategory === 'custom' ? '4px' : 'calc(env(safe-area-inset-bottom, 0px) + 48px)'
+          }}
+        >
+          {/* Creators Tab (Blank / Empty) */}
+          {activeCategory === 'creators' ? (
+            <div className="w-full min-h-full flex flex-col items-center justify-center text-center p-8 landscape:p-4 select-none">
+              <div className="w-20 h-20 landscape:w-14 landscape:h-14 rounded-full bg-slate-900/80 border-2 border-dashed border-slate-700 flex items-center justify-center mb-3 landscape:mb-1.5">
+                <Video size={36} className="text-slate-600 landscape:w-6 landscape:h-6" />
         <div 
           ref={scrollContainerRef}
           onPointerDown={handleCardsPointerDown}
@@ -614,8 +636,6 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
             </div>
           )}
         </div>
-        </>
-        )}
       </div>
     </div>
   );
