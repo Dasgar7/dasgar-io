@@ -313,34 +313,31 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
           </div>
         )}
 
-        {/* Custom Skin Builder Section (Only on Custom tab) */}
+        {/* Full-screen custom skin editor */}
         {activeCategory === 'custom' && (
-          <div className="flex-[0_0_62%] min-h-0 w-full overflow-y-auto overscroll-contain border-b border-[#303840]">
+          <div className="flex-1 min-h-0 w-full overflow-y-auto overscroll-contain">
             <CustomSkinBuilder onSaveSkin={handleSaveCustomSkin} />
           </div>
         )}
 
-        {/* Skins Grid Container — also shows saved custom skins below the editor */}
-        {activeCategory === 'own' && (
-          <div className="shrink-0 px-4 pt-2 pb-1 bg-[#111418] text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
-            My Saved Skins ({customSkins.length})
-          </div>
-        )}
-        <div className={activeCategory === 'own' ? 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 bg-[#0b101e] flex items-center select-none' : 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-6 landscape:px-4 bg-[#0b101e] flex items-center select-none cursor-grab active:cursor-grabbing' } 
-          ref={scrollContainerRef}
-          onPointerDown={handleCardsPointerDown}
-          onPointerMove={handleCardsPointerMove}
-          onPointerUp={handleCardsPointerUp}
-          onPointerCancel={handleCardsPointerUp}
-          style={{
-            WebkitOverflowScrolling: 'touch',
-            overscrollBehaviorX: 'contain',
-            touchAction: 'pan-x',
-            scrollBehavior: 'auto',
-            paddingTop: activeCategory === 'own' ? '4px' : '20px',
-            paddingBottom: activeCategory === 'own' ? '4px' : 'calc(env(safe-area-inset-bottom, 0px) + 48px)'
-          }}
-        >
+        {/* Saved custom skins are displayed in Mine */}
+        {activeCategory !== 'custom' && (
+          <div
+            ref={scrollContainerRef}
+            onPointerDown={handleCardsPointerDown}
+            onPointerMove={handleCardsPointerMove}
+            onPointerUp={handleCardsPointerUp}
+            onPointerCancel={handleCardsPointerUp}
+            className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-6 landscape:px-4 bg-[#0b101e] flex items-center select-none cursor-grab active:cursor-grabbing"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehaviorX: 'contain',
+              touchAction: 'pan-x',
+              scrollBehavior: 'auto',
+              paddingTop: '20px',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)'
+            }}
+          >
           {/* Creators Tab (Blank / Empty) */}
           {activeCategory === 'creators' ? (
             <div className="w-full min-h-full flex flex-col items-center justify-center text-center p-8 landscape:p-4 select-none">
@@ -635,7 +632,8 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
               })}
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
