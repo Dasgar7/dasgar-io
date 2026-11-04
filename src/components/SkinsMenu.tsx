@@ -179,17 +179,18 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
   );
 
   return (
-    <div 
-      className="w-full bg-[#111418] text-white flex justify-center font-sans select-none overflow-hidden"
-      style={{ 
-        height: 'calc(100% - env(safe-area-inset-bottom, 0px) - 16px)',
-        maxHeight: 'calc(100vh - env(safe-area-inset-bottom, 0px) - 16px)',
-        paddingLeft: 'max(16px, env(safe-area-inset-left))',
-        paddingRight: 'max(16px, env(safe-area-inset-right))'
+    <div
+      className="fixed inset-0 z-[100] w-screen h-[100dvh] min-h-0 bg-[#111418] text-white flex justify-center font-sans select-none overflow-hidden"
+      style={{
+        height: '100dvh',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)'
       }}
     >
-      <div 
-        className="w-full max-w-5xl h-full flex flex-col bg-[#111418] relative border-x border-[#292f36]"
+      <div
+        className="w-full h-full min-h-0 flex flex-col bg-[#111418] relative"
       >
         
 
@@ -314,11 +315,14 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
 
         {/* Custom Skin Builder Section (Only on Custom tab) */}
         {activeCategory === 'custom' && (
-          <div className="shrink-0 max-h-[54vh] landscape:max-h-[48vh] min-h-0 overflow-y-auto overscroll-contain">
+          <div className="flex-1 min-h-0 w-full overflow-y-auto overscroll-contain">
             <CustomSkinBuilder onSaveSkin={handleSaveCustomSkin} />
           </div>
         )}
 
+        {/* Preset skin grid is hidden while the full-screen custom editor is open */}
+        {activeCategory !== 'custom' && (
+        <>
         {/* Skins Grid Container */}
         <div 
           ref={scrollContainerRef}
@@ -610,6 +614,8 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );
