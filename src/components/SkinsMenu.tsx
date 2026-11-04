@@ -147,6 +147,8 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
     });
     setSelectedSkinId(newSkin.id);
     localStorage.setItem('dasgario_equipped_skin', newSkin.id);
+    setSearchQuery('');
+    setActiveCategory('own');
   };
 
   const handleDeleteCustomSkin = (skinId: string, e: React.MouseEvent) => {
@@ -320,29 +322,7 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
           </div>
         )}
 
-        {/* Saved custom skins are displayed in Mine */}
         {activeCategory !== 'custom' && (
-          <div
-            ref={scrollContainerRef}
-            onPointerDown={handleCardsPointerDown}
-            onPointerMove={handleCardsPointerMove}
-            onPointerUp={handleCardsPointerUp}
-            onPointerCancel={handleCardsPointerUp}
-            className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-6 landscape:px-4 bg-[#0b101e] flex items-center select-none cursor-grab active:cursor-grabbing"
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              overscrollBehaviorX: 'contain',
-              touchAction: 'pan-x',
-              scrollBehavior: 'auto',
-              paddingTop: '20px',
-              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 48px)'
-            }}
-          >
-          {/* Creators Tab (Blank / Empty) */}
-          {activeCategory === 'creators' ? (
-            <div className="w-full min-h-full flex flex-col items-center justify-center text-center p-8 landscape:p-4 select-none">
-              <div className="w-20 h-20 landscape:w-14 landscape:h-14 rounded-full bg-slate-900/80 border-2 border-dashed border-slate-700 flex items-center justify-center mb-3 landscape:mb-1.5">
-                <Video size={36} className="text-slate-600 landscape:w-6 landscape:h-6" />
         <div 
           ref={scrollContainerRef}
           onPointerDown={handleCardsPointerDown}
@@ -417,7 +397,7 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
                     }`}
                   >
                     {/* Delete button for custom skins */}
-                    {activeCategory === 'custom' && (
+                    {activeCategory === 'own' && (
                       <button
                         onClick={(e) => handleDeleteCustomSkin(skin.id, e)}
                         className="absolute top-2 right-2 landscape:top-1.5 landscape:right-1.5 p-1.5 landscape:p-1 text-slate-500 hover:text-rose-400 bg-slate-800/80 hover:bg-slate-700 rounded-lg transition-colors z-20"
