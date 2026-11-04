@@ -167,11 +167,11 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
   };
 
   // Current category skins
-  const currentSkins: SkinItem[] = 
-    activeCategory === 'custom' 
-      ? customSkins 
-      : activeCategory === 'creators' 
-        ? [] 
+  const currentSkins: SkinItem[] =
+    activeCategory === 'own'
+      ? customSkins
+      : activeCategory === 'custom' || activeCategory === 'creators'
+        ? []
         : PRESET_SKINS[activeCategory] || [];
 
   const filteredSkins = currentSkins.filter(skin => 
@@ -321,12 +321,12 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
         )}
 
         {/* Skins Grid Container — also shows saved custom skins below the editor */}
-        {activeCategory === 'custom' && (
+        {activeCategory === 'own' && (
           <div className="shrink-0 px-4 pt-2 pb-1 bg-[#111418] text-[11px] font-extrabold tracking-wider text-slate-400 uppercase">
             My Saved Skins ({customSkins.length})
           </div>
         )}
-        <div className={activeCategory === 'custom' ? 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 bg-[#0b101e] flex items-center select-none' : 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-6 landscape:px-4 bg-[#0b101e] flex items-center select-none cursor-grab active:cursor-grabbing' } 
+        <div className={activeCategory === 'own' ? 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 bg-[#0b101e] flex items-center select-none' : 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-4 sm:px-6 landscape:px-4 bg-[#0b101e] flex items-center select-none cursor-grab active:cursor-grabbing' } 
           ref={scrollContainerRef}
           onPointerDown={handleCardsPointerDown}
           onPointerMove={handleCardsPointerMove}
@@ -337,8 +337,8 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
             overscrollBehaviorX: 'contain',
             touchAction: 'pan-x',
             scrollBehavior: 'auto',
-            paddingTop: activeCategory === 'custom' ? '4px' : '20px',
-            paddingBottom: activeCategory === 'custom' ? '4px' : 'calc(env(safe-area-inset-bottom, 0px) + 48px)'
+            paddingTop: activeCategory === 'own' ? '4px' : '20px',
+            paddingBottom: activeCategory === 'own' ? '4px' : 'calc(env(safe-area-inset-bottom, 0px) + 48px)'
           }}
         >
           {/* Creators Tab (Blank / Empty) */}
