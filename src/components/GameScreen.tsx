@@ -3990,8 +3990,8 @@ export function GameScreen({ onBack, mode = 'classic' }: GameScreenProps) {
       // Floating joystick: shows EXACTLY where the player clicked/tapped
       if (inputRef.current.active) {
         const isMobile = isPhoneRef.current || logicalWidth < 640;
-        const ringRadius = isMobile ? 44 : 58;
-        const stickRadius = isMobile ? 22 : 29;
+        const ringRadius = isMobile ? 60 : 58;
+        const stickRadius = isMobile ? 30 : 29;
 
         const startX = inputRef.current.startX;
         const startY = inputRef.current.startY;
