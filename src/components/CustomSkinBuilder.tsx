@@ -436,196 +436,87 @@ export const CustomSkinBuilder: React.FC<CustomSkinBuilderProps> = ({ onSaveSkin
       )}
 
       {activeMode === 'draw' && (
-        <div className="flex flex-col md:flex-row landscape:flex-row items-center gap-2 md:gap-4 landscape:gap-2 bg-[#0b101e] p-2 md:p-3 landscape:p-2 rounded-xl landscape:rounded-lg border border-slate-800/80">
-          {/* Drawing Canvas (Interactive) */}
-          <div className="flex flex-col items-center gap-1 shrink-0">
-            <div 
-              className="relative w-24 h-24 sm:w-36 sm:h-36 landscape:w-20 landscape:h-20 rounded-full shadow-lg flex items-center justify-center overflow-hidden"
-              style={{
-                backgroundColor: bgColor,
-                border: `5px solid ${borderColor}`,
-                touchAction: 'none'
-              }}
-            >
-              <canvas
-                ref={canvasRef}
-                width={240}
-                height={240}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                onTouchStart={startDrawing}
-                onTouchMove={draw}
-                onTouchEnd={stopDrawing}
-                className="w-full h-full cursor-crosshair"
-                style={{ touchAction: 'none' }}
-              />
+        <div className="w-full rounded-xl overflow-hidden border border-slate-300 bg-[#f8fafc] text-slate-800 p-2 sm:p-3">
+          <div className="grid grid-cols-[minmax(68px,0.72fr)_minmax(0,2.4fr)_minmax(76px,0.8fr)] sm:grid-cols-[minmax(100px,0.8fr)_minmax(0,2.5fr)_minmax(120px,0.9fr)] gap-2 sm:gap-4 items-center min-h-[230px] landscape:min-h-[250px]">
+            {/* Left: drawing colors and history */}
+            <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-w-0">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                {COLOR_PRESETS.map((color) => (
+                  <button key={color} type="button" aria-label={`Pen color ${color}`}
+                    onClick={() => { setPenColor(color); setIsEraser(false); }}
+                    className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full border-2 transition-transform ${penColor === color && !isEraser ? 'border-sky-500 ring-2 ring-sky-500/30 scale-105' : 'border-slate-300'}`}
+                    style={{ backgroundColor: color }} />
+                ))}
+              </div>
+              <input type="color" aria-label="Custom pen color" value={penColor}
+                onChange={(e) => { setPenColor(e.target.value); setIsEraser(false); }}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-0 bg-transparent cursor-pointer" />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <TouchSafeButton onClick={handleUndo} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-300 bg-white text-slate-600 flex items-center justify-center">
+                  <RotateCcw size={17} className="pointer-events-none" />
+                </TouchSafeButton>
+                <TouchSafeButton onClick={handleClear} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-300 bg-white text-slate-600 flex items-center justify-center">
+                  <Trash2 size={16} className="pointer-events-none" />
+                </TouchSafeButton>
+              </div>
+              <span className="text-[9px] sm:text-[10px] font-semibold text-slate-500">Undo · Clear</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-bold">Draw Directly Inside Circle</span>
+
+            {/* Center: large skin preview */}
+            <div className="flex flex-col items-center justify-center min-w-0">
+              <div className="relative w-[min(48vw,220px)] h-[min(48vw,220px)] sm:w-[min(34vw,300px)] sm:h-[min(34vw,300px)] landscape:w-[min(38vh,270px)] landscape:h-[min(38vh,270px)] rounded-full shadow-md overflow-hidden flex items-center justify-center"
+                style={{ backgroundColor: bgColor, border: `6px solid ${borderColor}`, touchAction: 'none' }}>
+                <canvas ref={canvasRef} width={240} height={240}
+                  onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
+                  className="w-full h-full cursor-crosshair" style={{ touchAction: 'none' }} />
+              </div>
+              <span className="mt-2 text-[10px] sm:text-xs font-semibold text-slate-500">Draw your skin</span>
+            </div>
+
+            {/* Right: tools and skin finish */}
+            <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 min-w-0">
+              <div className="flex flex-col gap-2 w-full">
+                <TouchSafeButton onClick={() => setIsEraser(false)}
+                  className={`w-full min-h-10 rounded-xl border flex flex-col items-center justify-center gap-1 text-[10px] sm:text-xs font-bold ${!isEraser ? 'border-sky-500 bg-white text-sky-600' : 'border-slate-300 bg-white text-slate-600'}`}>
+                  <Paintbrush size={19} className="pointer-events-none" /> Brush
+                </TouchSafeButton>
+                <TouchSafeButton onClick={() => setIsEraser(true)}
+                  className={`w-full min-h-10 rounded-xl border flex flex-col items-center justify-center gap-1 text-[10px] sm:text-xs font-bold ${isEraser ? 'border-sky-500 bg-white text-sky-600' : 'border-slate-300 bg-white text-slate-600'}`}>
+                  <Eraser size={19} className="pointer-events-none" /> Eraser
+                </TouchSafeButton>
+              </div>
+              <div className="w-full flex flex-col gap-2">
+                <label className="flex flex-col items-center gap-1 text-[9px] sm:text-[10px] font-bold text-slate-600">
+                  Background
+                  <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)}
+                    className="w-9 h-9 rounded-full border border-slate-300 bg-white cursor-pointer" />
+                </label>
+                <label className="flex flex-col items-center gap-1 text-[9px] sm:text-[10px] font-bold text-slate-600">
+                  Border
+                  <input type="color" value={borderColor} onChange={(e) => setBorderColor(e.target.value)}
+                    className="w-9 h-9 rounded-full border border-slate-300 bg-white cursor-pointer" />
+                </label>
+              </div>
+              <div className="flex flex-wrap justify-center gap-1">
+                {[4, 8, 14, 22].map((size) => (
+                  <button key={size} type="button" onClick={() => setBrushSize(size)}
+                    className={`w-6 h-6 rounded-full text-[9px] font-bold ${brushSize === size ? 'bg-slate-700 text-white' : 'bg-white border border-slate-300 text-slate-600'}`}>
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Drawing Tools & Palettes */}
-          <div className="flex-1 flex flex-col gap-1.5 md:gap-2.5 landscape:gap-1 w-full min-w-0">
-            {/* Top Toolbar: Brush, Eraser, Size, Undo, Clear */}
-            <div className="flex flex-wrap items-center gap-2 justify-between">
-              <div className="flex items-center gap-1.5">
-                <TouchSafeButton
-                  onClick={() => setIsEraser(false)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
-                    !isEraser ? 'bg-sky-500 text-white shadow' : 'bg-[#161d2d] text-slate-400 border border-slate-700'
-                  }`}
-                >
-                  <Paintbrush size={14} className="pointer-events-none" />
-                  <span>Pen</span>
-                </TouchSafeButton>
-
-                <TouchSafeButton
-                  onClick={() => setIsEraser(true)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
-                    isEraser ? 'bg-rose-500 text-white shadow' : 'bg-[#161d2d] text-slate-400 border border-slate-700'
-                  }`}
-                >
-                  <Eraser size={14} className="pointer-events-none" />
-                  <span>Eraser</span>
-                </TouchSafeButton>
-
-                <div className="flex items-center gap-1 bg-[#161d2d] px-2 py-1 rounded-lg border border-slate-700">
-                  <span className="text-[10px] font-bold text-slate-400">Size:</span>
-                  {[4, 8, 14, 22].map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setBrushSize(size)}
-                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                        brushSize === size ? 'bg-sky-400 text-slate-900 font-black' : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {size === 4 ? 'S' : size === 8 ? 'M' : size === 14 ? 'L' : 'XL'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <TouchSafeButton
-                  onClick={handleUndo}
-                  className="bg-[#161d2d] hover:bg-slate-700 border border-slate-700 text-slate-300 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1"
-                >
-                  <RotateCcw size={13} className="pointer-events-none" />
-                  <span>Undo</span>
-                </TouchSafeButton>
-
-                <TouchSafeButton
-                  onClick={handleClear}
-                  className="bg-[#161d2d] hover:bg-rose-900/40 border border-slate-700 text-rose-400 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1"
-                >
-                  <Trash2 size={13} className="pointer-events-none" />
-                  <span>Clear</span>
-                </TouchSafeButton>
-              </div>
-            </div>
-
-            {/* Color Rows: Pen Color, Background Color, Border Color */}
-            <div className="grid grid-cols-3 gap-1.5 landscape:gap-1 bg-[#161d2d] p-1.5 landscape:p-1 rounded-xl landscape:rounded-lg border border-slate-800">
-              {/* Pen Color */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-300">Pen Color:</span>
-                  <input
-                    type="color"
-                    value={penColor}
-                    onChange={(e) => {
-                      setPenColor(e.target.value);
-                      setIsEraser(false);
-                    }}
-                    className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent"
-                  />
-                </div>
-                <div className="flex gap-1 flex-wrap">
-                  {COLOR_PRESETS.slice(0, 7).map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => {
-                        setPenColor(color);
-                        setIsEraser(false);
-                      }}
-                      className={`w-4 h-4 rounded-full border transition-transform ${
-                        penColor === color && !isEraser ? 'scale-125 border-white shadow-sm' : 'border-transparent'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Background Color */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-300">Fill Background:</span>
-                  <input
-                    type="color"
-                    value={bgColor}
-                    onChange={(e) => setBgColor(e.target.value)}
-                    className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent"
-                  />
-                </div>
-                <div className="flex gap-1 flex-wrap">
-                  {BG_COLOR_PRESETS.slice(0, 7).map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setBgColor(color)}
-                      className={`w-4 h-4 rounded-full border transition-transform ${
-                        bgColor === color ? 'scale-125 border-white shadow-sm' : 'border-transparent'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Border Color */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-300">Border Ring:</span>
-                  <input
-                    type="color"
-                    value={borderColor}
-                    onChange={(e) => setBorderColor(e.target.value)}
-                    className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent"
-                  />
-                </div>
-                <div className="flex gap-1 flex-wrap">
-                  {BORDER_COLOR_PRESETS.slice(0, 7).map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setBorderColor(color)}
-                      className={`w-4 h-4 rounded-full border transition-transform ${
-                        borderColor === color ? 'scale-125 border-white shadow-sm' : 'border-transparent'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile save button */}
-            <div className="sm:hidden flex gap-2 mt-1">
-              <input
-                type="text"
-                placeholder="Skin Name (optional)"
-                value={skinName}
-                onChange={(e) => setSkinName(e.target.value)}
-                className="flex-1 bg-[#161d2d] border border-slate-700 text-white text-xs px-3 py-1.5 rounded-lg focus:outline-none focus:border-sky-400"
-              />
-              <TouchSafeButton
-                onClick={handleSave}
-                className="bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs px-4 py-1.5 rounded-lg shadow-md flex items-center gap-1.5 shrink-0"
-              >
-                <Sparkles size={14} className="pointer-events-none" />
-                <span>Save</span>
-              </TouchSafeButton>
-            </div>
+          <div className="mt-2 pt-2 border-t border-slate-200 flex flex-col sm:flex-row gap-2">
+            <input type="text" placeholder="Skin name (optional)" value={skinName}
+              onChange={(e) => setSkinName(e.target.value)}
+              className="flex-1 min-w-0 bg-white border border-slate-300 text-slate-800 text-xs px-3 py-2 rounded-lg focus:outline-none focus:border-sky-500" />
+            <TouchSafeButton onClick={handleSave}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-5 py-2 rounded-lg flex items-center justify-center gap-2">
+              <Sparkles size={14} className="pointer-events-none" /> Save Skin
+            </TouchSafeButton>
           </div>
         </div>
       )}
