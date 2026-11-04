@@ -10,13 +10,13 @@ interface SkinsMenuProps {
 }
 
 const CATEGORIES = [
-  { id: 'vip', label: 'Elite', icon: Lock, iconColor: 'text-pink-400', activeBg: 'bg-purple-900/40 border-purple-500/50 text-purple-200' },
-  { id: 'custom', label: 'Custom', icon: ImageIcon, iconColor: 'text-sky-400', activeBg: 'bg-slate-700/80 border-slate-500 text-white' },
-  { id: 'free', label: 'Basic', icon: Smile, iconColor: 'text-yellow-400', activeBg: 'bg-[#293666] border-[#3f5296] text-white shadow-lg' },
-  { id: 'level', label: 'Ranked', icon: Star, iconColor: 'text-amber-500', activeBg: 'bg-slate-700/80 border-slate-500 text-white' },
-  { id: 'premium', label: 'Vault', icon: Gift, iconColor: 'text-rose-400', activeBg: 'bg-slate-700/80 border-slate-500 text-white' },
-  { id: 'creators', label: 'Creators', icon: Video, iconColor: 'text-red-400', activeBg: 'bg-red-900/40 border-red-500/50 text-red-200 shadow-lg' },
-  { id: 'own', label: 'Mine', icon: Backpack, iconColor: 'text-blue-400', activeBg: 'bg-slate-700/80 border-slate-500 text-white' },
+  { id: 'vip', label: 'Elite', icon: Lock, iconColor: 'text-slate-300', activeBg: 'bg-[#303844] border-slate-400 text-white' },
+  { id: 'custom', label: 'Custom', icon: ImageIcon, iconColor: 'text-slate-300', activeBg: 'bg-[#303844] border-slate-400 text-white' },
+  { id: 'free', label: 'Basic', icon: Smile, iconColor: 'text-slate-300', activeBg: 'bg-[#303844] border-slate-400 text-white' },
+  { id: 'level', label: 'Ranked', icon: Star, iconColor: 'text-slate-300', activeBg: 'bg-[#303844] border-slate-400 text-white' },
+  { id: 'premium', label: 'Vault', icon: Gift, iconColor: 'text-slate-300', activeBg: 'bg-[#303844] border-slate-400 text-white' },
+  { id: 'creators', label: 'Creators', icon: Video, iconColor: 'text-slate-300', activeBg: 'bg-[#303844] border-slate-400 text-white' },
+  { id: 'own', label: 'Mine', icon: Backpack, iconColor: 'text-slate-300', activeBg: 'bg-[#303844] border-slate-400 text-white' },
 ];
 
 export function SkinsMenu({ onBack }: SkinsMenuProps) {
@@ -180,7 +180,7 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
 
   return (
     <div 
-      className="w-full bg-[#0b101e] text-white flex justify-center font-sans select-none overflow-hidden"
+      className="w-full bg-[#111418] text-white flex justify-center font-sans select-none overflow-hidden"
       style={{ 
         height: 'calc(100% - env(safe-area-inset-bottom, 0px) - 16px)',
         maxHeight: 'calc(100vh - env(safe-area-inset-bottom, 0px) - 16px)',
@@ -189,14 +189,12 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
       }}
     >
       <div 
-        className="w-full max-w-5xl h-full flex flex-col bg-[#0b101e] relative border-x border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.15)]"
+        className="w-full max-w-5xl h-full flex flex-col bg-[#111418] relative border-x border-[#292f36]"
       >
         
-        {/* Glow Overlay */}
-        <div className="absolute inset-0 pointer-events-none shadow-[inset_20px_0_50px_-20px_rgba(59,130,246,0.25),inset_-20px_0_50px_-20px_rgba(59,130,246,0.25)] z-50"></div>
 
         {/* Top Header */}
-        <div className="relative flex justify-center items-center py-3.5 sm:py-4 landscape:py-2.5 bg-[#111728] border-b border-slate-800/60 z-10 shadow-sm shrink-0">
+        <div className="relative flex justify-center items-center py-3.5 sm:py-4 landscape:py-2.5 bg-[#1b2026] border-b border-[#30363d] z-10 shadow-sm shrink-0">
           <h1 
             className="text-4xl sm:text-5xl landscape:text-3xl font-black text-transparent bg-clip-text bg-white uppercase drop-shadow-md select-none pointer-events-none" 
             style={{ WebkitTextStroke: '1.5px #64748b', letterSpacing: '2px' }}
@@ -212,7 +210,7 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
         </div>
 
         {/* Categories Tabs */}
-        <div className="flex gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-2 landscape:py-1 bg-[#111728] border-b border-[#1c2438] w-full items-center justify-between shrink-0">
+        <div className="flex gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-2 landscape:py-1 bg-[#1b2026] border-b border-[#30363d] w-full items-center justify-between shrink-0">
           {CATEGORIES.map((cat) => {
             const isActive = activeCategory === cat.id;
             
@@ -223,8 +221,8 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
                 className={`flex-1 min-w-0 h-10 sm:h-11 landscape:h-8 flex items-center justify-center gap-1 sm:gap-1.5 px-0.5 sm:px-1.5 rounded-xl landscape:rounded-lg font-bold text-[11px] sm:text-xs md:text-sm landscape:text-[11px] whitespace-nowrap transition-all border-2 select-none ${
                   isActive 
                     ? cat.activeBg
-                    : 'bg-[#1a2235] border-[#2a3652] text-slate-300 hover:bg-[#202a40]'
-                } ${cat.id === 'vip' && !isActive ? 'border-purple-900/60 text-purple-300/80' : ''}`}
+                    : 'bg-[#252b32] border-[#39414a] text-slate-300 hover:bg-[#303840]'
+                }`}
               >
                 <cat.icon size={16} className={`${cat.iconColor} shrink-0 pointer-events-none landscape:w-3.5 landscape:h-3.5`} />
                 <span className="pointer-events-none font-extrabold tracking-wide">{cat.label}</span>
@@ -242,9 +240,9 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
                 transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
                 className={`relative flex-1 flex items-center rounded-full transition-all duration-300 ease-out ${
                   isSearchFocused 
-                    ? 'bg-white/[0.17] ring-2 ring-sky-400/40 border-white/40 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.3),0_4px_24px_rgba(0,0,0,0.45)]' 
-                    : 'bg-white/[0.11] hover:bg-white/[0.14] border-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_4px_16px_rgba(0,0,0,0.35)]'
-                } border backdrop-blur-2xl`}
+                    ? 'bg-[#303840] border-[#59636e] shadow-sm' 
+                    : 'bg-[#252b32] hover:bg-[#303840] border-[#39414a]'
+                } border`}
               >
                 <div className="absolute left-3.5 landscape:left-3 flex items-center pointer-events-none text-slate-300/75">
                   <Search size={15} strokeWidth={1.9} className="landscape:w-3.5 landscape:h-3.5" />
@@ -294,7 +292,7 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
                     exit={{ opacity: 0, x: 24, width: 0, marginLeft: 0 }}
                     transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
                     onClick={handleCancelSearch}
-                    className="text-sky-400 hover:text-sky-300 active:opacity-60 font-medium text-xs sm:text-sm landscape:text-xs whitespace-nowrap overflow-hidden transition-colors cursor-pointer select-none shrink-0"
+                    className="text-slate-300 hover:text-white active:opacity-60 font-medium text-xs sm:text-sm landscape:text-xs whitespace-nowrap overflow-hidden transition-colors cursor-pointer select-none shrink-0"
                   >
                     Cancel
                   </motion.button>
@@ -350,8 +348,8 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
           ) : activeCategory === 'custom' && currentSkins.length === 0 ? (
             /* Custom Tab Empty state if no skins saved yet */
             <div className="w-full min-h-full flex flex-col items-center justify-center text-center p-8 landscape:p-4 select-none">
-              <div className="w-20 h-20 landscape:w-14 landscape:h-14 rounded-full bg-slate-900/80 border-2 border-dashed border-sky-500/40 flex items-center justify-center mb-3 landscape:mb-1.5 shadow-[0_0_20px_rgba(56,189,248,0.15)]">
-                <ImageIcon size={36} className="text-sky-400/60 landscape:w-6 landscape:h-6" />
+              <div className="w-20 h-20 landscape:w-14 landscape:h-14 rounded-full bg-slate-900/80 border-2 border-dashed border-slate-600 flex items-center justify-center mb-3 landscape:mb-1.5 shadow-[0_0_20px_rgba(56,189,248,0.15)]">
+                <ImageIcon size={36} className="text-slate-500 landscape:w-6 landscape:h-6" />
               </div>
               <p className="text-sm landscape:text-xs font-bold text-slate-300">No Custom Skins Created Yet</p>
               <p className="text-xs landscape:text-[10px] text-slate-500 mt-1 max-w-sm">
@@ -389,10 +387,10 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
                     key={skin.id} 
                     className={`bg-[#161d2d] border-2 rounded-2xl landscape:rounded-xl p-3 sm:p-4 landscape:p-2.5 flex flex-col items-center justify-between transition-all group w-44 sm:w-52 md:w-56 landscape:w-36 landscape:sm:w-40 h-64 sm:h-72 md:h-76 landscape:h-[188px] landscape:sm:h-[200px] shrink-0 relative shadow-lg ${
                       isSelected 
-                        ? 'border-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.35)] bg-[#1a2538]' 
+                        ? 'border-slate-400 bg-[#252d35]' 
                         : isRankLocked
                           ? 'border-[#1b2336] bg-[#121826]'
-                          : 'border-[#1f2940] hover:bg-[#1a2235] hover:border-[#304060]'
+                          : 'border-[#303840] hover:bg-[#20262d] hover:border-[#48515b]'
                     }`}
                   >
                     {/* Delete button for custom skins */}
@@ -598,8 +596,8 @@ export function SkinsMenu({ onBack }: SkinsMenuProps) {
                         onClick={() => handleSelectSkin(skin)}
                         className={`w-full py-2.5 sm:py-3 landscape:py-1.5 rounded-xl landscape:rounded-lg font-extrabold text-xs sm:text-sm md:text-base landscape:text-xs tracking-wide flex items-center justify-center gap-1.5 landscape:gap-1.5 transition-all shadow-md active:scale-95 border select-none mt-1 landscape:mt-1 ${
                           isSelected
-                            ? 'bg-gradient-to-b from-emerald-500 to-green-600 border-emerald-300 text-white shadow-emerald-500/25'
-                            : 'bg-gradient-to-b from-blue-600 to-blue-800 border-blue-400/60 text-white hover:from-blue-500 hover:to-blue-700 shadow-blue-900/30'
+                            ? 'bg-[#3b7f55] border-[#57966d] text-white shadow-none'
+                            : 'bg-[#343c45] border-[#56616d] text-white hover:bg-[#414b56] shadow-none'
                         }`}
                       >
                         {isSelected && <Check size={16} strokeWidth={3} className="pointer-events-none landscape:w-3.5 landscape:h-3.5" />}
