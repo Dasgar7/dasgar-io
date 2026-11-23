@@ -8,9 +8,25 @@ class Cell {
     this.mass = mass;
     this.r = massToRadius(mass);
     this.bx = 0; this.by = 0;          // boost velocity (split / eject kick)
+    this.px = x; this.py = y;          // previous position, for jelly stretch
+    this.st = 0; this.stV = 0;         // stretch + its spring velocity
+    this.pu = 0; this.puV = 0;         // pulse (when eating) + its spring velocity
+    this.ang = 0;
     this.mergeAt = performance.now() / 1000 + CFG.MERGE_TIME + mass * 0.02;
   }
-  setMass(m) { this.mass = m; this.r = massToRadius(m); }
+  setMass(m) {
+    if (m > this.mass + 0.5) this.puV += 0.6;   // little jelly bounce when eating
+    this.mass = m; this.r = massToRadius(m);
+  }
+  jelly(dt) {
+    const mv = Math.hypot(this.x - this.px, this.y - this.py) / Math.max(dt, 0.001);
+    if (mv > 20) this.ang = Math.atan2(this.y - this.py, this.x - this.px);
+    const target = Math.min(0.14, mv / 1400);
+    this.stV += (target - this.st) * 160 * dt; this.stV *= Math.exp(-8 * dt); this.st += this.stV * dt;
+    this.puV += (0 - this.pu) * 140 * dt; this.puV *= Math.exp(-7 * dt); this.pu += this.puV * dt;
+    this.pu = Math.max(-0.12, Math.min(0.12, this.pu));
+    this.px = this.x; this.py = this.y;
+  }
   get speed() { return CFG.BASE_SPEED * Math.pow(this.mass, -0.2); }
 }
 

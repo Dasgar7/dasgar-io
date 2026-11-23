@@ -106,13 +106,16 @@ const Render = {
 
   drawCell(c) {
     const ctx = this.ctx, o = c.owner;
-    ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, 6.2832);
+    const sx = 1 + c.st + c.pu, sy = 1 - c.st * 0.8 - c.pu * 0.8;
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(c.ang);
+    ctx.scale(sx, sy);
+    ctx.beginPath(); ctx.arc(0, 0, c.r, 0, 6.2832);
     ctx.fillStyle = o.color; ctx.fill();
-    ctx.lineWidth = Math.max(3, c.r * 0.06);
-    ctx.strokeStyle = shade(o.color, -50); ctx.stroke();
-    // highlight
-    ctx.beginPath(); ctx.arc(c.x - c.r * 0.3, c.y - c.r * 0.3, c.r * 0.35, 0, 6.2832);
-    ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill();
+    ctx.lineWidth = Math.max(3, c.r * 0.05);
+    ctx.strokeStyle = shade(o.color, -45); ctx.stroke();
+    ctx.restore();
 
     if (c.r > 18) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

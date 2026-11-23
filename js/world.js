@@ -68,6 +68,7 @@ class World {
 
       c.x = clamp(c.x, c.r * 0.5, W - c.r * 0.5);
       c.y = clamp(c.y, c.r * 0.5, W - c.r * 0.5);
+      c.jelly(dt);
     }
 
     // own cells push apart until ready to merge, then merge
