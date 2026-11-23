@@ -26,8 +26,8 @@ const Render = {
     const p = world.player;
     if (p && p.alive) {
       const c = p.center();
-      this.camX += (c.x - this.camX) * Math.min(1, dt * 8);
-      this.camY += (c.y - this.camY) * Math.min(1, dt * 8);
+      this.camX = c.x;
+      this.camY = c.y;
       const m = p.mass;
       const target = clamp(Math.pow(Math.min(this.w, this.h) / (260 + Math.sqrt(m) * 26), 1), 0.18, 1.4) * Input.zoomMul;
       this.zoom += (target - this.zoom) * Math.min(1, dt * 3);
