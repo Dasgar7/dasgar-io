@@ -1,0 +1,26 @@
+/* Mobile-first HUD: pause + score top-left, leaderboard top-right, action buttons bottom-right */
+#pauseBtn { position: absolute; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(20,30,50,.38); display: flex; align-items: center; justify-content: center; gap: 5px; pointer-events: auto; padding: 0; }
+#pauseBtn span { width: 5px; height: 18px; border-radius: 3px; background: #fff; }
+#pauseBtn.on span { display: none; }
+#pauseBtn.on::after { content: ''; border-left: 16px solid #fff; border-top: 10px solid transparent; border-bottom: 10px solid transparent; margin-left: 4px; }
+
+#score { left: calc(66px + env(safe-area-inset-left, 0px)); top: calc(9px + env(safe-area-inset-top, 0px)); bottom: auto; background: none; padding: 0; border-radius: 0; color: #fff; text-shadow: 0 0 3px #000, 0 1px 4px rgba(0,0,0,.7); }
+#scoreMain { font-size: 22px; font-weight: 800; line-height: 1.15; }
+#scoreSub { font-size: 13px; font-weight: 700; opacity: .9; }
+
+#leaderboard { background: rgba(20,30,50,.38); border-radius: 12px; padding: 6px 10px 7px; min-width: 130px; font-size: 12px; }
+#leaderboard h4 { margin: 0 0 3px; font-size: 11px; letter-spacing: .6px; text-transform: uppercase; opacity: .9; pointer-events: auto; }
+#leaderboard ol { margin: 0; padding-left: 18px; }
+#leaderboard li small { opacity: .7; margin-left: 4px; }
+#leaderboard.collapsed ol { display: none; }
+#leaderboard.collapsed h4 { margin: 0; }
+
+#minimap { left: 50%; right: auto; top: auto; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); width: 84px; height: 84px; border-radius: 12px; background: rgba(20,30,50,.35); }
+
+#touch button { border: 0; background: rgba(20,30,50,.34); box-shadow: inset 0 0 0 2px rgba(255,255,255,.55); display: flex; align-items: center; justify-content: center; padding: 0; transition: transform .08s, background .08s; }
+#touch button svg { fill: #fff; opacity: .95; }
+#touch button:active { background: rgba(20,30,50,.6); transform: scale(.93); }
+#touch #btnSplit { width: 88px; height: 88px; right: calc(22px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+#touch #btnSplit svg { width: 52px; height: 52px; }
+#touch #btnEject { width: 62px; height: 62px; right: calc(116px + env(safe-area-inset-right, 0px)); bottom: calc(82px + env(safe-area-inset-bottom, 0px)); background: rgba(20,30,50,.34) !important; }
+#touch #btnEject svg { width: 38px; height: 38px; }

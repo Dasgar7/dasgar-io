@@ -5,7 +5,7 @@
   Render.init(canvas);
 
   let world = new World();
-  let playing = false;
+  let playing = false, paused = false;
   let selColor = localStorage.getItem('dasgar_color') || COLORS[4];
   $('nameInput').value = localStorage.getItem('dasgar_name') || '';
 
@@ -33,8 +33,10 @@
     $('menu').classList.add('hidden');
     $('dead').classList.add('hidden');
     $('hud').classList.remove('hidden');
-    playing = true;
+    playing = true; paused = false; $('pauseBtn').classList.remove('on');
   }
+  $('pauseBtn').onclick = () => { paused = !paused; $('pauseBtn').classList.toggle('on', paused); };
+  $('lbHead').onclick = () => $('leaderboard').classList.toggle('collapsed');
   $('playBtn').onclick = start;
   $('againBtn').onclick = () => { $('dead').classList.add('hidden'); $('menu').classList.remove('hidden'); };
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') start(); });
@@ -68,11 +70,15 @@
   let ejectTimer = 0;
 
   function updateHud() {
-    const p = world.player;
-    $('score').textContent = 'Mass: ' + (p && p.alive ? Math.floor(p.mass) : 0);
-    const lb = world.leaderboard();
-    $('lbList').innerHTML = lb.map(b =>
-      `<li class="${b === p ? 'me' : ''}">${b.name.replace(/</g, '')} <small>${Math.floor(b.mass)}</small></li>`).join('');
+    const p = world.player, alive = p && p.alive;
+    $('scoreMain').textContent = 'Score ' + (alive ? Math.floor(p.mass) : 0);
+    const ranked = world.blobs.filter(b => b.alive).sort((x, y) => y.mass - x.mass);
+    const rank = alive ? ranked.indexOf(p) + 1 : 0;
+    $('scoreSub').textContent = alive ? `Rank ${rank} of ${ranked.length}` : '';
+    const row = (b, n) => `<li class="${b === p ? 'me' : ''}" value="${n}">${b.name.replace(/</g, '')} <small>${Math.floor(b.mass)}</small></li>`;
+    let html = ranked.slice(0, 5).map((b, i) => row(b, i + 1)).join('');
+    if (alive && rank > 5) html += row(p, rank);
+    $('lbList').innerHTML = html;
   }
 
   let last = performance.now(), hudT = 0, deadShown = false;
@@ -80,8 +86,9 @@
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
 
-    if (playing) playerControls(dt);
-    world.update(dt);
+    if (paused) { Input.wantSplit = false; Input.wantEject = false; }
+    if (playing && !paused) playerControls(dt);
+    if (!paused) world.update(dt);
     Render.updateCamera(world, dt);
     Render.draw(world);
 
