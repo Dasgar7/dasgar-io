@@ -35,6 +35,6 @@
 #leaderboard.collapsed { min-width: 0; }
 
 /* floating joystick: soft translucent gray, no outline */
-#stick { width: 116px; height: 116px; border-radius: 50%; background: rgba(150,155,160,.30); border: 0; left: calc(40px + env(safe-area-inset-left, 0px)); bottom: calc(56px + env(safe-area-inset-bottom, 0px)); pointer-events: none; opacity: .4; transition: opacity .12s; }
+#stick { width: 116px; height: 116px; border-radius: 50%; background: rgba(150,155,160,.30); border: 0; left: calc(40px + env(safe-area-inset-left, 0px)); bottom: calc(56px + env(safe-area-inset-bottom, 0px)); pointer-events: none; opacity: 0; transition: opacity .12s; }
 #stick.active { opacity: 1; }
 #knob { left: 29px; top: 29px; width: 58px; height: 58px; border: 0; background: rgba(120,125,130,.55); }
