@@ -3,6 +3,7 @@ const Input = {
   dirX: 0, dirY: 0,
   mouseX: 0, mouseY: 0,
   usingMouse: true,
+  lastTouch: -9999,
   zoomMul: 1,
   wantSplit: false,
   wantEject: false,
@@ -10,7 +11,7 @@ const Input = {
   isTouch: ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches),
 
   init(canvas) {
-    window.addEventListener('mousemove', e => { this.mouseX = e.clientX; this.mouseY = e.clientY; this.usingMouse = true; });
+    window.addEventListener('mousemove', e => { if (performance.now() - this.lastTouch < 800) return; this.mouseX = e.clientX; this.mouseY = e.clientY; this.usingMouse = true; });
     window.addEventListener('keydown', e => {
       if (e.code === 'Space') { this.wantSplit = true; e.preventDefault(); }
       if (e.code === 'KeyW') { this.ejectHeld = true; this.wantEject = true; }
@@ -20,34 +21,46 @@ const Input = {
       this.zoomMul = clamp(this.zoomMul * (e.deltaY > 0 ? 0.92 : 1.08), 0.5, 1.6);
     }, { passive: true });
 
-    // Touch joystick
+    // Floating touch joystick: touch anywhere (not on a button) and it appears under your thumb
     const stick = document.getElementById('stick');
     const knob = document.getElementById('knob');
-    let activeId = null;
-    const R = 65;
+    const hud = document.getElementById('hud');
+    let activeId = null, cx = 0, cy = 0;
+    const R = 55;
     const move = t => {
-      const r = stick.getBoundingClientRect();
-      let dx = t.clientX - (r.left + R), dy = t.clientY - (r.top + R);
+      let dx = t.clientX - cx, dy = t.clientY - cy;
       const d = Math.hypot(dx, dy);
       if (d > R) { dx = dx / d * R; dy = dy / d * R; }
-      knob.style.left = (40 + dx) + 'px';
-      knob.style.top = (40 + dy) + 'px';
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
       this.dirX = dx / R; this.dirY = dy / R;
       this.usingMouse = false;
     };
-    stick.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; activeId = t.identifier; move(t); }, { passive: false });
-    stick.addEventListener('touchmove', e => {
-      e.preventDefault();
+    window.addEventListener('touchstart', e => {
+      this.lastTouch = performance.now();
+      if (activeId !== null || hud.classList.contains('hidden')) return;
+      for (const t of e.changedTouches) {
+        if (t.target.closest && t.target.closest('button, #leaderboard')) continue;
+        activeId = t.identifier; cx = t.clientX; cy = t.clientY;
+        stick.style.left = (cx - 58) + 'px'; stick.style.top = (cy - 58) + 'px'; stick.style.bottom = 'auto';
+        stick.classList.add('active');
+        move(t);
+        break;
+      }
+    }, { passive: true });
+    window.addEventListener('touchmove', e => {
       for (const t of e.changedTouches) if (t.identifier === activeId) move(t);
-    }, { passive: false });
+    }, { passive: true });
     const end = e => {
       for (const t of e.changedTouches) if (t.identifier === activeId) {
-        activeId = null; knob.style.left = '40px'; knob.style.top = '40px';
+        activeId = null;
+        stick.classList.remove('active');
+        stick.style.left = stick.style.top = stick.style.bottom = '';
+        knob.style.transform = 'translate(0px, 0px)';
         this.dirX = 0; this.dirY = 0;
       }
     };
-    stick.addEventListener('touchend', end);
-    stick.addEventListener('touchcancel', end);
+    window.addEventListener('touchend', end);
+    window.addEventListener('touchcancel', end);
 
     const bind = (id, fn, hold) => {
       const b = document.getElementById(id);
