@@ -1,0 +1,13 @@
+/* Main menu: original green-moonlight backdrop */
+#menu { background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,.12), rgba(0,0,0,.55) 85%), url(../img/menu-bg.svg) center / cover no-repeat #020a05; }
+#menu h1 { text-shadow: 0 0 26px rgba(120,255,70,.55), 0 3px 0 rgba(0,0,0,.6); }
+#menu h1 span { color: #8dff5a; }
+#menu #nameInput { background: rgba(3,22,9,.78); border-color: #2f8a45; }
+#menu #nameInput:focus { border-color: #8dff5a; }
+#menu button#playBtn { background: linear-gradient(135deg, #8dff5a, #2fd06a); color: #03140a; box-shadow: 0 0 28px rgba(120,255,70,.35); }
+#menu .help { opacity: .75; text-shadow: 0 1px 3px #000; }
+@media (max-height: 520px) {
+  #menu { gap: 8px; }
+  #menu h1 { font-size: 38px; }
+  #menu .help { display: none; }
+}
