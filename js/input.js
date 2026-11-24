@@ -7,7 +7,7 @@ const Input = {
   wantSplit: false,
   wantEject: false,
   ejectHeld: false,
-  isTouch: ('ontouchstart' in window) || navigator.maxTouchPoints > 0,
+  isTouch: ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches),
 
   init(canvas) {
     window.addEventListener('mousemove', e => { this.mouseX = e.clientX; this.mouseY = e.clientY; this.usingMouse = true; });
