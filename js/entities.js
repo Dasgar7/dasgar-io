@@ -44,29 +44,44 @@ class Cell {
   }
 
   jelly(dt) {
-    // acceleration of the cell this frame -> inertia drags the border the opposite way
+    // acceleration of the cell this frame -> front of the border dents, back bulges a little
     const inv = 1 / Math.max(dt, 0.001);
     let vx = (this.x - this.px) * inv, vy = (this.y - this.py) * inv;
     if (vx * vx + vy * vy > 2500 * 2500) { vx = 0; vy = 0; }
     let ax = (vx - this.pvx) * inv, ay = (vy - this.pvy) * inv;
-    const am = Math.hypot(ax, ay);
-    if (am > 5000) { ax *= 5000 / am; ay *= 5000 / am; }
+    let am = Math.hypot(ax, ay);
+    if (am > 5000) { ax *= 5000 / am; ay *= 5000 / am; am = 5000; }
     this.pvx = vx; this.pvy = vy; this.px = this.x; this.py = this.y;
 
-    const g = 0.12 / this.r;
+    const mag = am * 0.16 / this.r;
+    const ux = am > 1 ? ax / am : 0, uy = am > 1 ? ay / am : 0;
     const off = this.off, jv = this.jv;
     const steps = Math.min(4, Math.ceil(dt / 0.016)), h = dt / steps;
     const damp = Math.exp(-7 * h);
     for (let s = 0; s < steps; s++) {
       for (let i = 0; i < JN; i++) {
         const l = off[(i + JN - 1) % JN], n = off[(i + 1) % JN];
-        _jf[i] = -(ax * JCOS[i] + ay * JSIN[i]) * g - 90 * off[i] + 60 * (l + n - 2 * off[i]);
+        const cc = ux * JCOS[i] + uy * JSIN[i];
+        const drive = cc > 0 ? -cc * cc * mag : cc * cc * mag * 0.6;
+        _jf[i] = drive - 90 * off[i] + 60 * (l + n - 2 * off[i]);
       }
       for (let i = 0; i < JN; i++) {
         jv[i] = (jv[i] + _jf[i] * h) * damp;
         let o = off[i] + jv[i] * h;
         if (o > 0.16) { o = 0.16; jv[i] *= 0.5; } else if (o < -0.16) { o = -0.16; jv[i] *= 0.5; }
         off[i] = o;
+      }
+      // keep the membrane centred on the cell: remove the "whole border slid sideways" part,
+      // so the body never drifts away from the name
+      let oc = 0, os = 0, vc = 0, vs = 0;
+      for (let i = 0; i < JN; i++) {
+        oc += off[i] * JCOS[i]; os += off[i] * JSIN[i];
+        vc += jv[i] * JCOS[i]; vs += jv[i] * JSIN[i];
+      }
+      oc *= 2 / JN; os *= 2 / JN; vc *= 2 / JN; vs *= 2 / JN;
+      for (let i = 0; i < JN; i++) {
+        off[i] -= oc * JCOS[i] + os * JSIN[i];
+        jv[i] -= vc * JCOS[i] + vs * JSIN[i];
       }
     }
   }
