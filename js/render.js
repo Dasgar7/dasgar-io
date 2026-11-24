@@ -106,10 +106,9 @@ const Render = {
 
   drawCell(c) {
     const ctx = this.ctx, o = c.owner;
-    const sx = 1 + c.st + c.pu, sy = 1 - c.st * 0.8 - c.pu * 0.8;
+    const sx = 1 + c.pu * 0.5, sy = sx;  // round always, tiny bounce only
     ctx.save();
     ctx.translate(c.x, c.y);
-    ctx.rotate(c.ang);
     ctx.scale(sx, sy);
     ctx.beginPath(); ctx.arc(0, 0, c.r, 0, 6.2832);
     ctx.fillStyle = o.color; ctx.fill();
