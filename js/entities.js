@@ -125,7 +125,7 @@ class Blob {
       const half = c.mass / 2;
       c.setMass(half);
       const n = new Cell(this, c.x + dx * c.r, c.y + dy * c.r, half);
-      const kick = 520 + c.r * 2;
+      const kick = 400 + c.r * 2;
       n.bx = dx * kick; n.by = dy * kick;
       const t = performance.now() / 1000;
       c.mergeAt = t + CFG.MERGE_TIME + half * 0.02;

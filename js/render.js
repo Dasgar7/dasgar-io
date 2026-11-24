@@ -53,7 +53,7 @@ const Render = {
     ctx.fillRect(0, 0, W, W);
     ctx.strokeStyle = 'rgba(0,0,0,0.07)';
     ctx.lineWidth = 1 / this.zoom;
-    const step = 100;
+    const step = 50;
     const x0 = Math.max(0, Math.floor((this.camX - vw) / step) * step), x1 = Math.min(W, this.camX + vw);
     const y0 = Math.max(0, Math.floor((this.camY - vh) / step) * step), y1 = Math.min(W, this.camY + vh);
     ctx.beginPath();
