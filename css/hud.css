@@ -24,3 +24,12 @@
 #touch #btnSplit svg { width: 52px; height: 52px; }
 #touch #btnEject { width: 62px; height: 62px; right: calc(116px + env(safe-area-inset-right, 0px)); bottom: calc(82px + env(safe-area-inset-bottom, 0px)); background: rgba(20,30,50,.34) !important; }
 #touch #btnEject svg { width: 38px; height: 38px; }
+
+/* minimap hidden for now (remove this rule to bring it back) */
+#minimap { display: none !important; }
+
+/* leaderboard toggle */
+#leaderboard h4 { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; padding: 5px 0; margin: -3px 0 2px; }
+#lbArrow { font-size: 13px; transition: transform .15s; }
+#leaderboard.collapsed #lbArrow { transform: rotate(90deg); }
+#leaderboard.collapsed { min-width: 0; }

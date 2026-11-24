@@ -36,7 +36,8 @@
     playing = true; paused = false; $('pauseBtn').classList.remove('on');
   }
   $('pauseBtn').onclick = () => { paused = !paused; $('pauseBtn').classList.toggle('on', paused); };
-  $('lbHead').onclick = () => $('leaderboard').classList.toggle('collapsed');
+  if (localStorage.getItem('dasgar_lb') === '0') $('leaderboard').classList.add('collapsed');
+  $('lbHead').onclick = () => { const c = $('leaderboard').classList.toggle('collapsed'); localStorage.setItem('dasgar_lb', c ? '0' : '1'); };
   $('playBtn').onclick = start;
   $('againBtn').onclick = () => { $('dead').classList.add('hidden'); $('menu').classList.remove('hidden'); };
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') start(); });
