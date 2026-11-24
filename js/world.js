@@ -52,12 +52,17 @@ class World {
       // steer toward the aim point; closer aim point = slower
       let dx = b.targetX - c.x, dy = b.targetY - c.y;
       const d = Math.hypot(dx, dy);
+      let dvx = 0, dvy = 0;
       if (d > 4) {
         const k = Math.min(1, d / (c.r * 0.8 + 20));
         const sp = c.speed * k;
-        c.x += (dx / d) * sp * dt;
-        c.y += (dy / d) * sp * dt;
+        dvx = (dx / d) * sp; dvy = (dy / d) * sp;
       }
+      const ease = 1 - Math.exp(-dt * 7);
+      c.vx += (dvx - c.vx) * ease;
+      c.vy += (dvy - c.vy) * ease;
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
       // boost from split / eject, decays fast
       c.x += c.bx * dt; c.y += c.by * dt;
       const decay = Math.pow(0.004, dt);

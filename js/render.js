@@ -30,14 +30,14 @@ const Render = {
       this.camY = c.y;
       const m = p.mass;
       const target = clamp(Math.pow(Math.min(this.w, this.h) / (260 + Math.sqrt(m) * 26), 1), 0.18, 1.4) * Input.zoomMul;
-      this.zoom += (target - this.zoom) * Math.min(1, dt * 3);
+      this.zoom += (target - this.zoom) * (1 - Math.exp(-dt * 3.5));
     }
   },
 
   draw(world) {
     const ctx = this.ctx, W = CFG.WORLD;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.fillStyle = '#0d1428';
+    ctx.fillStyle = '#cfdbe3';
     ctx.fillRect(0, 0, this.w, this.h);
 
     ctx.save();
@@ -49,9 +49,9 @@ const Render = {
     const inView = (x, y, r) => Math.abs(x - this.camX) < vw + r && Math.abs(y - this.camY) < vh + r;
 
     // world bounds + grid
-    ctx.fillStyle = '#111a33';
+    ctx.fillStyle = '#f2fbff';
     ctx.fillRect(0, 0, W, W);
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.07)';
     ctx.lineWidth = 1 / this.zoom;
     const step = 100;
     const x0 = Math.max(0, Math.floor((this.camX - vw) / step) * step), x1 = Math.min(W, this.camX + vw);
@@ -60,7 +60,7 @@ const Render = {
     for (let x = x0; x <= x1; x += step) { ctx.moveTo(x, y0); ctx.lineTo(x, y1); }
     for (let y = y0; y <= y1; y += step) { ctx.moveTo(x0, y); ctx.lineTo(x1, y); }
     ctx.stroke();
-    ctx.strokeStyle = '#ff4d6d'; ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(255,77,109,0.7)'; ctx.lineWidth = 6;
     ctx.strokeRect(0, 0, W, W);
 
     // food
@@ -112,8 +112,8 @@ const Render = {
     ctx.scale(sx, sy);
     ctx.beginPath(); ctx.arc(0, 0, c.r, 0, 6.2832);
     ctx.fillStyle = o.color; ctx.fill();
-    ctx.lineWidth = Math.max(3, c.r * 0.05);
-    ctx.strokeStyle = shade(o.color, -45); ctx.stroke();
+    ctx.lineWidth = Math.max(2, c.r * 0.035);
+    ctx.strokeStyle = shade(o.color, -40); ctx.stroke();
     ctx.restore();
 
     if (c.r > 18) {

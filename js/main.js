@@ -39,7 +39,8 @@
   $('againBtn').onclick = () => { $('dead').classList.add('hidden'); $('menu').classList.remove('hidden'); };
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') start(); });
 
-  function playerControls() {
+  let sdx = 0, sdy = 0;
+  function playerControls(dt) {
     const p = world.player;
     if (!p || !p.alive) return;
     const c = p.center();
@@ -47,9 +48,11 @@
       const t = Render.screenToWorld(Input.mouseX, Input.mouseY);
       p.targetX = t.x; p.targetY = t.y;
     } else {
-      const mag = Math.hypot(Input.dirX, Input.dirY);
-      if (mag > 0.12) {
-        p.targetX = c.x + Input.dirX * 400; p.targetY = c.y + Input.dirY * 400;
+      const k = 1 - Math.exp(-dt * 14);
+      sdx += (Input.dirX - sdx) * k; sdy += (Input.dirY - sdy) * k;
+      const mag = Math.hypot(sdx, sdy);
+      if (mag > 0.08) {
+        p.targetX = c.x + sdx * 400; p.targetY = c.y + sdy * 400;
       } else { p.targetX = c.x; p.targetY = c.y; }
     }
     if (Input.wantSplit) { p.split(); Input.wantSplit = false; }
@@ -77,7 +80,7 @@
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
 
-    if (playing) playerControls();
+    if (playing) playerControls(dt);
     world.update(dt);
     Render.updateCamera(world, dt);
     Render.draw(world);

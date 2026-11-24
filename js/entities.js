@@ -8,6 +8,7 @@ class Cell {
     this.mass = mass;
     this.r = massToRadius(mass);
     this.bx = 0; this.by = 0;          // boost velocity (split / eject kick)
+    this.vx = 0; this.vy = 0;          // smoothed steering velocity
     this.px = x; this.py = y;          // previous position, for jelly stretch
     this.st = 0; this.stV = 0;         // stretch + its spring velocity
     this.pu = 0; this.puV = 0;         // pulse (when eating) + its spring velocity
