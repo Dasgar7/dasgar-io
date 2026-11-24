@@ -133,8 +133,10 @@ const Render = {
 
     if (c.r > 18) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      const fs = Math.max(12, c.r * 0.42);
+      let fs = c.r * 0.42;
       ctx.font = `800 ${fs}px system-ui, Arial`;
+      const tw = ctx.measureText(o.name).width, maxW = c.r * 1.45;   // keep the name inside the cell, even when the edge dents
+      if (tw > maxW) { fs *= maxW / tw; ctx.font = `800 ${fs}px system-ui, Arial`; }
       ctx.lineWidth = fs * 0.14; ctx.strokeStyle = 'rgba(0,0,0,.7)';
       ctx.strokeText(o.name, c.x, c.y); ctx.fillStyle = '#fff'; ctx.fillText(o.name, c.x, c.y);
       if (c.r > 40) {
