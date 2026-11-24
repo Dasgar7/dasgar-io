@@ -53,7 +53,7 @@ const Render = {
     ctx.fillRect(0, 0, W, W);
     ctx.strokeStyle = 'rgba(0,0,0,0.07)';
     ctx.lineWidth = 1 / this.zoom;
-    const step = 50;
+    const step = 25;
     const x0 = Math.max(0, Math.floor((this.camX - vw) / step) * step), x1 = Math.min(W, this.camX + vw);
     const y0 = Math.max(0, Math.floor((this.camY - vh) / step) * step), y1 = Math.min(W, this.camY + vh);
     ctx.beginPath();
@@ -86,9 +86,42 @@ const Render = {
       if (it.virus) this.drawVirus(it.virus);
       else this.drawCell(it);
     }
+    this.drawArrow(world);
     ctx.restore();
 
     this.drawMinimap(world);
+  },
+
+  // Gray direction arrow just outside your cells, pointing where you are heading
+  drawArrow(world) {
+    const p = world.player;
+    if (!p || !p.alive) return;
+    const c = p.center();
+    const dx = p.targetX - c.x, dy = p.targetY - c.y, d = Math.hypot(dx, dy);
+    if (d < 10) return;
+    const a = Math.atan2(dy, dx);
+    this._aa = this._aa === undefined ? a : this._aa + Math.atan2(Math.sin(a - this._aa), Math.cos(a - this._aa)) * 0.35;
+    let ext = 0;
+    for (const k of p.cells) ext = Math.max(ext, Math.hypot(k.x - c.x, k.y - c.y) + k.r);
+    const size = 11 + ext * 0.1, gap = ext + 8 + size * 0.4;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(c.x, c.y);
+    ctx.rotate(this._aa);
+    ctx.globalAlpha = Math.min(1, d / 70) * 0.85;
+    ctx.beginPath();
+    ctx.moveTo(gap + size * 1.5, 0);
+    ctx.lineTo(gap, -size * 0.95);
+    ctx.lineTo(gap + size * 0.45, 0);
+    ctx.lineTo(gap, size * 0.95);
+    ctx.closePath();
+    ctx.fillStyle = '#6b7280';
+    ctx.fill();
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(1.5, size * 0.12);
+    ctx.strokeStyle = 'rgba(255,255,255,.7)';
+    ctx.stroke();
+    ctx.restore();
   },
 
   drawVirus(v) {
