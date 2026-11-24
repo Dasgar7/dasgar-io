@@ -1,5 +1,13 @@
 let _id = 1;
 
+// Jelly membrane: JN edge points around each cell. Each point has an offset (fraction of
+// radius) and a velocity, linked to its neighbours by springs. The cell body stays a clean
+// circle; only the border ripples.
+const JN = 32;
+const JANG = [], JCOS = [], JSIN = [];
+for (let i = 0; i < JN; i++) { const a = i * Math.PI * 2 / JN; JANG.push(a); JCOS.push(Math.cos(a)); JSIN.push(Math.sin(a)); }
+const _jf = new Float32Array(JN);
+
 class Cell {
   constructor(owner, x, y, mass) {
     this.id = _id++;
@@ -9,26 +17,59 @@ class Cell {
     this.r = massToRadius(mass);
     this.bx = 0; this.by = 0;          // boost velocity (split / eject kick)
     this.vx = 0; this.vy = 0;          // smoothed steering velocity
-    this.px = x; this.py = y;          // previous position, for jelly stretch
-    this.st = 0; this.stV = 0;         // stretch + its spring velocity
-    this.pu = 0; this.puV = 0;         // pulse (when eating) + its spring velocity
-    this.ang = 0;
+    this.px = x; this.py = y;          // last frame position
+    this.pvx = 0; this.pvy = 0;        // last frame velocity
+    this.off = new Float32Array(JN);   // membrane offsets
+    this.jv = new Float32Array(JN);    // membrane offset velocities
     this.mergeAt = performance.now() / 1000 + CFG.MERGE_TIME + mass * 0.02;
   }
   setMass(m) {
-    if (m > this.mass + 0.5) this.puV += 0.6;   // little jelly bounce when eating
+    if (m > this.mass + 0.01) {        // eating: whole membrane gives a soft pulse
+      const p = Math.min(0.3, Math.max(0.04, (m - this.mass) / this.mass * 3));
+      for (let i = 0; i < JN; i++) this.jv[i] += p * 4;
+    }
     this.mass = m; this.r = massToRadius(m);
   }
-  jelly(dt) {
-    const mv = Math.hypot(this.x - this.px, this.y - this.py) / Math.max(dt, 0.001);
-    if (mv > 20) this.ang = Math.atan2(this.y - this.py, this.x - this.px);
-    const target = Math.min(0.14, mv / 1400);
-    this.stV += (target - this.st) * 160 * dt; this.stV *= Math.exp(-8 * dt); this.st += this.stV * dt;
-    this.puV += (0 - this.pu) * 140 * dt; this.puV *= Math.exp(-7 * dt); this.pu += this.puV * dt;
-    this.pu = Math.max(-0.12, Math.min(0.12, this.pu));
-    this.px = this.x; this.py = this.y;
-  }
   get speed() { return CFG.BASE_SPEED * Math.pow(this.mass, -0.2); }
+
+  // touching another cell: dent the border on the side that is being pressed
+  poke(ang, overlap, dt) {
+    const f = Math.min(0.4, overlap) * 90 * dt;
+    for (let i = 0; i < JN; i++) {
+      let d = JANG[i] - ang;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      const ad = d < 0 ? -d : d;
+      if (ad < 1.1) this.jv[i] -= f * Math.cos(ad / 1.1 * Math.PI / 2);
+    }
+  }
+
+  jelly(dt) {
+    // acceleration of the cell this frame -> inertia drags the border the opposite way
+    const inv = 1 / Math.max(dt, 0.001);
+    let vx = (this.x - this.px) * inv, vy = (this.y - this.py) * inv;
+    if (vx * vx + vy * vy > 2500 * 2500) { vx = 0; vy = 0; }
+    let ax = (vx - this.pvx) * inv, ay = (vy - this.pvy) * inv;
+    const am = Math.hypot(ax, ay);
+    if (am > 5000) { ax *= 5000 / am; ay *= 5000 / am; }
+    this.pvx = vx; this.pvy = vy; this.px = this.x; this.py = this.y;
+
+    const g = 0.12 / this.r;
+    const off = this.off, jv = this.jv;
+    const steps = Math.min(4, Math.ceil(dt / 0.016)), h = dt / steps;
+    const damp = Math.exp(-7 * h);
+    for (let s = 0; s < steps; s++) {
+      for (let i = 0; i < JN; i++) {
+        const l = off[(i + JN - 1) % JN], n = off[(i + 1) % JN];
+        _jf[i] = -(ax * JCOS[i] + ay * JSIN[i]) * g - 90 * off[i] + 60 * (l + n - 2 * off[i]);
+      }
+      for (let i = 0; i < JN; i++) {
+        jv[i] = (jv[i] + _jf[i] * h) * damp;
+        let o = off[i] + jv[i] * h;
+        if (o > 0.16) { o = 0.16; jv[i] *= 0.5; } else if (o < -0.16) { o = -0.16; jv[i] *= 0.5; }
+        off[i] = o;
+      }
+    }
+  }
 }
 
 class Blob {

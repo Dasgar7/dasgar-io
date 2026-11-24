@@ -42,7 +42,7 @@ class World {
     }
 
     this.updatePellets(dt);
-    this.updateEating();
+    this.updateEating(dt);
     this.maintain();
   }
 
@@ -96,6 +96,8 @@ class World {
         } else {
           const push = (min - d) * 0.5;
           dx /= d; dy /= d;
+          const pa = Math.atan2(dy, dx), pov = (min - d) / min;
+          a.poke(pa, pov, dt); c.poke(pa + Math.PI, pov, dt);
           a.x -= dx * push; a.y -= dy * push;
           c.x += dx * push; c.y += dy * push;
         }
@@ -116,7 +118,7 @@ class World {
     }
   }
 
-  updateEating() {
+  updateEating(dt) {
     // food + pellets
     for (const b of this.blobs) {
       if (!b.alive) continue;
@@ -179,6 +181,12 @@ class World {
         for (const o of this.blobs) {
           if (o === a || !o.alive) continue;
           for (const co of o.cells.slice()) {
+            const qx = co.x - ca.x, qy = co.y - ca.y, rs = ca.r + co.r;
+            if (qx * qx + qy * qy < rs * rs) {
+              const qd = Math.sqrt(qx * qx + qy * qy) || 0.01, qa = Math.atan2(qy, qx);
+              ca.poke(qa, (rs - qd) / ca.r * 0.35, dt);
+              co.poke(qa + Math.PI, (rs - qd) / co.r * 0.35, dt);
+            }
             if (ca.mass > co.mass * CFG.EAT_RATIO && dist(ca.x, ca.y, co.x, co.y) < ca.r - co.r * 0.45) {
               ca.setMass(ca.mass + co.mass);
               o.cells.splice(o.cells.indexOf(co), 1);

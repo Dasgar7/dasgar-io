@@ -104,17 +104,32 @@ const Render = {
     ctx.lineWidth = 4; ctx.strokeStyle = '#1a9a26'; ctx.stroke();
   },
 
+  cellPath(c) {
+    const ctx = this.ctx, N = JN, t = performance.now() / 1000;
+    const pts = this._pts || (this._pts = new Float32Array(N * 2));
+    for (let i = 0; i < N; i++) {
+      const rr = c.r * 1.005 * (1 + c.off[i] + Math.sin(t * 2.2 + i * 0.9 + c.id) * 0.004);
+      pts[i * 2] = c.x + JCOS[i] * rr;
+      pts[i * 2 + 1] = c.y + JSIN[i] * rr;
+    }
+    const L = (N - 1) * 2;
+    ctx.moveTo((pts[L] + pts[0]) / 2, (pts[L + 1] + pts[1]) / 2);
+    for (let i = 0; i < N; i++) {
+      const j = ((i + 1) % N) * 2;
+      ctx.quadraticCurveTo(pts[i * 2], pts[i * 2 + 1], (pts[i * 2] + pts[j]) / 2, (pts[i * 2 + 1] + pts[j + 1]) / 2);
+    }
+    ctx.closePath();
+  },
+
   drawCell(c) {
     const ctx = this.ctx, o = c.owner;
-    const sx = 1 + c.pu * 0.5, sy = sx;  // round always, tiny bounce only
-    ctx.save();
-    ctx.translate(c.x, c.y);
-    ctx.scale(sx, sy);
-    ctx.beginPath(); ctx.arc(0, 0, c.r, 0, 6.2832);
+    ctx.beginPath();
+    if (c.r * this.zoom < 9) ctx.arc(c.x, c.y, c.r, 0, 6.2832);
+    else this.cellPath(c);
     ctx.fillStyle = o.color; ctx.fill();
+    ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(2, c.r * 0.035);
     ctx.strokeStyle = shade(o.color, -40); ctx.stroke();
-    ctx.restore();
 
     if (c.r > 18) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
