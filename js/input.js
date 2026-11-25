@@ -22,40 +22,57 @@ const Input = {
       this.zoomMul = clamp(this.zoomMul * (e.deltaY > 0 ? 0.92 : 1.08), 0.5, 1.6);
     }, { passive: true });
 
-    // Touch anywhere: the joystick appears under your finger and the cell heads to that spot
-    // (it follows your finger while you hold, and keeps going to where you let go).
-    // The round knob inside the joystick looks toward where the cell is heading.
+    // Touch anywhere: the joystick appears under your finger and hides when you let go.
+    //  - just tap / hold: the cell heads to that spot (and keeps going there after you lift)
+    //  - drag: it works as a real joystick, steering by how far you pull the knob (stops when you lift)
     const stick = document.getElementById('stick');
+    const knobEl = document.getElementById('knob');
     const hud = document.getElementById('hud');
-    let tapId = null;
-    const tapAim = t => {
-      this.mouseX = t.clientX; this.mouseY = t.clientY;
-      const w = Render.screenToWorld(t.clientX, t.clientY);
-      this.tapWX = w.x; this.tapWY = w.y;
-      this.mode = 'tap'; this.tapDown = true;
+    const R = 46, DRAG = 12;
+    let tapId = null, ax = 0, ay = 0, dragging = false;
+    const setKnob = (dx, dy) => { knobEl.style.transform = `translate(${dx}px, ${dy}px)`; };
+    const touchAim = t => {
+      let dx = t.clientX - ax, dy = t.clientY - ay;
+      const d = Math.hypot(dx, dy);
+      if (!dragging && d > DRAG) dragging = true;
+      if (dragging) {
+        if (d > R) { dx = dx / d * R; dy = dy / d * R; }
+        setKnob(dx, dy);
+        this.dirX = dx / R; this.dirY = dy / R;
+        this.mode = 'stick'; this.tapDown = false;
+      } else {
+        this.mouseX = t.clientX; this.mouseY = t.clientY;
+        const w = Render.screenToWorld(t.clientX, t.clientY);
+        this.tapWX = w.x; this.tapWY = w.y;
+        this.mode = 'tap'; this.tapDown = true;
+      }
     };
     window.addEventListener('touchstart', e => {
       this.lastTouch = performance.now();
       if (hud.classList.contains('hidden') || tapId !== null) return;
       for (const t of e.changedTouches) {
         if (t.target.closest && t.target.closest('button, #leaderboard')) continue;
-        tapId = t.identifier;
-        stick.style.left = (t.clientX - 58) + 'px';
-        stick.style.top = (t.clientY - 58) + 'px';
+        tapId = t.identifier; ax = t.clientX; ay = t.clientY; dragging = false;
+        stick.style.left = (ax - 58) + 'px';
+        stick.style.top = (ay - 58) + 'px';
         stick.style.bottom = 'auto';
         stick.classList.add('shown', 'active');
-        tapAim(t);
+        touchAim(t);
         break;
       }
     }, { passive: true });
     window.addEventListener('touchmove', e => {
       this.lastTouch = performance.now();
-      for (const t of e.changedTouches) if (t.identifier === tapId) tapAim(t);
+      for (const t of e.changedTouches) if (t.identifier === tapId) touchAim(t);
     }, { passive: true });
     const end = e => {
       this.lastTouch = performance.now();
       for (const t of e.changedTouches) if (t.identifier === tapId) {
-        tapId = null; this.tapDown = false; stick.classList.remove('active');
+        tapId = null; this.tapDown = false;
+        if (dragging) { this.dirX = 0; this.dirY = 0; }   // joystick released: stop
+        dragging = false;
+        stick.classList.remove('shown', 'active');          // hide again until the next touch
+        setKnob(0, 0);
       }
     };
     window.addEventListener('touchend', end);
