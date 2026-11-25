@@ -4,6 +4,7 @@ const Input = {
   mouseX: 0, mouseY: 0,
   usingMouse: true,
   lastTouch: -9999,
+  stickActive: false, mode: 'mouse', tapDown: false, tapWX: 0, tapWY: 0,
   zoomMul: 1,
   wantSplit: false,
   wantEject: false,
@@ -11,7 +12,7 @@ const Input = {
   isTouch: ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches),
 
   init(canvas) {
-    window.addEventListener('mousemove', e => { if (performance.now() - this.lastTouch < 800) return; this.mouseX = e.clientX; this.mouseY = e.clientY; this.usingMouse = true; });
+    window.addEventListener('mousemove', e => { if (performance.now() - this.lastTouch < 800) return; this.mouseX = e.clientX; this.mouseY = e.clientY; this.usingMouse = true; this.mode = 'mouse'; });
     window.addEventListener('keydown', e => {
       if (e.code === 'Space') { this.wantSplit = true; e.preventDefault(); }
       if (e.code === 'KeyW') { this.ejectHeld = true; this.wantEject = true; }
@@ -21,40 +22,58 @@ const Input = {
       this.zoomMul = clamp(this.zoomMul * (e.deltaY > 0 ? 0.92 : 1.08), 0.5, 1.6);
     }, { passive: true });
 
-    // Tap anywhere: the cell heads to that spot and the joystick sits there (drag to steer)
+    // Two ways to steer on a phone:
+    //  1) drag the joystick (bottom-left) for analog control
+    //  2) touch anywhere else: the cell heads to that spot (follows your finger, keeps going to where you let go)
+    // The joystick knob always shows which way you are heading.
     const stick = document.getElementById('stick');
     const knob = document.getElementById('knob');
     const hud = document.getElementById('hud');
-    let activeId = null, ax = 0, ay = 0;
-    const R = 55;
-    const aim = t => {
-      this.mouseX = t.clientX; this.mouseY = t.clientY; this.usingMouse = true;
-      this.lastTouch = performance.now();
-      let dx = t.clientX - ax, dy = t.clientY - ay;
+    let stickId = null, tapId = null;
+    const R = 46;
+    const setKnob = (dx, dy) => { knob.style.transform = `translate(${dx}px, ${dy}px)`; };
+    const stickMove = t => {
+      const r = stick.getBoundingClientRect();
+      let dx = t.clientX - (r.left + r.width / 2), dy = t.clientY - (r.top + r.height / 2);
       const d = Math.hypot(dx, dy);
       if (d > R) { dx = dx / d * R; dy = dy / d * R; }
-      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      setKnob(dx, dy);
+      this.dirX = dx / R; this.dirY = dy / R;
+      this.mode = 'stick'; this.stickActive = true;
+    };
+    const tapAim = t => {
+      this.mouseX = t.clientX; this.mouseY = t.clientY;
+      const w = Render.screenToWorld(t.clientX, t.clientY);
+      this.tapWX = w.x; this.tapWY = w.y;
+      this.mode = 'tap'; this.tapDown = true;
     };
     window.addEventListener('touchstart', e => {
       this.lastTouch = performance.now();
-      if (activeId !== null || hud.classList.contains('hidden')) return;
+      if (hud.classList.contains('hidden')) return;
       for (const t of e.changedTouches) {
         if (t.target.closest && t.target.closest('button, #leaderboard')) continue;
-        activeId = t.identifier; ax = t.clientX; ay = t.clientY;
-        stick.style.left = (ax - 58) + 'px'; stick.style.top = (ay - 58) + 'px'; stick.style.bottom = 'auto';
-        stick.classList.add('shown', 'active');
-        aim(t);
-        break;
+        const r = stick.getBoundingClientRect();
+        const inStick = Math.hypot(t.clientX - (r.left + r.width / 2), t.clientY - (r.top + r.height / 2)) < r.width / 2 + 24;
+        if (inStick && stickId === null) { stickId = t.identifier; stick.classList.add('active'); stickMove(t); }
+        else if (!inStick && tapId === null) { tapId = t.identifier; tapAim(t); }
       }
     }, { passive: true });
     window.addEventListener('touchmove', e => {
-      for (const t of e.changedTouches) if (t.identifier === activeId) aim(t);
+      this.lastTouch = performance.now();
+      for (const t of e.changedTouches) {
+        if (t.identifier === stickId) stickMove(t);
+        else if (t.identifier === tapId) tapAim(t);
+      }
     }, { passive: true });
     const end = e => {
-      for (const t of e.changedTouches) if (t.identifier === activeId) {
-        activeId = null;
-        stick.classList.remove('active');
-        knob.style.transform = 'translate(0px, 0px)';
+      this.lastTouch = performance.now();
+      for (const t of e.changedTouches) {
+        if (t.identifier === stickId) {
+          stickId = null; this.stickActive = false; this.dirX = 0; this.dirY = 0;
+          stick.classList.remove('active'); setKnob(0, 0);
+        } else if (t.identifier === tapId) {
+          tapId = null; this.tapDown = false;      // cell keeps heading to the last tapped spot
+        }
       }
     };
     window.addEventListener('touchend', end);

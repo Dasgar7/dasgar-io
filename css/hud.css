@@ -53,3 +53,7 @@
 /* joystick sits where you last tapped */
 #stick.shown { opacity: .5; }
 #stick.active { opacity: 1; }
+
+/* joystick: a real controller at the bottom-left; the knob also shows where you are heading */
+#stick { opacity: .6; top: auto; }
+#stick.active { opacity: 1; }
