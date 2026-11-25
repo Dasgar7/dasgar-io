@@ -1,5 +1,5 @@
 /* Main menu: green moonlit scene + game-style layout */
-#menu { --edge: #2f8a45; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,.05), rgba(0,0,0,.45) 90%), url(../img/menu-bg.webp) center / cover no-repeat, url(../img/menu-bg.svg) center / cover no-repeat #020a05; padding: 0; gap: 0; }
+#menu { --edge: #2f8a45; background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,.25), rgba(0,0,0,.6) 95%), url(../img/menu-bg.jpg) center / cover no-repeat, url(../img/menu-bg.svg) center / cover no-repeat #020a05; padding: 0; gap: 0; }
 #menu #logo { position: absolute; top: calc(6px + env(safe-area-inset-top, 0px)); left: 50%; margin: 0; transform: translateX(-50%) skewX(-8deg); white-space: nowrap; font: italic 900 clamp(34px, min(9vw, 15vh), 92px)/1 "Arial Black", Impact, system-ui, sans-serif; letter-spacing: 2px; background: linear-gradient(#f0ffd9 0%, #8dff5a 50%, #25b24b 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px rgba(110,255,70,.55)) drop-shadow(0 3px 0 rgba(0,0,0,.65)); }
 #menu #logo span { font-size: .62em; color: transparent; }
 
