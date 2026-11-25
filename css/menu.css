@@ -1,13 +1,42 @@
-/* Main menu: original green-moonlight backdrop */
-#menu { background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,.12), rgba(0,0,0,.55) 85%), url(../img/menu-bg.svg) center / cover no-repeat #020a05; }
-#menu h1 { text-shadow: 0 0 26px rgba(120,255,70,.55), 0 3px 0 rgba(0,0,0,.6); }
-#menu h1 span { color: #8dff5a; }
-#menu #nameInput { background: rgba(3,22,9,.78); border-color: #2f8a45; }
-#menu #nameInput:focus { border-color: #8dff5a; }
-#menu button#playBtn { background: linear-gradient(135deg, #8dff5a, #2fd06a); color: #03140a; box-shadow: 0 0 28px rgba(120,255,70,.35); }
-#menu .help { opacity: .75; text-shadow: 0 1px 3px #000; }
-@media (max-height: 520px) {
-  #menu { gap: 8px; }
-  #menu h1 { font-size: 38px; }
-  #menu .help { display: none; }
+/* Main menu: green moonlit scene + game-style layout */
+#menu { --edge: #2f8a45; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,.05), rgba(0,0,0,.45) 90%), url(../img/menu-bg.webp) center / cover no-repeat, url(../img/menu-bg.svg) center / cover no-repeat #020a05; padding: 0; gap: 0; }
+#menu #logo { position: absolute; top: calc(6px + env(safe-area-inset-top, 0px)); left: 50%; margin: 0; transform: translateX(-50%) skewX(-8deg); white-space: nowrap; font: italic 900 clamp(34px, min(9vw, 15vh), 92px)/1 "Arial Black", Impact, system-ui, sans-serif; letter-spacing: 2px; background: linear-gradient(#f0ffd9 0%, #8dff5a 50%, #25b24b 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px rgba(110,255,70,.55)) drop-shadow(0 3px 0 rgba(0,0,0,.65)); }
+#menu #logo span { font-size: .62em; color: transparent; }
+
+#menuCoins { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(4,12,7,.78); border: 2px solid var(--edge); border-radius: 10px; font-size: 17px; }
+#menuCoins b.gold { color: #ffd54a; margin-right: 6px; }
+#menuCoins b.green { color: #4be0a0; }
+.coin { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3a3, #f2b01e 60%, #b87a08); }
+.gem { width: 18px; height: 20px; background: linear-gradient(135deg, #8dffd0, #18b974); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+
+.menuCol { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; }
+.menuCol.left { left: calc(12px + env(safe-area-inset-left, 0px)); }
+.menuCol.right { right: calc(12px + env(safe-area-inset-right, 0px)); }
+.mbtn { width: 66px; height: 66px; padding: 0; border-radius: 10px; border: 2px solid var(--edge); background: rgba(4,12,7,.8); color: #7dff5a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.mbtn svg { width: 28px; height: 28px; }
+.mbtn span { color: #fff; font: 800 9px/1 system-ui, sans-serif; text-transform: uppercase; letter-spacing: .3px; }
+.mbtn:active { background: rgba(30,90,45,.7); transform: scale(.95); }
+
+#menuPanel { position: relative; margin-top: clamp(20px, 7vh, 60px); width: min(46vw, 520px); min-width: 270px; padding: 18px 18px 12px; background: rgba(4,12,7,.82); border: 2px solid var(--edge); border-radius: 14px; box-shadow: 0 0 40px rgba(60,200,80,.12), inset 0 0 0 1px rgba(0,0,0,.6); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#menuPanel .tab { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); padding: 3px 16px; background: #06150b; border: 1px solid var(--edge); border-radius: 8px; font: 800 11px system-ui, sans-serif; letter-spacing: .8px; text-transform: uppercase; white-space: nowrap; }
+#menuPanel #nameInput { width: 100%; padding: 9px 14px; font-size: 18px; text-align: left; border-radius: 8px; border: 2px solid var(--edge); background: rgba(2,10,5,.9); color: #fff; outline: none; }
+#menuPanel #nameInput:focus { border-color: #8dff5a; }
+#menuPanel #skins { max-width: none; gap: 6px; }
+#menuPanel .skin { width: 24px; height: 24px; border-width: 2px; }
+#menu button#playBtn { width: 78%; padding: 9px 0; font-size: 26px; letter-spacing: 1px; border-radius: 12px; border: 2px solid #c8ffa8; background: linear-gradient(#a6ff72, #3fd04f 55%, #27a845); color: #07200d; box-shadow: 0 0 22px rgba(110,255,70,.35), inset 0 2px 0 rgba(255,255,255,.5); }
+#menuPanel .ver { font-size: 12px; opacity: .8; }
+
+#modal { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.62); }
+#modal .card { width: min(520px, 90vw); max-height: 78vh; overflow: auto; padding: 16px 20px; text-align: left; background: #07170c; border: 2px solid var(--edge); border-radius: 14px; box-shadow: 0 0 40px rgba(60,200,80,.2); }
+#modal h3 { margin: 0 0 8px; color: #8dff5a; font-size: 20px; }
+#modal p, #modal li { font-size: 14px; line-height: 1.5; margin: 6px 0; }
+#modal ul { margin: 0; padding-left: 20px; }
+#modalClose { margin-top: 10px; padding: 8px 22px; border-radius: 8px; border: 2px solid var(--edge); background: rgba(47,138,69,.35); color: #fff; font-weight: 800; }
+
+@media (orientation: portrait) {
+  .menuCol { flex-direction: row; top: auto; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: none; gap: 8px; }
+  .menuCol.left { left: 8px; } .menuCol.right { right: 8px; }
+  .mbtn { width: 54px; height: 54px; } .mbtn svg { width: 24px; height: 24px; }
+  #menuPanel { width: 88vw; margin-top: 60px; }
+  #menu #logo { top: calc(58px + env(safe-area-inset-top, 0px)); }
 }

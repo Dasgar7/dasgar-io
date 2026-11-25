@@ -116,6 +116,7 @@
     if (playing && world.player && !world.player.alive) {
       playing = false;
       const p = world.player;
+      try { if (Math.floor(p.peak) > (+localStorage.getItem('dasgar_best') || 0)) localStorage.setItem('dasgar_best', Math.floor(p.peak)); } catch (e) {}
       $('deadStats').textContent = `Peak mass: ${Math.floor(p.peak)}  |  Cells eaten: ${p.eaten}`;
       setTimeout(() => { $('dead').classList.remove('hidden'); }, 600);
       $('hud').classList.add('hidden');
