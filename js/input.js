@@ -21,42 +21,40 @@ const Input = {
       this.zoomMul = clamp(this.zoomMul * (e.deltaY > 0 ? 0.92 : 1.08), 0.5, 1.6);
     }, { passive: true });
 
-    // Floating touch joystick: touch anywhere (not on a button) and it appears under your thumb
+    // Tap anywhere: the cell heads to that spot and the joystick sits there (drag to steer)
     const stick = document.getElementById('stick');
     const knob = document.getElementById('knob');
     const hud = document.getElementById('hud');
-    let activeId = null, cx = 0, cy = 0;
+    let activeId = null, ax = 0, ay = 0;
     const R = 55;
-    const move = t => {
-      let dx = t.clientX - cx, dy = t.clientY - cy;
+    const aim = t => {
+      this.mouseX = t.clientX; this.mouseY = t.clientY; this.usingMouse = true;
+      this.lastTouch = performance.now();
+      let dx = t.clientX - ax, dy = t.clientY - ay;
       const d = Math.hypot(dx, dy);
       if (d > R) { dx = dx / d * R; dy = dy / d * R; }
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
-      this.dirX = dx / R; this.dirY = dy / R;
-      this.usingMouse = false;
     };
     window.addEventListener('touchstart', e => {
       this.lastTouch = performance.now();
       if (activeId !== null || hud.classList.contains('hidden')) return;
       for (const t of e.changedTouches) {
         if (t.target.closest && t.target.closest('button, #leaderboard')) continue;
-        activeId = t.identifier; cx = t.clientX; cy = t.clientY;
-        stick.style.left = (cx - 58) + 'px'; stick.style.top = (cy - 58) + 'px'; stick.style.bottom = 'auto';
-        stick.classList.add('active');
-        move(t);
+        activeId = t.identifier; ax = t.clientX; ay = t.clientY;
+        stick.style.left = (ax - 58) + 'px'; stick.style.top = (ay - 58) + 'px'; stick.style.bottom = 'auto';
+        stick.classList.add('shown', 'active');
+        aim(t);
         break;
       }
     }, { passive: true });
     window.addEventListener('touchmove', e => {
-      for (const t of e.changedTouches) if (t.identifier === activeId) move(t);
+      for (const t of e.changedTouches) if (t.identifier === activeId) aim(t);
     }, { passive: true });
     const end = e => {
       for (const t of e.changedTouches) if (t.identifier === activeId) {
         activeId = null;
         stick.classList.remove('active');
-        stick.style.left = stick.style.top = stick.style.bottom = '';
         knob.style.transform = 'translate(0px, 0px)';
-        this.dirX = 0; this.dirY = 0;
       }
     };
     window.addEventListener('touchend', end);

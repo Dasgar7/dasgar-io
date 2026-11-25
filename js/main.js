@@ -34,10 +34,12 @@
     $('dead').classList.add('hidden');
     $('hud').classList.remove('hidden');
     playing = true; paused = false; $('pauseBtn').classList.remove('on');
+    Input.mouseX = Render.w / 2; Input.mouseY = Render.h / 2;   // no drifting until you tap
+    $('stick').classList.remove('shown', 'active');
   }
   $('pauseBtn').onclick = () => { paused = !paused; $('pauseBtn').classList.toggle('on', paused); };
-  if (localStorage.getItem('dasgar_lb') === '0') $('leaderboard').classList.add('collapsed');
-  $('lbHead').onclick = () => { const c = $('leaderboard').classList.toggle('collapsed'); localStorage.setItem('dasgar_lb', c ? '0' : '1'); };
+  if (localStorage.getItem('dasgar_lb') === '1') { $('leaderboard').classList.remove('collapsed'); $('lbBtn').classList.add('on'); }
+  $('lbBtn').onclick = () => { const c = $('leaderboard').classList.toggle('collapsed'); $('lbBtn').classList.toggle('on', !c); localStorage.setItem('dasgar_lb', c ? '0' : '1'); };
   $('playBtn').onclick = start;
   $('againBtn').onclick = () => { $('dead').classList.add('hidden'); $('menu').classList.remove('hidden'); };
   $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') start(); });

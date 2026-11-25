@@ -38,3 +38,18 @@
 #stick { width: 116px; height: 116px; border-radius: 50%; background: rgba(150,155,160,.30); border: 0; left: calc(40px + env(safe-area-inset-left, 0px)); bottom: calc(56px + env(safe-area-inset-bottom, 0px)); pointer-events: none; opacity: 0; transition: opacity .12s; }
 #stick.active { opacity: 1; }
 #knob { left: 29px; top: 29px; width: 58px; height: 58px; border: 0; background: rgba(120,125,130,.55); }
+
+/* Square HUD buttons (pause + leaderboard) */
+#pauseBtn, #lbBtn { width: 46px; height: 46px; border-radius: 11px; background: rgba(205,212,218,.6); box-shadow: inset 0 0 0 2px rgba(120,128,136,.45); }
+#pauseBtn span { background: #7b838b; }
+#pauseBtn.on::after { border-left-color: #7b838b; }
+#lbBtn { position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); border: 0; padding: 0; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+#lbBtn svg { width: 28px; height: 28px; fill: #7b838b; }
+#lbBtn.on { background: rgba(170,178,186,.75); }
+#leaderboard { top: calc(66px + env(safe-area-inset-top, 0px)); }
+#leaderboard.collapsed { display: none; }
+#leaderboard h4 { justify-content: center; cursor: default; }
+
+/* joystick sits where you last tapped */
+#stick.shown { opacity: .5; }
+#stick.active { opacity: 1; }
