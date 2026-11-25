@@ -57,3 +57,8 @@
 /* joystick: a real controller at the bottom-left; the knob also shows where you are heading */
 #stick { opacity: .6; top: auto; }
 #stick.active { opacity: 1; }
+
+/* joystick: hidden until you touch; then it appears under your finger and stays there */
+#stick { opacity: 0; }
+#stick.shown { opacity: .55; }
+#stick.active { opacity: 1; }
