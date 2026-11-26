@@ -1,7 +1,5 @@
 /* Main menu: green moonlit scene + game-style layout */
-#menu { --edge: #2f8a45; background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,.25), rgba(0,0,0,.6) 95%), url(../img/menu-bg.jpg) center / cover no-repeat, url(../img/menu-bg.svg) center / cover no-repeat #020a05; padding: 0; gap: 0; }
-#menu #logo { position: absolute; top: calc(6px + env(safe-area-inset-top, 0px)); left: 50%; margin: 0; transform: translateX(-50%) skewX(-8deg); white-space: nowrap; font: italic 900 clamp(34px, min(9vw, 15vh), 92px)/1 "Arial Black", Impact, system-ui, sans-serif; letter-spacing: 2px; background: linear-gradient(#f0ffd9 0%, #8dff5a 50%, #25b24b 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px rgba(110,255,70,.55)) drop-shadow(0 3px 0 rgba(0,0,0,.65)); }
-#menu #logo span { font-size: .62em; color: transparent; }
+#menu { --edge: #2f8a45; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,.05), rgba(0,0,0,.45) 90%), url(../img/menu-bg.svg) center / cover no-repeat #020a05; padding: 0; gap: 0; }
 
 #menuCoins { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: rgba(4,12,7,.78); border: 2px solid var(--edge); border-radius: 10px; font-size: 17px; }
 #menuCoins b.gold { color: #ffd54a; margin-right: 6px; }
@@ -38,5 +36,16 @@
   .menuCol.left { left: 8px; } .menuCol.right { right: 8px; }
   .mbtn { width: 54px; height: 54px; } .mbtn svg { width: 24px; height: 24px; }
   #menuPanel { width: 88vw; margin-top: 60px; }
-  #menu #logo { top: calc(58px + env(safe-area-inset-top, 0px)); }
 }
+
+
+/* DASGAR.IO logo: bold italic, light-to-bright green, dark outline, neon glow, sharp wings */
+@font-face { font-family: 'Exo 2'; font-style: italic; font-weight: 900; font-display: swap; src: url(../fonts/exo2-900i.woff2) format('woff2'); }
+#logoWrap { position: absolute; top: calc(4px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+#menu #logo { position: relative; margin: 0; padding: 0 .25em; white-space: nowrap; font: italic 900 clamp(34px, min(9vw, 15vh), 92px)/1.05 'Exo 2', 'Arial Black', Impact, sans-serif; letter-spacing: .02em; background: linear-gradient(180deg, #f7ffec 0%, #c8ff9a 30%, #6cff3a 62%, #25c53c 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(1.5px 0 0 #0a4016) drop-shadow(-1.5px 0 0 #0a4016) drop-shadow(0 1.5px 0 #0a4016) drop-shadow(0 -1.5px 0 #0a4016) drop-shadow(0 0 14px rgba(110,255,70,.65)); }
+#menu #logo::before, #menu #logo::after { content: ''; position: absolute; }
+#menu #logo::before { left: -.08em; bottom: .02em; width: .55em; height: .3em; background: linear-gradient(90deg, #5cff30, #e9ffd2); clip-path: polygon(0 100%, 100% 8%, 100% 52%, 38% 100%); }
+#menu #logo::after { right: -.1em; top: .02em; width: .5em; height: .3em; background: linear-gradient(90deg, #e9ffd2, #5cff30); clip-path: polygon(0 92%, 62% 0, 100% 0, 62% 100%); }
+#logoOrn { width: min(60vw, 330px); height: 14px; margin-top: 2px; }
+#logoOrn svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 5px rgba(110,255,70,.7)); }
+@media (orientation: portrait) { #logoWrap { top: calc(56px + env(safe-area-inset-top, 0px)); } }
