@@ -62,3 +62,9 @@
 #stick { opacity: 0; }
 #stick.shown { opacity: .55; }
 #stick.active { opacity: 1; }
+
+/* leaderboard dropdown: hangs directly under its square button, right edges aligned */
+#leaderboard { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); width: 150px; min-width: 0; box-sizing: border-box; border-radius: 12px 4px 12px 12px; }
+#lbList { overflow: hidden; }
+#lbList li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (orientation: portrait) { #leaderboard { width: 160px; } }
