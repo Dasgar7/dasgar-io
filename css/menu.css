@@ -39,13 +39,8 @@
 }
 
 
-/* DASGAR.IO logo: bold italic, light-to-bright green, dark outline, neon glow, sharp wings */
-@font-face { font-family: 'Exo 2'; font-style: italic; font-weight: 900; font-display: swap; src: url(../fonts/exo2-900i.woff2) format('woff2'); }
-#logoWrap { position: absolute; top: calc(4px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-#menu #logo { position: relative; margin: 0; padding: 0 .25em; white-space: nowrap; font: italic 900 clamp(34px, min(9vw, 15vh), 92px)/1.05 'Exo 2', 'Arial Black', Impact, sans-serif; letter-spacing: .02em; background: linear-gradient(180deg, #f7ffec 0%, #c8ff9a 30%, #6cff3a 62%, #25c53c 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(1.5px 0 0 #0a4016) drop-shadow(-1.5px 0 0 #0a4016) drop-shadow(0 1.5px 0 #0a4016) drop-shadow(0 -1.5px 0 #0a4016) drop-shadow(0 0 14px rgba(110,255,70,.65)); }
-#menu #logo::before, #menu #logo::after { content: ''; position: absolute; }
-#menu #logo::before { left: -.08em; bottom: .02em; width: .55em; height: .3em; background: linear-gradient(90deg, #5cff30, #e9ffd2); clip-path: polygon(0 100%, 100% 8%, 100% 52%, 38% 100%); }
-#menu #logo::after { right: -.1em; top: .02em; width: .5em; height: .3em; background: linear-gradient(90deg, #e9ffd2, #5cff30); clip-path: polygon(0 92%, 62% 0, 100% 0, 62% 100%); }
-#logoOrn { width: min(60vw, 330px); height: 14px; margin-top: 2px; }
-#logoOrn svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 5px rgba(110,255,70,.7)); }
-@media (orientation: portrait) { #logoWrap { top: calc(56px + env(safe-area-inset-top, 0px)); } }
+/* DASGAR.IO logo: the supplied artwork (transparent webp) */
+#logoWrap { position: absolute; top: calc(2px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); pointer-events: none; }
+#menu #logo { margin: 0; line-height: 0; filter: drop-shadow(0 0 16px rgba(110,255,70,.35)); }
+#menu #logo img { display: block; height: clamp(44px, 17vh, 100px); width: auto; max-width: 92vw; }
+@media (orientation: portrait) { #logoWrap { top: calc(54px + env(safe-area-inset-top, 0px)); } #menu #logo img { height: auto; width: min(88vw, 440px); } }
